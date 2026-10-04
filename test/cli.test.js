@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { makeProject } from './helpers.js';
+import { makeProject, FAKE_AWS_ID } from './helpers.js';
 
 // End-to-end: run the real CLI the way users do. --offline keeps these tests off the network.
 const CLI = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'bin', 'nativekeel.js');
@@ -13,7 +13,7 @@ const run = (args, opts = {}) => spawnSync(process.execPath, [CLI, ...args], { e
 function app() {
   return makeProject({
     'package.json': { name: 'cli-app', dependencies: { 'react-native': '0.80.0' } },
-    'src/keys.js': "export const k = 'AKIAIOSFODNN7EXAMPLE';\n",
+    'src/keys.js': `export const k = '${FAKE_AWS_ID}';\n`,
   });
 }
 
@@ -37,9 +37,9 @@ test('report files: JSON, HTML, Markdown, SARIF', () => {
   assert.match(fs.readFileSync(out('r.md'), 'utf8'), /NativeKeel health report/);
   assert.equal(JSON.parse(fs.readFileSync(out('r.sarif'), 'utf8')).version, '2.1.0');
   for (const f of ['r.html', 'r.md', 'r.sarif']) {
-    assert.ok(!fs.readFileSync(out(f), 'utf8').includes('AKIAIOSFODNN7EXAMPLE'), `${f} never contains the secret`);
+    assert.ok(!fs.readFileSync(out(f), 'utf8').includes(FAKE_AWS_ID), `${f} never contains the secret`);
   }
-  assert.ok(!r.stdout.includes('AKIAIOSFODNN7EXAMPLE'));
+  assert.ok(!r.stdout.includes(FAKE_AWS_ID));
 });
 
 test('plan, baseline and compare commands', () => {
@@ -75,7 +75,7 @@ test('helpful errors', () => {
 
 test('large JSON through a pipe is complete, and the exit code survives', () => {
   const files = { 'package.json': { name: 'big', dependencies: { 'react-native': '0.80.0' } } };
-  for (let i = 0; i < 60; i++) files[`src/keys${i}.js`] = "export const k = 'AKIAIOSFODNN7EXAMPLE';\n";
+  for (let i = 0; i < 60; i++) files[`src/keys${i}.js`] = `export const k = '${FAKE_AWS_ID}';\n`;
   const r = run([makeProject(files), '--offline', '--json']);
   assert.ok(r.stdout.length > 16384, `output should be large, got ${r.stdout.length}`);
   assert.doesNotThrow(() => JSON.parse(r.stdout));

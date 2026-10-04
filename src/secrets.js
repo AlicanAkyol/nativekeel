@@ -18,7 +18,7 @@ const RULES = [
   { id: 'openai-key', label: 'OpenAI API key', re: /\bsk-(?:proj-)?[A-Za-z0-9_-]{32,}\b/g },
   { id: 'anthropic-key', label: 'Anthropic API key', re: /\bsk-ant-[A-Za-z0-9_-]{32,}\b/g },
   { id: 'github-token', label: 'GitHub token', re: /\bgh[pousr]_[A-Za-z0-9]{36,}\b/g },
-  { id: 'slack-token', label: 'Slack token', re: /\bxox[baprs]-[A-Za-z0-9-]{10,}\b/g },
+  { id: 'slack-token', label: 'Slack token', re: /\bxox[baprs]-\d{6,}-[A-Za-z0-9-]{10,}\b/g },
   { id: 'sendgrid-key', label: 'SendGrid API key', re: /\b(?<v>SG\.[A-Za-z0-9_-]{22}\.[A-Za-z0-9_-]{43})\b/g },
   { id: 'twilio-key', label: 'Twilio API key', re: /\b(?<v>SK[0-9a-fA-F]{32})\b/g },
   { id: 'google-oauth-secret', label: 'Google OAuth client secret', re: /\b(?<v>GOCSPX-[A-Za-z0-9_-]{28})\b/g },
@@ -39,6 +39,14 @@ const RULES = [
     },
   },
 ];
+
+// Values that are obviously not real: docs examples, test fixtures, templates.
+const PLACEHOLDER = /example|test|dummy|fake|sample|placeholder|xxxx|changeme|redacted|your[_-]?(?:api[_-]?)?(?:key|token|secret)/i;
+
+// Test code is never part of the app bundle.
+const TEST_PATH = /(^|\/)(__tests__|__mocks__|__fixtures__|test|tests|e2e|fixtures)\/|\.(test|spec)\.[cm]?[jt]sx?$/;
+
+const isCommentLine = (line) => /^\s*(\/\/|\/\*|\*|#|<!--)/.test(line);
 
 export function mask(value) {
   if (value.length <= 8) return '****';
@@ -77,19 +85,26 @@ export function scanSecrets(root) {
     } catch {
       continue;
     }
+    const lines = text.split('\n');
     for (const rule of RULES) {
       for (const m of text.matchAll(rule.re)) {
         if (rule.validate && !rule.validate(m)) continue;
+        if (PLACEHOLDER.test(m[0])) continue;
         const rel = path.relative(root, file);
+        const posix = rel.split(path.sep).join('/');
         const value = m.groups && m.groups.v;
+        const line = text.slice(0, m.index).split('\n').length;
+        // Comments are stripped from the bundle; a key there is committed, not shipped.
+        const inComment = isCommentLine(lines[line - 1] || '');
         findings.push({
           rule: rule.id,
           label: rule.label,
           file: rel,
-          line: text.slice(0, m.index).split('\n').length,
+          line,
           preview: value ? mask(value) : null,
-          inAppBundle: !SERVER_DIRS.has(rel.split(path.sep)[0]),
-          committed: tracked ? tracked.has(rel.split(path.sep).join('/')) : null,
+          inAppBundle: !SERVER_DIRS.has(posix.split('/')[0]) && !TEST_PATH.test(posix) && !inComment,
+          inComment,
+          committed: tracked ? tracked.has(posix) : null,
         });
       }
     }

@@ -16,7 +16,7 @@ test('Supabase: service_role is reported, anon key is not', () => {
 test('provider key formats', () => {
   assert.deepEqual(scan(`'SG.${'a'.repeat(22)}.${'b'.repeat(43)}'`), ['sendgrid-key']);
   assert.deepEqual(scan(`'SK${'0123456789abcdef'.repeat(2)}'`), ['twilio-key']);
-  assert.deepEqual(scan(`'GOCSPX-${'x'.repeat(28)}'`), ['google-oauth-secret']);
+  assert.deepEqual(scan(`'GOCSPX-${'Ab1Cd2E'.repeat(4)}'`), ['google-oauth-secret']);
   assert.deepEqual(scan(`'${'0123456789abcdef'.repeat(2)}-us14'`), ['mailchimp-key']);
   assert.deepEqual(scan(`'shpat_${'ab12'.repeat(8)}'`), ['shopify-token']);
 });
@@ -33,4 +33,25 @@ test('secrets are masked, never returned in full', () => {
   const [f] = scanSecrets(makeProject({ 'package.json': '{}', 'src/a.js': `x='${key}'` }));
   assert.ok(!JSON.stringify(f).includes(key));
   assert.equal(f.preview, 'SG.a…bb');
+});
+
+test('placeholders and docs examples are not secrets', () => {
+  assert.deepEqual(scan(`process.env.SLACK_TOKEN = 'xoxb-test-token';`), []);
+  assert.deepEqual(scan(`const id = '${['AKIA', 'IOSFODNN7', 'EXAMPLE'].join('')}';`), [], "AWS's documented example key");
+  assert.deepEqual(scan(`const t = 'xoxb-${'1'.repeat(12)}-${'2'.repeat(13)}-${'Ab3'.repeat(8)}';`), ['slack-token'], 'a real-shaped Slack token still counts');
+});
+
+test('where a secret sits decides whether it ships', () => {
+  const pem = ['-----BEGIN RSA ', 'PRIVATE KEY-----'].join('');
+  const root = makeProject({
+    'package.json': '{}',
+    'src/app.js': `const k = "${pem}";\n`,
+    'src/old.js': `// const k = "${pem}";\n`,
+    'src/__tests__/a.test.js': `const k = "${pem}";\n`,
+  });
+  const byFile = Object.fromEntries(scanSecrets(root).map((f) => [f.file.split('/').join('/'), f]));
+  assert.equal(byFile['src/app.js'].inAppBundle, true);
+  assert.equal(byFile['src/old.js'].inAppBundle, false);
+  assert.equal(byFile['src/old.js'].inComment, true);
+  assert.equal(byFile['src/__tests__/a.test.js'].inAppBundle, false, 'test code is not bundled');
 });

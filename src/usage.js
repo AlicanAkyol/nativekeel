@@ -125,3 +125,15 @@ export function findUnused(project) {
     .filter((n) => !nativeText.includes(n) && !nativeTokens(root, n).some((t) => nativeText.includes(t)))
     .map((name) => ({ name, native: nativeTokens(root, name).length > 0 }));
 }
+
+// Source files (relative paths) that import `pkg` and whose text matches `pattern`.
+export function filesImportingWith(root, pkg, pattern) {
+  const re = new RegExp(pattern);
+  const out = [];
+  for (const file of walk(root, JS_EXT)) {
+    const text = readSmall(file);
+    if (!text.includes(pkg) || !importedPackages(text).has(pkg)) continue;
+    if (re.test(text)) out.push(path.relative(root, file));
+  }
+  return out.sort();
+}

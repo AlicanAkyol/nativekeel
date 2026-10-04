@@ -48,3 +48,8 @@ export function fakeRegistry({ directory = {}, latest = {}, published = {}, rnPe
     return null;
   };
 }
+
+// Realistic-looking fake keys, built from parts so the repository never contains a literal
+// that secret scanners flag. (AWS's documented EXAMPLE keys are now treated as placeholders.)
+export const FAKE_AWS_ID = ['AKIA', 'Q7Z3M9N2', 'P4R6T8V1'].join('');
+export const FAKE_AWS_SECRET = ['k7Pq2Rs9', 'Tv4Wx6Yz', '1Ab3Cd5E', 'f7Gh9Jk2', 'Lm4Np6Qr'].join('');

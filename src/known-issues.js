@@ -38,9 +38,19 @@ export const KNOWN_ISSUES = [
     rnFrom: 76,
     when: 'newArch',
     severity: 'high',
-    title: 'react-native-linear-gradient 2.x crashes the New Architecture when a screen unmounts',
-    detail: "2.x has no Fabric component, so BVLinearGradient runs through the interop layer. Its children are not detached before React Native recycles them: \"RCTComponentViewRegistry: Attempt to recycle a mounted view\" (an abort on iOS, right after login in the app where it was found). React Native 0.76+ draws gradients itself: replace it with a small component that sets experimental_backgroundImage: 'linear-gradient(...)' and drop the native package.",
-    source: 'real upgrade of an RN 0.80 app, 2026-10-04 (UI test after login)',
+    title: 'LinearGradient around a Modal: a known New Architecture crash',
+    detail: "react-native-linear-gradient 2.x has no Fabric component, so it runs through the interop layer. When a LinearGradient contains a Modal (or a Modal-based bottom sheet), closing it can abort the app: \"RCTComponentViewRegistry: Attempt to recycle a mounted view\" (upstream issue #718). React Native 0.76+ draws gradients itself: experimental_backgroundImage: 'linear-gradient(...)' on a View.",
+    source: 'real upgrade of an RN 0.80 app, 2026-10-04 (UI test after login); upstream issue #718',
+    // Only high when the code has the crashing shape; many apps use 2.x under Fabric without it.
+    evidence: {
+      imports: 'react-native-linear-gradient',
+      pattern: '<Modal\\b|<RBSheet\\b|<BottomSheetModal\\b|react-native-modal|react-native-raw-bottom-sheet',
+    },
+    withoutEvidence: {
+      severity: 'low',
+      title: 'react-native-linear-gradient 2.x runs through the New Architecture interop layer',
+      detail: "It has no Fabric component. No LinearGradient next to a Modal was found, which is the layout known to crash (upstream issue #718). React Native 0.76+ can draw gradients itself (experimental_backgroundImage), which removes a native dependency.",
+    },
   },
 ];
 

@@ -199,7 +199,7 @@ test('signing material committed to git', () => {
     'android/app/build.gradle': "signingConfigs { debug { storePassword 'android'\n keyPassword 'android' } }",
     'android/app/debug.keystore': 'x',
     'android/app/release.keystore': 'x',
-    'ios/AuthKey_ABC123XYZ9.p8': 'x',
+    'ios/AuthKey_ABC123XYZ9.p8': ['-----BEGIN ', 'PRIVATE KEY-----\nMIGT\n'].join(''),
     'ios/dist.p12': 'x',
     'ios/App/PrivacyInfo.xcprivacy': '',
   }));
@@ -291,4 +291,12 @@ test('Java MainApplication two-argument getDefaultReactHost', () => {
   const src = (call) => rnApp('0.80.3', { 'android/app/src/main/java/com/a/MainApplication.java': `class A { ReactHost h() { return ${call}; } }` });
   assert.equal(check(src('DefaultReactHost.getDefaultReactHost(getApplicationContext(), mReactNativeHost)')).find((f) => f.id === 'android-default-react-host').severity, 'high');
   assert.ok(!check(src('DefaultReactHost.getDefaultReactHost(getApplicationContext(), mReactNativeHost, null)')).some((f) => f.id === 'android-default-react-host'));
+});
+
+test('empty signing placeholders are not reported', () => {
+  const root = makeProject({ 'package.json': { name: 'x', dependencies: { 'react-native': '0.80.0' } }, 'ios/fastlane/AuthKey_ABC123.p8': '', 'android/app/release.keystore': '' });
+  spawnSync('git', ['init', '-q'], { cwd: root });
+  spawnSync('git', ['add', '-A'], { cwd: root });
+  const ids = nativeChecks(loadProject(root), { rnLatest: '0.87.1', now: new Date('2026-10-04') }).map((f) => f.id);
+  assert.ok(!ids.some((i) => i.startsWith('signing-')), ids.join(','));
 });

@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { loadProject } from '../src/project.js';
 import { analyze } from '../src/analyze.js';
 import { applyBaseline, saveBaseline } from '../src/baseline.js';
-import { makeProject, fakeRegistry } from './helpers.js';
+import { makeProject, fakeRegistry, FAKE_AWS_ID, FAKE_AWS_SECRET } from './helpers.js';
 
 const NOW = new Date('2026-10-03T12:00:00Z');
 
@@ -25,7 +25,7 @@ function bareApp() {
     'android/build.gradle': 'ext {\n  targetSdkVersion = 34\n  compileSdkVersion = 34\n}\n',
     'ios/Podfile': "ENV['RCT_NEW_ARCH_ENABLED'] = '0'\n",
     'src/App.js': "import FastImage from 'react-native-fast-image';\nimport lib from 'some-js-lib';\n",
-    'src/aws.js': "AWS.config.update({ accessKeyId: 'AKIAIOSFODNN7EXAMPLE', secretAccessKey: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY' });\n",
+    'src/aws.js': `AWS.config.update({ accessKeyId: '${FAKE_AWS_ID}', secretAccessKey: '${FAKE_AWS_SECRET}' });\n`,
     'functions/admin.json': '{"private_key": "-----BEGIN PRIVATE KEY-----\\nabc\\n-----END PRIVATE KEY-----"}',
   });
 }
@@ -52,7 +52,7 @@ test('bare app: version, architecture, store, dependency and secret findings', a
 
   const bundled = result.findings.filter((f) => f.area === 'secret' && f.severity === 'critical');
   assert.equal(bundled.length, 2, 'AWS key id and secret in src are critical');
-  assert.ok(!JSON.stringify(result).includes('AKIAIOSFODNN7EXAMPLE'), 'secret values never appear in output');
+  assert.ok(!JSON.stringify(result).includes(FAKE_AWS_ID), 'secret values never appear in output');
 
   const server = result.findings.find((f) => f.id === 'secret:private-key:functions/admin.json');
   assert.equal(server.severity, 'high', 'server-side secrets are not reported as shipped in the app');
@@ -202,4 +202,25 @@ test('release recency: stale packages are flagged, revived "unmaintained" ones a
   assert.match(byId['dep-revived:revived-image'].title, /marked unmaintained, but 2026-10-02 saw a new release/);
   assert.equal(byId['dep-risk:fresh-lib'], undefined, 'packages the directory knows as maintained are not re-checked');
   assert.equal(byId['dep-risk:base64-js'], undefined, 'an old pure-JS utility that does not depend on React Native is fine');
+});
+
+test('linear-gradient: high only when a LinearGradient file also renders a Modal', async () => {
+  const appWith = (screen) =>
+    makeProject({
+      'package.json': { name: 'g', dependencies: { 'react-native': '0.80.3', 'react-native-linear-gradient': '2.8.3' } },
+      'node_modules/react-native/package.json': { version: '0.80.3' },
+      'node_modules/react-native-linear-gradient/package.json': { version: '2.8.3' },
+      'node_modules/react-native-linear-gradient/android/build.gradle': '',
+      'android/gradle.properties': 'newArchEnabled=true\n',
+      'src/Screen.js': screen,
+    });
+  const find = async (root) => (await analyze(loadProject(root), { get: registry, now: NOW })).findings.find((f) => f.id === 'known:linear-gradient-interop-unmount');
+
+  const risky = await find(appWith("import LinearGradient from 'react-native-linear-gradient';\nimport {Modal} from 'react-native';\nexport default () => <LinearGradient colors={[]}><Modal visible /></LinearGradient>;\n"));
+  assert.equal(risky.severity, 'high');
+  assert.match(risky.detail, /Found in src\/Screen\.js/);
+
+  const plain = await find(appWith("import LinearGradient from 'react-native-linear-gradient';\nexport default () => <LinearGradient colors={[]} />;\n"));
+  assert.equal(plain.severity, 'low');
+  assert.match(plain.title, /interop layer/);
 });

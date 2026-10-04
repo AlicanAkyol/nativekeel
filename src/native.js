@@ -365,7 +365,14 @@ export function nativeChecks(project, { rnLatest = null, now = new Date() } = {}
   // someone publish as you. The debug keystore and its public 'android' password are fine.
   const tracked = gitTracked(root);
   if (tracked) {
-    const signing = tracked.filter((f) => /\.(jks|keystore)$/i.test(f) && !/debug/i.test(path.basename(f)));
+    const nonEmpty = (f) => {
+      try {
+        return fs.statSync(path.join(root, f)).size > 0;
+      } catch {
+        return false;
+      }
+    };
+    const signing = tracked.filter((f) => /\.(jks|keystore)$/i.test(f) && !/debug/i.test(path.basename(f)) && nonEmpty(f));
     for (const f of signing) {
       add({
         id: `signing-keystore:${f}`,
@@ -376,7 +383,16 @@ export function nativeChecks(project, { rnLatest = null, now = new Date() } = {}
         fix: { kind: 'secret', label: 'Release keystore', file: f, line: 1, bundled: false },
       });
     }
-    for (const f of tracked.filter((x) => /(^|\/)AuthKey_[A-Z0-9]+\.p8$/.test(x))) {
+    // An empty placeholder file is not a key (some repos commit one so fastlane paths resolve).
+    const hasContent = (f, marker) => {
+      try {
+        const text = fs.readFileSync(path.join(root, f), 'utf8');
+        return marker ? text.includes(marker) : text.length > 0;
+      } catch {
+        return false;
+      }
+    };
+    for (const f of tracked.filter((x) => /(^|\/)AuthKey_[A-Z0-9]+\.p8$/.test(x) && hasContent(x, 'PRIVATE KEY'))) {
       add({
         id: `signing-asc-key:${f}`,
         severity: 'critical',
@@ -386,7 +402,7 @@ export function nativeChecks(project, { rnLatest = null, now = new Date() } = {}
         fix: { kind: 'secret', label: 'App Store Connect API key', file: f, line: 1, bundled: false },
       });
     }
-    for (const f of tracked.filter((x) => /\.p12$/i.test(x))) {
+    for (const f of tracked.filter((x) => /\.p12$/i.test(x) && nonEmpty(x))) {
       add({
         id: `signing-p12:${f}`,
         severity: 'high',

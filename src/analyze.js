@@ -4,7 +4,7 @@ import { cleanVersion, findPackageDir, installedVersion } from './project.js';
 import { createRegistry } from './registry.js';
 import { scanSecrets } from './secrets.js';
 import { nativeChecks } from './native.js';
-import { findUnused } from './usage.js';
+import { findUnused, filesImportingWith } from './usage.js';
 import { matchKnownIssues } from './known-issues.js';
 import { COMPAT, bestRange, checkCompat } from './compat.js';
 import { interopProblems } from './interop.js';
@@ -261,13 +261,22 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
   const newArchRequired =
     findings.some((f) => f.id === 'new-arch-disabled') || (archOff && current && minorOf(current) < NEW_ARCH_ONLY_MINOR);
   for (const { issue, dep } of matchKnownIssues({ deps, rnVersion: current, newArchOn, newArchRequired })) {
+    let { severity, title, detail } = issue;
+    if (issue.evidence) {
+      const files = filesImportingWith(project.root, issue.evidence.imports, issue.evidence.pattern);
+      if (files.length) {
+        detail = `Found in ${files.slice(0, 3).join(', ')}${files.length > 3 ? ` and ${files.length - 3} more` : ''}. ${detail}`;
+      } else {
+        ({ severity, title, detail } = { ...issue, ...issue.withoutEvidence });
+      }
+    }
     add({
       id: `known:${issue.id}`,
-      severity: issue.severity,
+      severity,
       area: 'dependency',
-      title: issue.title,
-      detail: `${issue.detail} (installed: ${dep.name} ${dep.version}; seen in: ${issue.source})`,
-      fix: { kind: 'known-issue', name: dep.name, title: issue.title, detail: issue.detail },
+      title,
+      detail: `${detail} (installed: ${dep.name} ${dep.version}; seen in: ${issue.source})`,
+      fix: { kind: 'known-issue', name: dep.name, title, detail },
     });
   }
 
@@ -321,6 +330,15 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
         title: `${s.label} shipped inside the app (${where})`,
         detail: `${value}Anyone who downloads the app can extract it. Revoke it now, then move the call to a server.`,
         fix: { kind: 'secret', label: s.label, file: s.file, line: s.line, bundled: true },
+      });
+    } else if (s.committed !== false && s.inComment) {
+      add({
+        id: `secret:${s.rule}:${s.file}`,
+        severity: 'medium',
+        area: 'secret',
+        title: `${s.label} in a commented-out line (${where})`,
+        detail: `${value}Comments are not shipped in the app, but the line is in the repository and its git history. If the value is real, rotate it; either way, delete the line.`,
+        fix: { kind: 'secret', label: s.label, file: s.file, line: s.line, bundled: false },
       });
     } else if (s.committed !== false) {
       add({
