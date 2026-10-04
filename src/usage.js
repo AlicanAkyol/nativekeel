@@ -22,6 +22,10 @@ const IMPLICIT = [
   /^@react-native\//, // versioned with React Native, used by the build
   /^@react-native-community\/cli/,
   /^react-native-vector-icons$/, // fonts linked by the build
+  // Work by being installed: native auto-registration or compiler output.
+  /^react-native-webp-format$/, // iOS WebP decoder registers itself with the image loader
+  /^@react-native-firebase\/(crashlytics|perf)$/, // collect natively without any JS call
+  /^react-compiler-runtime$/, // imported by babel-plugin-react-compiler output
 ];
 
 function walk(dir, exts, out = []) {
@@ -58,7 +62,7 @@ export function packageOf(spec) {
 
 export function importedPackages(text) {
   const found = new Set();
-  const re = /(?:\bfrom\s*|\bimport\s*\(?\s*|\brequire\s*\(\s*|\bjest\.(?:mock|requireActual)\s*\(\s*)['"]([^'"\n]+)['"]/g;
+  const re = /(?:\bfrom\s*|\bimport\s*\(?\s*|\brequire(?:\.resolve)?\s*\(\s*|\bjest\.(?:mock|requireActual)\s*\(\s*)['"]([^'"\n]+)['"]/g;
   for (const m of text.matchAll(re)) {
     const pkg = packageOf(m[1]);
     if (pkg) found.add(pkg);
@@ -102,28 +106,75 @@ export function findUnused(project) {
     readSmall(path.join(root, 'app.config.js')),
     readSmall(path.join(root, 'app.config.ts')),
     readSmall(path.join(root, 'react-native.config.js')),
+    // metro/babel/jest config and friends: aliases such as `crypto: 'crypto-browserify'`.
+    ...fs
+      .readdirSync(root)
+      .filter((f) => /\.config\.[cm]?[jt]s$|^\.babelrc|^rn-cli\.config/.test(f))
+      .map((f) => readSmall(path.join(root, f))),
   ].join('\n');
-
-  // Required by another dependency (peer or regular).
-  const requiredByOthers = new Set();
-  for (const other of Object.keys(project.deps)) {
-    const dir = findPackageDir(root, other);
-    if (!dir) continue;
+  // CLI tools run from scripts by their command name, which can differ from the package name.
+  const scriptText = JSON.stringify(pkgJson.scripts || {});
+  const usedByBin = (name) => {
+    const dir = findPackageDir(root, name);
     try {
-      const m = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8'));
+      const bin = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8')).bin;
+      const bins = typeof bin === 'string' ? [name.split('/').pop()] : Object.keys(bin || {});
+      return bins.some((b) => scriptText.includes(b));
+    } catch {
+      return false;
+    }
+  };
+
+  // Required by any installed package (peer or regular), including indirect ones: e.g.
+  // @react-navigation/elements, pulled in by the stack navigator, peers on masked-view.
+  const requiredByOthers = new Set();
+  for (const manifest of installedManifests(root)) {
+    try {
+      const m = JSON.parse(fs.readFileSync(manifest, 'utf8'));
       for (const k of ['peerDependencies', 'dependencies']) for (const d of Object.keys(m[k] || {})) requiredByOthers.add(d);
     } catch {
       // unreadable manifest
     }
   }
 
-  const candidates = names.filter((n) => !used.has(n) && !requiredByOthers.has(n) && !configText.includes(n));
+  const candidates = names.filter((n) => !used.has(n) && !requiredByOthers.has(n) && !configText.includes(n) && !usedByBin(n));
   if (!candidates.length) return [];
 
   const nativeText = ['ios', 'android'].flatMap((d) => walk(path.join(root, d), NATIVE_EXT)).map(readSmall).join('\n');
   return candidates
     .filter((n) => !nativeText.includes(n) && !nativeTokens(root, n).some((t) => nativeText.includes(t)))
     .map((name) => ({ name, native: nativeTokens(root, name).length > 0 }));
+}
+
+// package.json of every package in the node_modules folders from the app up to the filesystem
+// root (monorepos hoist), one level of scopes deep. Nested node_modules are skipped.
+function installedManifests(root) {
+  const out = [];
+  let dir = root;
+  while (true) {
+    const nm = path.join(dir, 'node_modules');
+    let entries = [];
+    try {
+      entries = fs.readdirSync(nm, { withFileTypes: true });
+    } catch {
+      // none here
+    }
+    for (const e of entries) {
+      if (!e.isDirectory() && !e.isSymbolicLink()) continue;
+      if (e.name.startsWith('@')) {
+        try {
+          for (const sub of fs.readdirSync(path.join(nm, e.name))) out.push(path.join(nm, e.name, sub, 'package.json'));
+        } catch {
+          // unreadable scope
+        }
+      } else if (!e.name.startsWith('.')) {
+        out.push(path.join(nm, e.name, 'package.json'));
+      }
+    }
+    const parent = path.dirname(dir);
+    if (parent === dir) return out;
+    dir = parent;
+  }
 }
 
 // Source files (relative paths) that import `pkg` and whose text matches `pattern`.

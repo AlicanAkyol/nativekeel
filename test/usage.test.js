@@ -56,3 +56,32 @@ test('without node_modules nothing is claimed', () => {
   const root = makeProject({ 'package.json': { name: 'x', dependencies: { 'react-native': '0.80.0', lonely: '1.0.0' } } });
   assert.deepEqual(findUnused(loadProject(root)), []);
 });
+
+test('unused: config aliases, indirect peers, CLI command names and self-registering packages count as used', () => {
+  const root = makeProject({
+    'package.json': {
+      name: 'u',
+      scripts: { 'upload-maps': 'bugsnag-source-maps upload-react-native' },
+      dependencies: {
+        'react-native': '0.80.0',
+        'crypto-browserify': '3.12.0',
+        '@react-native-masked-view/masked-view': '0.3.2',
+        '@bugsnag/source-maps': '2.3.0',
+        'react-native-webp-format': '1.2.1',
+        'left-pad': '1.3.0',
+      },
+    },
+    'metro.config.js': "module.exports = { resolver: { extraNodeModules: { crypto: require.resolve('crypto-browserify') } } };\n",
+    'node_modules/react-native/package.json': { version: '0.80.0' },
+    'node_modules/crypto-browserify/package.json': { version: '3.12.0' },
+    'node_modules/@react-native-masked-view/masked-view/package.json': { version: '0.3.2' },
+    // Not declared by the app: pulled in by a navigator, and it peers on masked-view.
+    'node_modules/@react-navigation/elements/package.json': { version: '2.0.0', peerDependencies: { '@react-native-masked-view/masked-view': '>= 0.2.0' } },
+    'node_modules/@bugsnag/source-maps/package.json': { version: '2.3.0', bin: { 'bugsnag-source-maps': 'bin/cli.js' } },
+    'node_modules/react-native-webp-format/package.json': { version: '1.2.1' },
+    'node_modules/left-pad/package.json': { version: '1.3.0' },
+    'src/App.js': "export default 1;\n",
+  });
+  const unused = findUnused(loadProject(root)).map((u) => u.name);
+  assert.deepEqual(unused, ['left-pad']);
+});
