@@ -31,8 +31,10 @@ const lineOf = (v) => {
 };
 
 // react, react-native and @react-native/* move together with the React Native version; @babel/* and types are tooling.
+// Also packages that move with React Native and React themselves (Metro, the scheduler, react-is).
 const isTracked = (name) =>
-  !['react-native', 'react', 'expo'].includes(name) &&
+  !['react-native', 'react', 'expo', 'react-dom', 'react-is', 'react-test-renderer', 'scheduler', 'hermes-engine'].includes(name) &&
+  !/^metro(-|$)/.test(name) &&
   !name.startsWith('@react-native/') &&
   !name.startsWith('@babel/') &&
   !name.startsWith('@types/');

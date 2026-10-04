@@ -181,3 +181,11 @@ test('plan: JS-only abandoned packages are not blockers, low notes stay out, 16 
   assert.ok(!titles.includes('Avoid known traps'), 'a low note is not a trap');
   assert.ok(plan.phases.find((p) => p.title.startsWith('Meet App Store')).steps.some((s) => s.includes('React Native 0.77 or later')));
 });
+
+test('complexity: many routine bumps do not size a current app like a migration', async () => {
+  const { complexity } = await import('../src/plan.js');
+  const bumps = Array.from({ length: 40 }, (_, i) => ({ fix: { kind: 'bump-dep', native: i % 2 === 0 } }));
+  assert.notEqual(complexity(bumps).size, 'Extra large');
+  const migration = [{ fix: { kind: 'upgrade-rn', from: '0.70.0', to: '0.87.1' } }, { fix: { kind: 'enable-new-arch' } }, ...bumps];
+  assert.equal(complexity(migration).size, 'Extra large');
+});

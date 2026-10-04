@@ -67,10 +67,26 @@ const WEIGHTS = {
   'default-react-host': () => 0.25,
 };
 
+// Routine version bumps are many but cheap next to a React Native, architecture or store
+// change; capping them keeps a nearly current app with many outdated packages from being sized
+// like a migration.
+const BUMP_CAPS = { native: 6, js: 2 };
+
 export function complexity(findings) {
-  const score = Math.round(
-    findings.reduce((sum, f) => sum + (f.fix && WEIGHTS[f.fix.kind] ? WEIGHTS[f.fix.kind](f.fix) : 0), 0),
-  );
+  let nativeBumps = 0;
+  let jsBumps = 0;
+  let rest = 0;
+  for (const f of findings) {
+    if (!f.fix || !WEIGHTS[f.fix.kind]) continue;
+    const w = WEIGHTS[f.fix.kind](f.fix);
+    if (f.fix.kind === 'bump-dep') {
+      if (f.fix.native) nativeBumps += w;
+      else jsBumps += w;
+    } else {
+      rest += w;
+    }
+  }
+  const score = Math.round(rest + Math.min(nativeBumps, BUMP_CAPS.native) + Math.min(jsBumps, BUMP_CAPS.js));
   const size = score < 8 ? 'Small' : score < 20 ? 'Medium' : score < 40 ? 'Large' : 'Extra large';
   return { score, size };
 }
