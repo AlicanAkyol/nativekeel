@@ -44,7 +44,7 @@ runs:
       id: scan
     - name: Upload SARIF
       if: ${{ inputs.sarif == 'true' && always() }}
-      uses: github/codeql-action/upload-sarif@v3
+      uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: ${{ runner.temp }}/nativekeel.sarif
         category: nativekeel
