@@ -14,7 +14,9 @@ export function textReport(result, { color = true, verbose = false } = {}) {
   const indent = '           ';
   const out = [];
   const p = result.project;
-  const arch = (v) => (v === true ? c.green('on') : v === false ? c.red('off') : c.gray('default'));
+  // Not set means React Native's default: off before 0.76, on from 0.76.
+  const defaultOn = !!p.reactNative && Number(p.reactNative.split('.')[1]) >= 76;
+  const arch = (v) => (v === true ? c.green('on') : v === false ? c.red('off') : defaultOn ? c.gray('on (default)') : c.red('off (default)'));
 
   out.push('');
   out.push(`${c.bold('NativeKeel health report')}  ${p.name || ''}`);

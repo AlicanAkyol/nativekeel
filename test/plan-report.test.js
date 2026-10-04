@@ -205,3 +205,9 @@ test('managed Expo plan: no native-folder commands', () => {
   assert.match(md, /eas build/);
   assert.match(md, /At SDK 52, turn on the New Architecture/);
 });
+
+test('reports show what "not set" means for the New Architecture', () => {
+  const r = (rn) => ({ ...result, project: { ...result.project, reactNative: rn, newArch: { android: null, ios: null } }, findings: [] });
+  assert.match(textReport(r('0.74.5'), { color: false }), /android: off \(default\)/);
+  assert.match(textReport(r('0.80.0'), { color: false }), /android: on \(default\)/);
+});

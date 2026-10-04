@@ -12,7 +12,8 @@ export function htmlReport(result, { brand = null, plan = null } = {}) {
   const n = countBySeverity(result.findings);
   const title = `${p.name || 'App'} health report`;
   const sevLabel = { critical: 'Critical', high: 'High', medium: 'Medium', low: 'Low', info: 'Info' };
-  const arch = (v) => (v === true ? 'on' : v === false ? 'off' : 'default');
+  const defaultOn = !!result.project.reactNative && Number(result.project.reactNative.split('.')[1]) >= 76;
+  const arch = (v) => (v === true ? 'on' : v === false ? 'off' : defaultOn ? 'on (default)' : 'off (default)');
 
   const rows = SEVERITIES.flatMap((sev) =>
     result.findings
