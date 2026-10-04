@@ -319,3 +319,13 @@ test('signing passwords read from a properties lookup are not leaks', () => {
   const ids = nativeChecks(loadProject(root), { now: NOW }).map((f) => f.id);
   assert.ok(!ids.some((i) => i.startsWith('signing-password')), ids.join(','));
 });
+
+test('empty and placeholder signing passwords are not leaks', () => {
+  const root = makeProject(rnApp('0.80.0', {
+    'android/gradle.properties': "KB_RELEASE_STORE_PASSWORD=''\nMYAPP_UPLOAD_STORE_PASSWORD=*****\nMYAPP_UPLOAD_KEY_PASSWORD=<password>\n",
+    'ios/App/PrivacyInfo.xcprivacy': '',
+  }));
+  spawnSync('git', ['init', '-q'], { cwd: root });
+  spawnSync('git', ['add', '-A'], { cwd: root });
+  assert.ok(!nativeChecks(loadProject(root), { now: NOW }).some((f) => f.id.startsWith('signing-password')));
+});

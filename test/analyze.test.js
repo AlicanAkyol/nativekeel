@@ -309,3 +309,30 @@ test('a React Native library is recognised and store checks are skipped', async 
   assert.ok(!ids.includes('ios-privacy-manifest'));
   assert.ok(!ids.some((i) => i.startsWith('play-target')));
 });
+
+test('Expo: a library version Expo pins for the SDK is not a compat problem', async () => {
+  const app = (reanimated, withPins) =>
+    makeProject({
+      'package.json': { name: 'e', dependencies: { expo: '~46.0.0', 'react-native': '0.69.6', 'react-native-reanimated': reanimated } },
+      'node_modules/react-native/package.json': { version: '0.69.6' },
+      'node_modules/expo/package.json': { version: '46.0.21' },
+      ...(withPins ? { 'node_modules/expo/bundledNativeModules.json': { 'react-native-reanimated': '~2.9.1' } } : {}),
+      'node_modules/react-native-reanimated/package.json': { version: reanimated },
+      'node_modules/react-native-reanimated/android/build.gradle': '',
+      'src/App.js': "import Animated from 'react-native-reanimated';\n",
+    });
+  const compat = async (root) => (await analyze(loadProject(root), { get: registry, now: NOW })).findings.find((f) => f.id === 'compat:react-native-reanimated');
+  assert.equal(await compat(app('2.9.1', true)), undefined, 'Expo SDK 46 ships Reanimated 2.9 with React Native 0.69');
+  const mismatch = await compat(app('2.3.0', true));
+  assert.match(mismatch.detail, /Expo SDK 46 expects ~2\.9\.1/);
+  const unknown = await compat(app('2.9.1', false));
+  assert.equal(unknown.severity, 'medium', 'without the pin list, Expo projects get a softer finding');
+});
+
+test('Expo range check', async () => {
+  const { satisfiesExpoRange } = await import('../src/analyze.js');
+  assert.equal(satisfiesExpoRange('2.9.1', '~2.9.1'), true);
+  assert.equal(satisfiesExpoRange('2.10.0', '~2.9.1'), false);
+  assert.equal(satisfiesExpoRange('3.4.0', '^3.1.0'), true);
+  assert.equal(satisfiesExpoRange('2.9.0', '~2.9.1'), false);
+});

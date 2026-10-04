@@ -5,7 +5,7 @@ import { createRegistry } from './registry.js';
 import { scanSecrets } from './secrets.js';
 import { nativeChecks } from './native.js';
 import { findUnused, filesImportingWith } from './usage.js';
-import { matchKnownIssues } from './known-issues.js';
+import { matchKnownIssues, compareVersions } from './known-issues.js';
 import { COMPAT, bestRange, checkCompat } from './compat.js';
 import { interopProblems } from './interop.js';
 import {
@@ -51,6 +51,25 @@ function isNativeModule(root, name, dir) {
   // not "has native code" (pure JS packages set them too), so prefer its hasNativeCode.
   if (dir && dir.github && typeof dir.github.hasNativeCode === 'boolean') return dir.github.hasNativeCode;
   return !!(dir && (dir.ios || dir.android) && !dir.web);
+}
+
+function readJsonFile(file) {
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+// Expo's pins are ~x.y.z (same minor), ^x.y.z (same major), or an exact version.
+export function satisfiesExpoRange(version, range) {
+  const m = String(range).trim().match(/^([~^]?)\s*(\d+)\.(\d+)\.(\d+)/);
+  if (!m) return true; // a range we do not understand: do not second-guess Expo
+  const [maj, min] = version.split('.').map(Number);
+  if (compareVersions(version, `${m[2]}.${m[3]}.${m[4]}`) < 0) return false;
+  if (m[1] === '^') return maj === Number(m[2]);
+  if (m[1] === '~') return maj === Number(m[2]) && min === Number(m[3]);
+  return compareVersions(version, `${m[2]}.${m[3]}.${m[4]}`) === 0;
 }
 
 // `offline: true` means the user asked for no network access (get returns nothing).
@@ -321,20 +340,30 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
   }
 
   // Library ↔ React Native compatibility, from the libraries' own tables.
+  // Expo SDKs pin tested versions of these libraries (bundledNativeModules.json). A version
+  // inside Expo's range is a combination Expo ships, even where the library's table is stricter.
+  const expoDir = project.expoVersion ? findPackageDir(project.root, 'expo') : null;
+  const expoPins = expoDir ? readJsonFile(path.join(expoDir, 'bundledNativeModules.json')) : null;
+  const expoSdk = project.expoVersion ? majorOf(project.expoVersion) : null;
   if (current) {
     const rnMinor = minorOf(current);
     for (const dep of deps.filter((d) => COMPAT[d.name])) {
+      const pinned = expoPins && expoPins[dep.name];
+      if (pinned && dep.version && satisfiesExpoRange(dep.version, pinned)) continue;
       const problem = checkCompat(dep.name, dep.version, rnMinor, newArchOn);
       // Also check the architecture this app has to move to.
       const ahead = !problem && newArchRequired ? checkCompat(dep.name, dep.version, rnMinor, true) : null;
       if (!problem && !ahead) continue;
       const best = bestRange(dep.name, rnMinor, problem ? newArchOn : true);
+      let expoNote = '';
+      if (pinned) expoNote = ` Expo SDK ${expoSdk} expects ${pinned}: run \`npx expo install --fix\`.`;
+      else if (expoSdk) expoNote = ` Expo SDK ${expoSdk} pins a tested version of this package; \`npx expo install --check\` shows whether yours matches (install dependencies for a precise check).`;
       add({
         id: `compat:${dep.name}`,
-        severity: problem ? 'high' : 'medium',
+        severity: problem && !(expoSdk && !pinned) ? 'high' : 'medium',
         area: 'dependency',
         title: problem || `${ahead} (needed for the New Architecture)`,
-        detail: `${best ? `Use ${dep.name} ${best.range} on React Native ${current}. ` : ''}Source: ${COMPAT[dep.name].source}.${COMPAT[dep.name].note ? ` ${COMPAT[dep.name].note}` : ''}`,
+        detail: `${best ? `Use ${dep.name} ${best.range} on React Native ${current}. ` : ''}Source: ${COMPAT[dep.name].source}.${COMPAT[dep.name].note ? ` ${COMPAT[dep.name].note}` : ''}${expoNote}`,
         fix: { kind: 'compat', name: dep.name, range: best && best.range, forNewArch: !problem },
       });
     }

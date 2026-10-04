@@ -442,7 +442,11 @@ export function nativeChecks(project, { rnLatest = null, now = new Date() } = {}
         ...[...text.matchAll(/^\s*([A-Z0-9_]*(?:STORE|KEY)_PASSWORD)\s*=\s*(\S+)\s*$/gm)].map((m) => ({ name: m[1], value: m[2] })),
         // Not `props['storePassword']`: there the name is a lookup key, not an assignment.
         ...[...text.matchAll(/(?<![\w'"[])(storePassword|keyPassword)\s*=?\s*["']([^"'\n]+)["']/g)].map((m) => ({ name: m[1], value: m[2] })),
-      ].filter((l) => l.value !== 'android' && !/^System\.getenv|^\$\{?[A-Z_]+\}?$/.test(l.value));
+      ]
+        .map((l) => ({ ...l, value: l.value.replace(/^["']|["']$/g, '') }))
+        // Not leaks: the debug keystore's public password, environment references, empty
+        // values and template placeholders (*****, <password>, your_password).
+        .filter((l) => l.value && l.value !== 'android' && !/^System\.getenv|^\$\{?[A-Z_]+\}?$/.test(l.value) && !/^(\*+|x+|<.*>|your[_-]?\w*|changeme)$/i.test(l.value));
       if (leaked.length) {
         add({
           id: `signing-password:${f}`,
