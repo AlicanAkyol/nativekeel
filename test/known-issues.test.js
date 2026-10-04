@@ -30,3 +30,11 @@ test('drawer 6 with React Native close to the Reanimated 4 boundary', () => {
   assert.deepEqual(ids({ deps, rnVersion: '0.77.1' }), [], 'not relevant two hops away');
   assert.deepEqual(ids({ deps: [{ name: '@react-navigation/drawer', version: '7.1.0' }], rnVersion: '0.80.3' }), []);
 });
+
+test('linear-gradient 2.x only matters with the New Architecture on RN 0.76+', () => {
+  const deps = [{ name: 'react-native-linear-gradient', version: '2.8.3' }];
+  assert.deepEqual(ids({ deps, rnVersion: '0.80.3', newArchOn: true }), ['linear-gradient-interop-unmount']);
+  assert.deepEqual(ids({ deps, rnVersion: '0.77.1', newArchRequired: true }), ['linear-gradient-interop-unmount']);
+  assert.deepEqual(ids({ deps, rnVersion: '0.80.3', newArchOn: false }), []);
+  assert.deepEqual(ids({ deps, rnVersion: '0.74.5', newArchOn: true }), []);
+});

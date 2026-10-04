@@ -30,6 +30,18 @@ export const KNOWN_ISSUES = [
     detail: "Its TurboModule spec uses EventEmitter properties that this React Native version's codegen rejects (UnsupportedModulePropertyParserError, property 'onDownloadBegin'). Pin 2.36.2 until React Native is upgraded. Its peer range says react-native: *, so npm will not warn you.",
     source: 'real upgrade of an RN 0.77 app, 2026-10-03',
   },
+  {
+    id: 'linear-gradient-interop-unmount',
+    pkg: 'react-native-linear-gradient',
+    from: '2.0.0',
+    to: '2.99.99',
+    rnFrom: 76,
+    when: 'newArch',
+    severity: 'high',
+    title: 'react-native-linear-gradient 2.x crashes the New Architecture when a screen unmounts',
+    detail: "2.x has no Fabric component, so BVLinearGradient runs through the interop layer. Its children are not detached before React Native recycles them: \"RCTComponentViewRegistry: Attempt to recycle a mounted view\" (an abort on iOS, right after login in the app where it was found). React Native 0.76+ draws gradients itself: replace it with a small component that sets experimental_backgroundImage: 'linear-gradient(...)' and drop the native package.",
+    source: 'real upgrade of an RN 0.80 app, 2026-10-04 (UI test after login)',
+  },
 ];
 
 // Semver-ish compare on major.minor.patch, ignoring pre-release tags.
