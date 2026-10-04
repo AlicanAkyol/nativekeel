@@ -336,3 +336,25 @@ test('Expo range check', async () => {
   assert.equal(satisfiesExpoRange('3.4.0', '^3.1.0'), true);
   assert.equal(satisfiesExpoRange('2.9.0', '~2.9.1'), false);
 });
+
+test('fetchJson: retries rate limits, says nothing about 404, counts real failures', async () => {
+  const { fetchJson } = await import('../src/registry.js');
+  const realFetch = globalThis.fetch;
+  const responses = [];
+  globalThis.fetch = async () => responses.shift();
+  const res = (status, body) => ({ ok: status === 200, status, headers: new Map(), json: async () => body });
+  const noWait = { wait: async () => {} };
+  try {
+    const stats = { failed: 0 };
+    responses.push(res(429), res(429), res(200, { version: '1.0.0' }));
+    assert.deepEqual(await fetchJson('u', {}, stats, noWait), { version: '1.0.0' });
+    responses.push(res(404));
+    assert.equal(await fetchJson('u', {}, stats, noWait), null);
+    assert.equal(stats.failed, 0, 'not found is an answer');
+    responses.push(res(429), res(429), res(429), res(429));
+    assert.equal(await fetchJson('u', {}, stats, noWait), null);
+    assert.equal(stats.failed, 1);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});

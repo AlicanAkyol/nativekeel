@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { cleanVersion, findPackageDir, installedVersion } from './project.js';
-import { createRegistry } from './registry.js';
+import { createRegistry, fetchJson } from './registry.js';
 import { scanSecrets } from './secrets.js';
 import { nativeChecks } from './native.js';
 import { findUnused, filesImportingWith } from './usage.js';
@@ -74,7 +74,9 @@ export function satisfiesExpoRange(version, range) {
 
 // `offline: true` means the user asked for no network access (get returns nothing).
 export async function analyze(project, { get, now = new Date(), offline: forcedOffline = false } = {}) {
-  const registry = createRegistry(get);
+  // Requests that failed even after retries (rate limits, network): reported, never hidden.
+  const net = { failed: 0 };
+  const registry = createRegistry(get || ((url, headers) => fetchJson(url, headers, net)));
   const findings = [];
   const add = (f) => findings.push(f);
 
@@ -102,6 +104,9 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
   if (project.isLibrary) {
     warnings.push('This looks like a React Native library, not an app (react-native is a peer dependency, or android/ builds a library). App Store and Google Play checks were skipped; scan the app that uses it for those.');
   }
+  const reportIncomplete = () => {
+    if (net.failed && !offline) warnings.push(`${net.failed} request${net.failed === 1 ? '' : 's'} to npm or React Native Directory failed (rate limit or network), so some dependency checks may be missing. Run again in a few minutes.`);
+  };
   if (!offline && project.rnVersion && !rn) warnings.push('Could not fetch React Native releases from npm; version and New Architecture checks were skipped. Run again.');
   if (!offline && project.expoVersion && !expo) warnings.push('Could not fetch Expo releases from npm; the SDK check was skipped. Run again.');
 
@@ -421,6 +426,7 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
     }
   }
 
+  reportIncomplete();
   findings.sort((a, b) => SEVERITIES.indexOf(a.severity) - SEVERITIES.indexOf(b.severity));
   return {
     tool: 'nativekeel',

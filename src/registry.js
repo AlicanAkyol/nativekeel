@@ -1,11 +1,28 @@
 const UA = { 'User-Agent': 'nativekeel' };
 
-export async function fetchJson(url, headers = {}) {
-  try {
-    const res = await fetch(url, { headers: { ...UA, ...headers }, signal: AbortSignal.timeout(30000) });
-    if (!res.ok) return null;
-    return await res.json();
-  } catch {
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// GET a JSON document. Returns null for "not found" (a package that does not exist is an
+// answer, not an error). Rate limits (429) and server errors are retried with backoff; if the
+// request still fails, `stats.failed` is incremented so the report can say it is incomplete.
+export async function fetchJson(url, headers = {}, stats = null, { retries = 3, wait = sleep } = {}) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const res = await fetch(url, { headers: { ...UA, ...headers }, signal: AbortSignal.timeout(30000) });
+      if (res.ok) return await res.json();
+      if (res.status === 404) return null;
+      if ((res.status === 429 || res.status >= 500) && attempt < retries) {
+        const after = Number(res.headers.get('retry-after'));
+        await wait(Math.min(Number.isFinite(after) && after > 0 ? after * 1000 : 1000 * 2 ** attempt, 10000));
+        continue;
+      }
+    } catch {
+      if (attempt < retries) {
+        await wait(1000 * 2 ** attempt);
+        continue;
+      }
+    }
+    if (stats) stats.failed++;
     return null;
   }
 }
