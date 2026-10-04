@@ -125,8 +125,40 @@ function safetyNetPhase(tool) {
   };
 }
 
+// Libraries whose version an Expo SDK decides (from Expo's bundledNativeModules.json). When the
+// app's own copy of that file is installed it is used instead; this list covers scans without
+// node_modules.
+const EXPO_PINNED = new Set([
+  'react-native-reanimated', 'react-native-worklets', 'react-native-gesture-handler', 'react-native-screens',
+  'react-native-safe-area-context', 'react-native-webview', 'react-native-svg', 'react-native-pager-view',
+  'react-native-maps', 'react-native-view-shot', 'react-native-get-random-values', 'react-native-keyboard-controller',
+  '@react-native-async-storage/async-storage', '@react-native-community/datetimepicker', '@react-native-community/slider',
+  '@react-native-community/netinfo', '@react-native-picker/picker', '@react-native-masked-view/masked-view',
+  'lottie-react-native', '@shopify/flash-list', '@shopify/react-native-skia', '@stripe/stripe-react-native',
+]);
+
+function expoPinnedNames(root) {
+  try {
+    let dir = root;
+    while (true) {
+      const file = path.join(dir, 'node_modules', 'expo', 'bundledNativeModules.json');
+      if (fs.existsSync(file)) return new Set(Object.keys(JSON.parse(fs.readFileSync(file, 'utf8'))));
+      const parent = path.dirname(dir);
+      if (parent === dir) return EXPO_PINNED;
+      dir = parent;
+    }
+  } catch {
+    return EXPO_PINNED;
+  }
+}
+
 export function buildPlan(result) {
-  const pm = commands[packageManager(result.project.root)];
+  const isExpo = !!result.project.expo;
+  const basePm = commands[packageManager(result.project.root)];
+  // In Expo projects `npx expo install` picks the version that matches the SDK.
+  const pm = isExpo ? { ...basePm, add: 'npx expo install' } : basePm;
+  const pinned = isExpo ? expoPinnedNames(result.project.root) : new Set();
+  const movesWithExpo = (name) => isExpo && (/^(expo-|@expo\/)/.test(name) || name === 'expo' || name === 'jest-expo' || pinned.has(name));
   const installed = new Set(result.deps.map((d) => d.name));
   const byKind = (kind) => result.findings.filter((f) => f.fix && f.fix.kind === kind).map((f) => f.fix);
   const phases = [];
@@ -266,7 +298,8 @@ export function buildPlan(result) {
     });
   }
 
-  const nativeBumps = byKind('bump-dep').filter((d) => d.native);
+  const expoMoves = byKind('bump-dep').filter((d) => movesWithExpo(d.name));
+  const nativeBumps = byKind('bump-dep').filter((d) => d.native && !movesWithExpo(d.name));
   if (nativeBumps.length) {
     phases.push({
       title: 'Update native modules on the current React Native version',
@@ -354,13 +387,17 @@ export function buildPlan(result) {
     const steps = [];
     for (let v = expo.from + 1; v <= expo.to; v++) steps.push(`SDK ${v - 1} → ${v}: \`npx expo install expo@^${v}.0.0 --fix\`, read the SDK ${v} changelog, run \`npx expo-doctor\`, build.`);
     steps.push('Each SDK brings its own React Native version; do not upgrade React Native separately.');
+    if (expoMoves.length) {
+      const names = expoMoves.map((d) => `\`${d.name}\``);
+      steps.push(`\`npx expo install --fix\` also moves ${names.slice(0, 8).join(', ')}${names.length > 8 ? ` and ${names.length - 8} more` : ''} to the versions each SDK expects. Do not bump them yourself: a newer major than the SDK supports fails to build.`);
+    }
     if (!result.project.managed) {
       steps.push('This app has its own android/ and ios/ folders: after each SDK, apply the native changes from Expo\'s native project upgrade helper (docs.expo.dev/bare/upgrade), then `pod install` and build both platforms.');
     }
     phases.push({ title: `Upgrade Expo SDK ${expo.from} → ${expo.to}`, why: 'Expo only supports one SDK step at a time reliably.', steps });
   }
 
-  const jsBumps = byKind('bump-dep').filter((d) => !d.native);
+  const jsBumps = byKind('bump-dep').filter((d) => !d.native && !movesWithExpo(d.name));
   if (jsBumps.length) {
     phases.push({
       title: 'Update JavaScript-only packages',

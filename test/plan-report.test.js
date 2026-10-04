@@ -121,3 +121,23 @@ test('safety net: uses the UI tests the project already has', () => {
   const net = plan.phases.find((p) => p.title === 'Set up a safety net');
   assert.match(net.steps[0], /Run your Maestro suite/);
 });
+
+test('Expo plan: SDK-managed packages move with `expo install --fix`, not by hand', () => {
+  const expoResult = {
+    ...result,
+    project: { ...result.project, name: 'e', root: '/nonexistent', reactNative: '0.69.9', expo: '46.0.21', managed: true },
+    findings: [
+      { id: 'expo-unsupported', severity: 'critical', area: 'expo', title: 'x', detail: 'x', fix: { kind: 'upgrade-expo', from: 46, to: 48 } },
+      { id: 'dep-major:expo-file-system', severity: 'low', area: 'dependency', title: 'x', detail: 'x', fix: { kind: 'bump-dep', name: 'expo-file-system', from: '14.1.0', to: '57.0.7', native: true } },
+      { id: 'dep-major:react-native-reanimated', severity: 'low', area: 'dependency', title: 'x', detail: 'x', fix: { kind: 'bump-dep', name: 'react-native-reanimated', from: '2.9.1', to: '4.7.1', native: true } },
+      { id: 'dep-major:react-native-blob-util', severity: 'low', area: 'dependency', title: 'x', detail: 'x', fix: { kind: 'bump-dep', name: 'react-native-blob-util', from: '0.19.0', to: '0.25.1', native: true } },
+      { id: 'dep-risk:expo-av', severity: 'high', area: 'dependency', title: 'x', detail: 'x', fix: { kind: 'replace-dep', name: 'expo-av', native: true, unmaintained: true, alternatives: ['expo-audio'] } },
+    ],
+  };
+  const md = planToMarkdown(expoResult, buildPlan(expoResult));
+  assert.ok(!/`expo-file-system` 14\.1\.0 → 57/.test(md), 'never bump an Expo package past the SDK');
+  assert.ok(!/`react-native-reanimated` 2\.9\.1 → 4/.test(md));
+  assert.match(md, /`react-native-blob-util` 0\.19\.0 → 0\.25\.1/, 'packages Expo does not pin are still listed');
+  assert.match(md, /`npx expo install --fix` also moves `expo-file-system`, `react-native-reanimated`/);
+  assert.match(md, /npx expo install expo-audio/);
+});
