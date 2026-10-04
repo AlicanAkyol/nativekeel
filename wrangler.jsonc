@@ -1,0 +1,10 @@
+// Cloudflare deploy config for the website only (the npm package does not include this file).
+// The site is static: Cloudflare serves the files in ./site as they are.
+{
+  "name": "nativekeel",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./site",
+    "not_found_handling": "404-page"
+  }
+}
