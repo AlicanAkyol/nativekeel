@@ -146,14 +146,16 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
     }
 
     // 2. New Architecture
-    const off = ['android', 'ios'].filter((p) => project.newArch[p] === false);
+    // Not set means the default: off before 0.76, on from 0.76.
+    const unset = minorOf(current) < 76 ? ['android', 'ios'].filter((p) => project.newArch[p] === null) : [];
+    const off = ['android', 'ios'].filter((p) => project.newArch[p] === false || unset.includes(p));
     if (minorOf(current) < NEW_ARCH_ONLY_MINOR && off.length && rn.lines[0] >= NEW_ARCH_ONLY_MINOR) {
       add({
         id: 'new-arch-disabled',
         severity: 'critical',
         area: 'new-architecture',
-        title: `New Architecture is disabled (${off.join(' + ')})`,
-        detail: `The legacy architecture was removed in 0.${NEW_ARCH_ONLY_MINOR}. This app cannot upgrade past 0.${NEW_ARCH_ONLY_MINOR - 1} until it migrates.`,
+        title: `New Architecture is ${unset.length === off.length ? 'off' : 'disabled'} (${off.join(' + ')})`,
+        detail: `${unset.length ? `Not set, and before React Native 0.76 the default is off. ` : ''}The legacy architecture was removed in 0.${NEW_ARCH_ONLY_MINOR}. This app cannot upgrade past 0.${NEW_ARCH_ONLY_MINOR - 1} until it migrates.`,
         fix: { kind: 'enable-new-arch', platforms: off },
       });
     }
@@ -321,7 +323,7 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
   const newArchOn = project.newArch.android !== false && project.newArch.ios !== false && minorOf(current || '0.0') >= 76;
   // The legacy architecture ends at 0.81, so any older app with it off has to migrate; this
   // holds even when the latest release could not be fetched (offline).
-  const archOff = project.newArch.android === false || project.newArch.ios === false;
+  const archOff = project.newArch.android === false || project.newArch.ios === false || (!!current && minorOf(current) < 76 && (project.newArch.android === null || project.newArch.ios === null));
   const newArchRequired =
     findings.some((f) => f.id === 'new-arch-disabled') || (archOff && current && minorOf(current) < NEW_ARCH_ONLY_MINOR);
   for (const { issue, dep } of matchKnownIssues({ deps, rnVersion: current, newArchOn, newArchRequired })) {

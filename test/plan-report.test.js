@@ -141,3 +141,21 @@ test('Expo plan: SDK-managed packages move with `expo install --fix`, not by han
   assert.match(md, /`npx expo install --fix` also moves `expo-file-system`, `react-native-reanimated`/);
   assert.match(md, /npx expo install expo-audio/);
 });
+
+test('old app: the New Architecture switch goes inside the React Native hops, at 0.76–0.81', () => {
+  const old = {
+    ...result,
+    project: { ...result.project, reactNative: '0.63.4' },
+    findings: [
+      { id: 'rn-unsupported', severity: 'critical', area: 'react-native', title: 'x', detail: 'x', fix: { kind: 'upgrade-rn', from: '0.63.4', to: '0.87.1' } },
+      { id: 'new-arch-disabled', severity: 'critical', area: 'new-architecture', title: 'x', detail: 'x', fix: { kind: 'enable-new-arch', platforms: ['android', 'ios'] } },
+    ],
+  };
+  const plan = buildPlan(old);
+  assert.ok(!plan.phases.some((p) => p.title.startsWith('Turn on the New Architecture on your current version')), 'not on 0.63');
+  const steps = plan.phases.find((p) => p.title.startsWith('Upgrade React Native')).steps;
+  const stop = steps.findIndex((s) => s.startsWith('**Stop at 0.78.0 and turn on the New Architecture**'));
+  assert.ok(stop > 0);
+  assert.ok(steps[stop - 1].includes('→ 0.78.0'), 'right after reaching 0.78');
+  assert.ok(steps[stop + 1].startsWith('New Architecture: '));
+});

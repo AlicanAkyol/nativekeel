@@ -358,3 +358,15 @@ test('fetchJson: retries rate limits, says nothing about 404, counts real failur
     globalThis.fetch = realFetch;
   }
 });
+
+test('New Architecture not set on an old app means off', async () => {
+  const root = makeProject({
+    'package.json': { name: 'old', dependencies: { 'react-native': '0.63.4' } },
+    'node_modules/react-native/package.json': { version: '0.63.4' },
+    'android/gradle.properties': 'android.useAndroidX=true\n',
+  });
+  const result = await analyze(loadProject(root), { get: registry, now: NOW });
+  const f = result.findings.find((x) => x.id === 'new-arch-disabled');
+  assert.ok(f, 'a 0.63 app has to migrate before 0.82');
+  assert.match(f.detail, /before React Native 0\.76 the default is off/);
+});

@@ -317,6 +317,7 @@ export function buildPlan(result) {
       steps: [`In \`${depProvider.file}\`: \`#import <ReactAppDependencyProvider/RCTAppDependencyProvider.h>\` and \`self.dependencyProvider = [RCTAppDependencyProvider new];\` before \`[super application:didFinishLaunchingWithOptions:]\`.`],
     });
   }
+  let deferredArch = null;
   if (arch) {
     const steps = [];
     for (const j of byKind('interop-job')) {
@@ -337,11 +338,18 @@ export function buildPlan(result) {
     steps.push('Clean everything (`./gradlew clean`, `watchman watch-del-all`, delete `ios/build` and `ios/Pods`). Switching architecture without a clean build fails on stale codegen output (e.g. missing `Native…Spec` classes).');
     steps.push('Build debug and release on both platforms.');
     steps.push('Click through every screen that uses a native module. Interop-layer problems show up at runtime, not at build time.');
-    phases.push({
-      title: 'Turn on the New Architecture on your current version',
-      why: `React Native 0.${NEW_ARCH_ONLY_MINOR} removed the legacy architecture. Switching now, before changing the React Native version, keeps the two kinds of breakage apart.`,
-      steps,
-    });
+    // Before 0.76 the New Architecture is too immature to switch on in place: do it on the way,
+    // at the first stop between 0.76 and 0.81 (or Expo SDK 52+), in its own commit.
+    const currentMinor = Number((result.project.reactNative || '0.99').split('.')[1]);
+    if (currentMinor < 76) {
+      deferredArch = steps;
+    } else {
+      phases.push({
+        title: 'Turn on the New Architecture on your current version',
+        why: `React Native 0.${NEW_ARCH_ONLY_MINOR} removed the legacy architecture. Switching now, before changing the React Native version, keeps the two kinds of breakage apart.`,
+        steps,
+      });
+    }
   }
 
   const rn = byKind('upgrade-rn')[0];
@@ -368,6 +376,19 @@ export function buildPlan(result) {
       from = to;
       return step;
     });
+    if (deferredArch) {
+      const hops = upgradeHops(rn.from, rn.to);
+      const at = hops.findIndex((h) => Number(h.split('.')[1]) >= 76 && Number(h.split('.')[1]) < NEW_ARCH_ONLY_MINOR);
+      if (at >= 0) {
+        steps.splice(
+          at + 1,
+          0,
+          `**Stop at ${hops[at]} and turn on the New Architecture** before going further: 0.${NEW_ARCH_ONLY_MINOR} removed the legacy one. Do it in its own commit:`,
+          ...deferredArch.map((x) => `New Architecture: ${x}`),
+        );
+        deferredArch = null;
+      }
+    }
     steps.push('Bump `react`, `@react-native/*` packages and the Metro/Babel config to the versions the Upgrade Helper shows for the target.');
     const patchesReview = byKind('patches-review')[0];
     if (patchesReview) {
@@ -385,7 +406,14 @@ export function buildPlan(result) {
   const expo = byKind('upgrade-expo')[0];
   if (expo) {
     const steps = [];
-    for (let v = expo.from + 1; v <= expo.to; v++) steps.push(`SDK ${v - 1} → ${v}: \`npx expo install expo@^${v}.0.0 --fix\`, read the SDK ${v} changelog, run \`npx expo-doctor\`, build.`);
+    for (let v = expo.from + 1; v <= expo.to; v++) {
+      steps.push(`SDK ${v - 1} → ${v}: \`npx expo install expo@^${v}.0.0 --fix\`, read the SDK ${v} changelog, run \`npx expo-doctor\`, build.`);
+      // SDK 52 ships React Native 0.76, the first version where switching is practical.
+      if (deferredArch && v >= 52) {
+        steps.push(`**At SDK ${v}, turn on the New Architecture** before going further (it is the default from SDK 53, and React Native 0.${NEW_ARCH_ONLY_MINOR} removed the legacy one):`, ...deferredArch.map((x) => `New Architecture: ${x}`));
+        deferredArch = null;
+      }
+    }
     steps.push('Each SDK brings its own React Native version; do not upgrade React Native separately.');
     if (expoMoves.length) {
       const names = expoMoves.map((d) => `\`${d.name}\``);
