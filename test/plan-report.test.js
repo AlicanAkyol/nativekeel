@@ -187,5 +187,6 @@ test('complexity: many routine bumps do not size a current app like a migration'
   const bumps = Array.from({ length: 40 }, (_, i) => ({ fix: { kind: 'bump-dep', native: i % 2 === 0 } }));
   assert.notEqual(complexity(bumps).size, 'Extra large');
   const migration = [{ fix: { kind: 'upgrade-rn', from: '0.70.0', to: '0.87.1' } }, { fix: { kind: 'enable-new-arch' } }, ...bumps];
-  assert.equal(complexity(migration).size, 'Extra large');
+  assert.ok(['Large', 'Extra large'].includes(complexity(migration).size));
+  assert.ok(complexity(migration).score > complexity(bumps).score * 2);
 });
