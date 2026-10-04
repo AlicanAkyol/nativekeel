@@ -24,7 +24,7 @@
   ],
   "license": "MIT",
   "scripts": {
-    "test": "node --test test/",
+    "test": "node --test test/*.test.js",
     "scan": "node bin/nativekeel.js"
   },
   "homepage": "https://nativekeel.com"
