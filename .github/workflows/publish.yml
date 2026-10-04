@@ -1,6 +1,6 @@
-# Publishes to npm when a GitHub release is created.
-# Provenance links the npm package to this exact commit and workflow run.
-# Setup: add an npm automation token as the NPM_TOKEN repository secret.
+# Publishes to npm when a GitHub release is created, using npm trusted publishing (OIDC):
+# no npm token is stored anywhere. npm checks that this repository and this workflow file
+# are the trusted publisher configured for the package, and attaches provenance automatically.
 name: publish
 on:
   release:
@@ -17,7 +17,6 @@ jobs:
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
+      - run: npm install -g npm@^11.5.1
       - run: npm test
-      - run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - run: npm publish --access public
