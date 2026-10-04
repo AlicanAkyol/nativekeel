@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildPlan, planToMarkdown, upgradeHops } from '../src/plan.js';
+import { buildPlan, planToMarkdown, upgradeHops, existingUiTests } from '../src/plan.js';
+import { makeProject } from './helpers.js';
 import { htmlReport } from '../src/report-html.js';
 import { textReport } from '../src/report-text.js';
 
@@ -29,6 +30,7 @@ test('plan orders phases: leaks, blockers, architecture, then React Native', () 
   const titles = plan.phases.map((p) => p.title);
   const idx = (s) => titles.findIndex((t) => t.startsWith(s));
   assert.ok(idx('Stop the leaks') === 0);
+  assert.equal(idx('Set up a safety net'), 1, 'UI tests come before the first code change');
   assert.ok(idx('Replace blocking') < idx('Turn on the New Architecture'));
   assert.ok(idx('Turn on the New Architecture') < idx('Upgrade React Native'));
   assert.equal(titles.at(-1), 'Verify before you ship');
@@ -100,4 +102,22 @@ test('text report: non-dependency low findings are not hidden under the outdated
   const text = textReport(r, { color: false });
   assert.match(text, /LOW {6}MainApplication.java calls getDefaultReactHost\n {11}Pass null\./);
   assert.match(text, /1 package is a major version behind:\n {11}a 1.0.0 → 2.0.0/);
+});
+
+test('safety net: only when the plan changes code', () => {
+  const onlySecret = { ...result, findings: result.findings.filter((f) => f.area === 'secret') };
+  const titles = buildPlan(onlySecret).phases.map((p) => p.title);
+  assert.ok(!titles.includes('Set up a safety net'));
+});
+
+test('safety net: uses the UI tests the project already has', () => {
+  const maestro = makeProject({ '.maestro/login.yaml': 'appId: com.example\n---\n- launchApp\n', 'package.json': '{}' });
+  assert.equal(existingUiTests(maestro, new Set()), 'Maestro');
+  assert.equal(existingUiTests(makeProject({ 'package.json': '{}' }), new Set(['detox'])), 'Detox');
+  const ciYaml = makeProject({ 'e2e/workflow.yml': 'name: ci\non: push\n' });
+  assert.equal(existingUiTests(ciYaml, new Set()), null, 'a YAML file is not a Maestro flow');
+
+  const plan = buildPlan({ ...result, project: { ...result.project, root: maestro } });
+  const net = plan.phases.find((p) => p.title === 'Set up a safety net');
+  assert.match(net.steps[0], /Run your Maestro suite/);
 });

@@ -1,6 +1,6 @@
 {
   "name": "nativekeel",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Health check for React Native apps: version support, New Architecture blockers, unmaintained native modules and leaked secrets.",
   "type": "module",
   "bin": {

@@ -75,6 +75,56 @@ export function complexity(findings) {
   return { score, size };
 }
 
+// UI test tooling the project already has, so the plan can say "run yours" instead of
+// "write some". Looks for Maestro flows and the common e2e runners.
+export function existingUiTests(root, installed) {
+  for (const name of ['detox', 'appium', 'webdriverio', '@wdio/cli']) {
+    if (installed.has(name)) return name === 'detox' ? 'Detox' : 'Appium';
+  }
+  for (const dir of ['.maestro', 'maestro', 'e2e', '.e2e']) {
+    try {
+      const files = fs.readdirSync(path.join(root, dir), { recursive: true });
+      if (files.some((f) => /\.ya?ml$/.test(String(f)))) {
+        const text = files
+          .filter((f) => /\.ya?ml$/.test(String(f)))
+          .slice(0, 20)
+          .map((f) => fs.readFileSync(path.join(root, dir, String(f)), 'utf8'))
+          .join('\n');
+        if (/^appId:/m.test(text)) return 'Maestro';
+      }
+    } catch {
+      // no such directory
+    }
+  }
+  return null;
+}
+
+function safetyNetPhase(tool) {
+  const why =
+    'A build that compiles and launches can still crash after login or hide a button. On a real upgrade, UI flows caught three such bugs that build and launch checks missed.';
+  if (tool) {
+    return {
+      title: 'Set up a safety net',
+      why,
+      steps: [
+        `Run your ${tool} suite on both platforms on the current version before changing anything, and keep the results as the baseline.`,
+        'Make sure it covers what users do first: launch, sign-in with a test account, and every tab or main screen. Add flows where it does not.',
+        'Run it again at the end of every phase below.',
+      ],
+    };
+  }
+  return {
+    title: 'Set up a safety net',
+    why,
+    steps: [
+      'Before changing anything, write a few UI flows (Maestro is the quickest: maestro.mobile.dev): launch, sign-in with a test account, and every tab or main screen.',
+      'Keep test credentials in environment variables, never in the repo. Never let a flow press a button that writes to production (sign-up, purchase, posting).',
+      'Assert that no error banner or red screen appears, not only that the app is running: a native module that fails to load can leave the process alive behind a red screen.',
+      'Run the flows on both platforms on the current version, then again at the end of every phase below.',
+    ],
+  };
+}
+
 export function buildPlan(result) {
   const pm = commands[packageManager(result.project.root)];
   const installed = new Set(result.deps.map((d) => d.name));
@@ -321,6 +371,12 @@ export function buildPlan(result) {
       why: 'Current React Native no longer supports older OS versions. Check your analytics for how many users this drops before you ship.',
       steps: minimums,
     });
+  }
+
+  // Only worth it when the plan changes code: secrets alone do not need UI tests.
+  const leaksFirst = phases[0] && phases[0].title === 'Stop the leaks' ? 1 : 0;
+  if (phases.length > leaksFirst) {
+    phases.splice(leaksFirst, 0, safetyNetPhase(existingUiTests(result.project.root, installed)));
   }
 
   phases.push({
