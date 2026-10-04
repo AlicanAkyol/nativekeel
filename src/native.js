@@ -274,15 +274,18 @@ export function nativeChecks(project, { rnLatest = null, now = new Date() } = {}
   }
 
   // Hermes: JavaScriptCore is no longer bundled with React Native.
-  const hermesOff = /^\s*hermesEnabled\s*=\s*false/m.test(gradleProps) || /:hermes_enabled\s*=>\s*false/.test(podfile);
-  if (hermesOff) {
+  const hermesOffOn = [
+    /^\s*hermesEnabled\s*=\s*false/m.test(gradleProps) && 'android',
+    /^[^#\n]*:hermes_enabled\s*=>\s*false/m.test(podfile) && 'ios',
+  ].filter(Boolean);
+  if (hermesOffOn.length) {
     add({
       id: 'hermes-disabled',
       severity: 'medium',
       area: 'native',
-      title: 'Hermes is disabled (JavaScriptCore)',
+      title: `Hermes is disabled (JavaScriptCore on ${hermesOffOn.join(' + ')})`,
       detail: 'JavaScriptCore is no longer part of React Native; newer versions need the community JSC package. Switching to Hermes is the supported path and usually faster.',
-      fix: { kind: 'enable-hermes' },
+      fix: { kind: 'enable-hermes', platforms: hermesOffOn },
     });
   }
 

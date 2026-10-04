@@ -329,3 +329,10 @@ test('empty and placeholder signing passwords are not leaks', () => {
   spawnSync('git', ['add', '-A'], { cwd: root });
   assert.ok(!nativeChecks(loadProject(root), { now: NOW }).some((f) => f.id.startsWith('signing-password')));
 });
+
+test('Hermes: only the platform that has it off', () => {
+  const found = check(rnApp('0.77.0', { 'android/gradle.properties': 'hermesEnabled=true\n', 'ios/Podfile': ':hermes_enabled => false\n' }));
+  const f = found.find((x) => x.id === 'hermes-disabled');
+  assert.deepEqual(f.fix.platforms, ['ios']);
+  assert.match(f.title, /on ios\)/);
+});

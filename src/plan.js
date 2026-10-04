@@ -294,8 +294,10 @@ export function buildPlan(result) {
   if (byKind('remove-flipper').length) {
     cleanup.push('Remove Flipper: delete the `com.facebook.flipper` dependencies and `FLIPPER_VERSION` on Android, `use_flipper!` / Flipper config in the Podfile, and the `ReactNativeFlipper` initialization code. Use React Native DevTools instead.');
   }
-  if (byKind('enable-hermes').length) {
-    cleanup.push('Switch to Hermes: set `hermesEnabled=true` in `android/gradle.properties` and `:hermes_enabled => true` in the Podfile, then test anything that relied on JavaScriptCore behavior (Intl, Date parsing).');
+  const hermes = byKind('enable-hermes')[0];
+  if (hermes) {
+    const where = (hermes.platforms || ['android', 'ios']).map((pl) => (pl === 'android' ? 'set `hermesEnabled=true` in `android/gradle.properties`' : 'set `:hermes_enabled => true` in the Podfile'));
+    cleanup.push(`Switch to Hermes: ${where.join(' and ')}, then test anything that relied on JavaScriptCore behavior (Intl, Date parsing).`);
   }
   if (cleanup.length) {
     phases.push({ title: 'Remove legacy tooling', why: 'Leftovers from older templates break on newer React Native versions; removing them first shrinks the upgrade diff.', steps: cleanup });
