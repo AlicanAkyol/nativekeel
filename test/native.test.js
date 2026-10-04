@@ -126,6 +126,10 @@ test('iOS privacy manifest', () => {
   assert.ok(ids(check(rnApp('0.80.0', { 'ios/Podfile': '' }))).includes('ios-privacy-manifest'));
   assert.ok(!ids(check(rnApp('0.80.0', { 'ios/Podfile': '', 'ios/App/PrivacyInfo.xcprivacy': '<plist/>' }))).includes('ios-privacy-manifest'));
   assert.ok(ids(check(rnApp('0.80.0', { 'ios/Podfile': '', 'ios/Pods/X/PrivacyInfo.xcprivacy': '' }))).includes('ios-privacy-manifest'), 'manifests inside Pods do not count');
+  const sev = (version, podfile = '') => check(rnApp(version, { 'ios/Podfile': podfile })).find((f) => f.id === 'ios-privacy-manifest').severity;
+  assert.equal(sev('0.80.0'), 'low', 'pod install generates it from 0.75');
+  assert.equal(sev('0.74.5'), 'high');
+  assert.equal(sev('0.80.0', 'use_react_native!(privacy_file_aggregation_enabled: false)\n'), 'high', 'aggregation turned off');
 });
 
 test('Flipper and Hermes', () => {

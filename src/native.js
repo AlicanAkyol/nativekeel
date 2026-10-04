@@ -290,13 +290,26 @@ export function nativeChecks(project, { rnLatest = null, now = new Date() } = {}
   // uses "required reason" APIs, so every React Native app needs one.
   if (hasIos && !project.isLibrary) {
     const manifests = findFiles(path.join(root, 'ios'), (name) => name.endsWith('.xcprivacy'));
-    if (!manifests.length) {
+    // From 0.75, `pod install` writes the manifest (with React Native's and the pods' reasons)
+    // and adds it to the app target, unless the Podfile turns aggregation off.
+    const aggregationOff = /privacy_file_aggregation_enabled\s*(?:=>|:)\s*false|RCT_AGGREGATE_PRIVACY_FILES['"]?\]?\s*=\s*['"]?0/.test(podfile);
+    const generated = rn !== null && rn >= 75 && !aggregationOff;
+    if (!manifests.length && generated) {
+      add({
+        id: 'ios-privacy-manifest',
+        severity: 'low',
+        area: 'store',
+        title: 'iOS privacy manifest is generated at pod install, not committed',
+        detail: "React Native 0.75+ creates PrivacyInfo.xcprivacy during `pod install` with the required-reason APIs of React Native and your pods. Commit it, then add what only you know: collected data types and tracking. App Store Connect checks those too.",
+        fix: { kind: 'privacy-manifest', generated: true },
+      });
+    } else if (!manifests.length) {
       add({
         id: 'ios-privacy-manifest',
         severity: 'high',
         area: 'store',
         title: 'iOS privacy manifest (PrivacyInfo.xcprivacy) is missing',
-        detail: 'App Store Connect rejects uploads that use required-reason APIs without declaring them. React Native uses several (UserDefaults, file timestamps, system boot time). Add PrivacyInfo.xcprivacy to the app target.',
+        detail: `App Store Connect rejects uploads that use required-reason APIs without declaring them. React Native uses several (UserDefaults, file timestamps, system boot time). ${rn !== null && rn < 75 ? 'React Native before 0.75 does not add it to the app for you: ' : ''}Add PrivacyInfo.xcprivacy to the app target.`,
         fix: { kind: 'privacy-manifest' },
       });
     }

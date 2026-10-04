@@ -190,7 +190,10 @@ export function buildPlan(result) {
   }
 
   const storeSteps = [];
-  if (byKind('privacy-manifest').length) {
+  const privacy = byKind('privacy-manifest')[0];
+  if (privacy && privacy.generated) {
+    storeSteps.push('Run `pod install`, commit the generated `PrivacyInfo.xcprivacy`, and add your collected data types and tracking to it (React Native only fills in the required-reason APIs).');
+  } else if (privacy) {
     storeSteps.push('Add `PrivacyInfo.xcprivacy` to the iOS app target. Start from the file in the React Native template and declare the required-reason APIs your app and SDKs use (UserDefaults, file timestamps, system boot time, disk space).');
   }
   const align = byKind('align-16kb')[0];
