@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Case study · NativeKeel</title>
+<meta name="description" content="A production React Native app was rejected by App Review for a launch crash. The fix that went out hid the bug. Here is what was really wrong, and the 13 other problems standing between the app and the next React Native.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b5d55'/%3E%3Cpath d='M16 6v16M9 22h14M11 26h10' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#fbfaf7;--surface:#ffffff;--text:#15171b;--muted:#5d6470;--line:#e4e2dc;
+  --accent:#0b5d55;--accent-ink:#ffffff;--accent-soft:#e3f1ee;--red:#c62828;--amber:#b26a00;
+  --code-bg:#12151a;--code-text:#d9dee6;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--bg:#0e1013;--surface:#161a1f;--text:#e9ebef;--muted:#9aa2ad;--line:#262b32;--accent:#3cc4b4;--accent-ink:#06201d;--accent-soft:#12302c;--red:#ff6b6b;--amber:#f0a73a;--code-bg:#090b0e}
+}
+:root[data-theme="dark"]{--bg:#0e1013;--surface:#161a1f;--text:#e9ebef;--muted:#9aa2ad;--line:#262b32;--accent:#3cc4b4;--accent-ink:#06201d;--accent-soft:#12302c;--red:#ff6b6b;--amber:#f0a73a;--code-bg:#090b0e}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:17px/1.7 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+.wrap{max-width:760px;margin:0 auto;padding:0 16px}
+header.top{display:flex;align-items:center;justify-content:space-between;padding:18px 0;max-width:1040px;margin:0 auto;padding-left:16px;padding-right:16px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;color:var(--text);text-decoration:none}
+.logo svg{width:28px;height:28px}
+header.top a.back{color:var(--muted);text-decoration:none;font-size:15px}
+.eyebrow{font:600 13px ui-monospace,SFMono-Regular,Menlo,monospace;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin:40px 0 8px}
+h1{font-size:clamp(30px,4.6vw,42px);line-height:1.15;letter-spacing:-.02em;margin:0 0 16px}
+.lead{font-size:20px;color:var(--muted);margin:0 0 28px}
+h2{font-size:24px;letter-spacing:-.01em;margin:48px 0 8px}
+h3{font-size:18px;margin:28px 0 6px}
+p{margin:0 0 16px}
+.facts{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:8px 0 32px}
+.fact{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px}
+.fact b{display:block;font-size:24px;line-height:1.2}
+.fact span{font-size:13px;color:var(--muted);line-height:1.4;display:block;margin-top:4px}
+.before-after{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:8px 0 24px}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px 18px;font-size:15px}
+.box h4{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.box ul{margin:0;padding-left:18px}
+pre{background:var(--code-bg);color:var(--code-text);border-radius:10px;padding:14px 16px;overflow-x:auto;font:13.5px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;margin:0 0 18px}
+code{font:14px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--accent-soft);padding:1px 5px;border-radius:5px;overflow-wrap:anywhere}
+pre code{background:none;padding:0;font-size:inherit}
+.callout{border-left:4px solid var(--accent);background:var(--surface);border-radius:0 10px 10px 0;padding:14px 18px;margin:0 0 20px;font-size:16px}
+.callout.warn{border-left-color:var(--amber)}
+.step{border-top:1px solid var(--line);padding-top:8px}
+.tag{display:inline-block;font:600 12px ui-monospace,monospace;text-transform:uppercase;letter-spacing:.05em;padding:2px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);margin-right:6px}
+.tag.red{background:color-mix(in srgb,var(--red) 14%,transparent);color:var(--red)}
+.tag.amber{background:color-mix(in srgb,var(--amber) 16%,transparent);color:var(--amber)}
+table{width:100%;border-collapse:collapse;font-size:15px;margin:0 0 24px}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+td.ok{color:var(--accent);font-weight:600;white-space:nowrap}
+.cta{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:24px;margin:48px 0}
+.cta h2{margin-top:0}
+.btn{display:inline-block;text-decoration:none;font-weight:600;padding:11px 16px;border-radius:9px;background:var(--accent);color:var(--accent-ink);margin:6px 8px 0 0}
+.btn.ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
+footer{border-top:1px solid var(--line);margin-top:56px;padding:24px 0 40px;color:var(--muted);font-size:14px}
+@media (max-width:680px){.facts{grid-template-columns:repeat(2,1fr)}.before-after{grid-template-columns:1fr}body{font-size:16px}.lead{font-size:18px}}
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="logo" href="/">
+    <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="var(--accent)"/><path d="M16 6v16M9 22h14M11 26h10" stroke="var(--accent-ink)" stroke-width="3" stroke-linecap="round"/></svg>
+    NativeKeel
+  </a>
+  <a class="back" href="/">← Home</a>
+</header>
+
+<main class="wrap">
+  <p class="eyebrow">Case study · October 2026</p>
+  <h1>The launch crash App Review rejected, and the fix that hid it</h1>
+  <p class="lead">A consumer app in production on both stores, on React Native 0.77, had a release rejected for crashing at launch. The emergency fix made the crash go away. It did not fix it. This is what was really wrong, and the other problems standing between the app and a supported React Native.</p>
+
+  <div class="facts">
+    <div class="fact"><b>14</b><span>problems fixed, each verified by builds on both platforms</span></div>
+    <div class="fact"><b>0.77 → 0.80</b><span>React Native, with React 18 → 19</span></div>
+    <div class="fact"><b>43 → 38</b><span>native modules; Podfile.lock −1,361 lines</span></div>
+    <div class="fact"><b>~2 h</b><span>engineering time, build waits included</span></div>
+  </div>
+
+  <div class="before-after">
+    <div class="box">
+      <h4>Before</h4>
+      <ul>
+        <li>React Native 0.77.1, out of support</li>
+        <li>New Architecture switched off to stop a crash</li>
+        <li>App Store release rejected</li>
+        <li>Upgrades past 0.81 impossible</li>
+      </ul>
+    </div>
+    <div class="box">
+      <h4>After</h4>
+      <ul>
+        <li>React Native 0.80.3 and React 19.1</li>
+        <li>New Architecture on, iOS and Android</li>
+        <li>Root cause of the rejection fixed</li>
+        <li>Clean path to the next upgrade</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>1. The rejection: a crash that only happens in Release</h2>
+  <p>App Review rejected the build for crashing on launch. React Native 0.76+ turns the New Architecture on by default, so the team switched it off in the Podfile and shipped again. The crash disappeared, and the diagnosis in the commit blamed a navigation library.</p>
+  <p>Turning the New Architecture back on and running the app on a simulator showed the real symptom. Not a crash in Debug, just one error line:</p>
+<pre><code>Error: Failed to call into JavaScript module method RCTEventEmitter.receiveEvent().
+Module has not been registered as callable. Registered callable JavaScript modules
+(n = 9): AppRegistry, HMRClient, GlobalPerformanceLogger, RCTNativeAppEventEmitter, ...</code></pre>
+  <p>In Debug React Native logs it. In Release it is fatal. That is why it only showed up for App Review.</p>
+  <p>To see which component sent the event, we temporarily registered a stub for the missing module and logged what arrived:</p>
+<pre><code>'NKDIAG receiveEvent', 2, 'topInsetsChange', '{"frame":{"width":402,"height":874,"x":0,"y":0},"insets":{"bottom":34,"right":0,"top":62,"left":0}}'</code></pre>
+  <p><code>topInsetsChange</code> comes from <code>SafeAreaProvider</code>. The library ships a proper New Architecture component, and it was compiled into the app, but React Native was not using it: it was running the old version through the compatibility layer, whose events go to a module that no longer exists without the bridge.</p>
+  <div class="callout"><strong>Root cause:</strong> React Native 0.77 requires one new line in <code>AppDelegate.mm</code>. The app had been upgraded without it, so no third-party component was registered with the New Architecture.</div>
+<pre><code>#import &lt;ReactAppDependencyProvider/RCTAppDependencyProvider.h&gt;
+...
+self.dependencyProvider = [RCTAppDependencyProvider new];</code></pre>
+  <p>With that line: zero legacy events, no error, the New Architecture back on. Switching it off had only hidden the bug until the next time someone switched it on.</p>
+
+  <h2>2. Android: alive, but a red screen</h2>
+  <p>On a real Android emulator the app process stayed alive. A test that only checks "did it crash" would have passed. The screen said otherwise:</p>
+<pre><code>Exception in HostObject::get for prop 'TrackPlayerModule':
+TurboModuleInteropUtils$ParsingException: Unable to parse @ReactMethod annotation from native
+module method: TrackPlayerModule.clearNowPlayingMetadata(). Detected unsupported return class:
+kotlinx.coroutines.Job</code></pre>
+  <p>The audio library writes its methods as <code>fun play(...) = scope.launch { }</code>, which returns a coroutine <code>Job</code>. The New Architecture compatibility layer only accepts methods that return nothing, so the whole module failed to load. Because it is imported at startup, the app never registered. iOS was fine; the iOS module is written differently.</p>
+  <p>The latest stable release of the library has the same pattern in 36 methods, so upgrading would not help. A 25-method patch that keeps the same launch but returns nothing fixed it.</p>
+
+  <h2>3. Deleting is cheaper than upgrading</h2>
+  <p>Four packages were installed and never used: never imported, never referenced from native code, not required by another package. One of them was a Firebase database SDK. On iOS it pulled in gRPC, BoringSSL and abseil, some of the slowest and most fragile pods to build. Removing it took 1,361 lines out of <code>Podfile.lock</code>.</p>
+  <div class="callout warn"><strong>Near miss:</strong> a fifth package also looked unused. Removing it would have built fine and crashed at runtime: another UI library requires it as a peer dependency. "Unused" has to mean unused by everything, not only by your code.</div>
+
+  <h2>4. The upgrade itself: what breaks between 0.77 and 0.80</h2>
+  <p>Library versions came from each library's own compatibility table, not from "latest": <code>react-native-screens</code> 4.18 (4.25+ drops the old architecture, 4.26+ needs React Native 0.84), <code>react-native-reanimated</code> 3.19 (4.x is a separate migration), <code>react-native-gesture-handler</code> 2.28 (2.32+ needs 0.84). Then, in order:</p>
+  <table>
+    <tr><th>What broke</th><th>Why</th></tr>
+    <tr><td><code>pod install</code>: cannot load native_modules</td><td>The Podfile still loaded a file the new CLI no longer ships.</td></tr>
+    <tr><td>Android build: <code>no suitable method found for getDefaultReactHost</code></td><td>A new parameter whose default Java code cannot see.</td></tr>
+    <tr><td>iOS build: <code>'folly/coro/Coroutine.h' file not found</code></td><td>Compiler flags in the Xcode project came from a much older template.</td></tr>
+    <tr><td>SVG library fails to compile on both platforms</td><td>A patch written to make it work on 0.77 undid exactly what 0.80 needs. Deleted.</td></tr>
+    <tr><td>A patch silently stopped applying</td><td>It had captured 350 KB of build output. It worked on the machine that made it and would have failed on CI and on every new machine. Recreated: 12 KB.</td></tr>
+    <tr><td>Kotlin 2.1 compile errors in the audio library</td><td>Stricter nullability and an Android API signature. Added to the patch.</td></tr>
+  </table>
+  <p>Every step ended with builds on both platforms and a launch on an iOS simulator, and from the New Architecture switch on, an Android emulator too: process alive, no JavaScript errors in the log, screen rendered.</p>
+
+  <h2>Every one of these is now a check</h2>
+  <p>Problems found on real upgrades go back into the tool. Run against the original repository today, NativeKeel flags all of the following before any work starts:</p>
+  <table>
+    <tr><th>Problem</th><th>Would have cost</th><th></th></tr>
+    <tr><td>Missing <code>RCTAppDependencyProvider</code></td><td>A rejected release</td><td class="ok">✓ flagged</td></tr>
+    <tr><td>Native module that cannot load on the New Architecture</td><td>Red screen on Android only</td><td class="ok">✓ flagged</td></tr>
+    <tr><td>Unused native modules, incl. the gRPC-heavy SDK</td><td>Build time, upgrade surface</td><td class="ok">✓ flagged</td></tr>
+    <tr><td>Podfile loading the old CLI file</td><td><code>pod install</code> fails at 0.80</td><td class="ok">✓ flagged</td></tr>
+    <tr><td>Stale folly flags in the Xcode project</td><td>iOS build fails at 0.80</td><td class="ok">✓ flagged</td></tr>
+    <tr><td>Two-argument <code>getDefaultReactHost</code> in Java</td><td>Android build fails at 0.80</td><td class="ok">✓ flagged</td></tr>
+    <tr><td>patch-package patches that must be re-checked at every hop</td><td>A library broken by its own patch</td><td class="ok">✓ flagged</td></tr>
+    <tr><td>Flipper still wired in (not 16 KB aligned)</td><td>Google Play rejection risk</td><td class="ok">✓ flagged</td></tr>
+    <tr><td>Release signing passwords committed to git</td><td>Anyone with repo access can sign</td><td class="ok">✓ flagged</td></tr>
+  </table>
+  <p>None of these show up in a debug build on the developer's machine. That is the point.</p>
+
+  <div class="cta">
+    <h2>Run it on your app</h2>
+    <p>One command, no signup, nothing leaves your machine:</p>
+<pre><code>npx nativekeel</code></pre>
+    <p>If the report says "Extra large", we do fixed-price upgrades like this one on a branch of your repository, delivered as a pull request with test builds. No calls needed.</p>
+    <a class="btn" href="sample-report.html">See a sample report</a><a class="btn ghost" href="/#services">Upgrade service</a>
+  </div>
+
+  <footer>Published with the app owner's permission. App name and identifying details withheld. · <a href="/">NativeKeel</a></footer>
+</main>
+</body>
+</html>
