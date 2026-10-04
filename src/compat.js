@@ -1,0 +1,125 @@
+import { compareVersions } from './known-issues.js';
+
+// Which library versions work with which React Native versions, per architecture. Taken from
+// each library's own compatibility table; nothing here is guessed. Rows are version ranges
+// [from, to] (inclusive; `to` may be open) with the React Native minor range they support.
+// legacy: false means the range does not run on the old architecture at all.
+
+export const COMPAT = {
+  'react-native-screens': {
+    source: 'https://github.com/software-mansion/react-native-screens#support-for-fabric (checked 2026-10-03)',
+    newArch: [
+      { from: '4.0.0', to: '4.4.99', rnMin: 76 },
+      { from: '4.5.0', to: '4.13.99', rnMin: 77 },
+      { from: '4.14.0', to: '4.18.99', rnMin: 79 },
+      { from: '4.19.0', to: '4.24.99', rnMin: 81 },
+      { from: '4.25.0', to: '4.25.99', rnMin: 82 },
+      { from: '4.26.0', rnMin: 84 },
+    ],
+    legacy: [
+      { from: '4.0.0', to: '4.4.99', rnMin: 72 },
+      { from: '4.5.0', to: '4.8.99', rnMin: 74 },
+      { from: '4.9.0', to: '4.13.99', rnMin: 76 },
+      { from: '4.14.0', to: '4.18.99', rnMin: 79 },
+      { from: '4.19.0', to: '4.24.99', rnMin: 80 },
+      { from: '4.25.0', unsupported: true },
+    ],
+  },
+  'react-native-gesture-handler': {
+    source: 'https://github.com/software-mansion/react-native-gesture-handler#gesture-handler-2 (checked 2026-10-03)',
+    note: 'Gesture Handler supports the three latest React Native minors; the table gives minimums.',
+    newArch: [
+      { from: '2.18.0', to: '2.20.99', rnMin: 73 },
+      { from: '2.21.0', to: '2.23.99', rnMin: 74 },
+      { from: '2.24.0', to: '2.24.99', rnMin: 75 },
+      { from: '2.25.0', to: '2.25.99', rnMin: 76 },
+      { from: '2.26.0', to: '2.27.99', rnMin: 78 },
+      { from: '2.28.0', to: '2.31.99', rnMin: 79 },
+      { from: '2.32.0', to: '2.99.99', rnMin: 84 },
+      { from: '3.0.0', rnMin: 82 },
+    ],
+    legacy: [
+      { from: '2.18.0', to: '2.20.99', rnMin: 73 },
+      { from: '2.21.0', to: '2.23.99', rnMin: 74 },
+      { from: '2.24.0', to: '2.24.99', rnMin: 75 },
+      { from: '2.25.0', to: '2.25.99', rnMin: 76 },
+      { from: '2.26.0', to: '2.27.99', rnMin: 78 },
+      { from: '2.28.0', to: '2.31.99', rnMin: 79 },
+      { from: '2.32.0', to: '2.99.99', rnMin: 84 },
+    ],
+  },
+  'react-native-reanimated': {
+    source: 'https://docs.swmansion.com/react-native-reanimated/docs/guides/compatibility/ and /docs/3.x/guides/compatibility/ (checked 2026-10-03)',
+    newArch: [
+      { from: '3.0.0', to: '3.0.99', rnMin: 71, rnMax: 71 },
+      { from: '3.1.0', to: '3.5.99', rnMin: 72, rnMax: 72 },
+      { from: '3.6.0', to: '3.8.99', rnMin: 72, rnMax: 73 },
+      { from: '3.9.0', to: '3.14.99', rnMin: 74, rnMax: 74 },
+      { from: '3.15.0', to: '3.15.99', rnMin: 74, rnMax: 75 },
+      { from: '3.16.0', to: '3.16.99', rnMin: 74, rnMax: 77 },
+      { from: '3.17.0', to: '3.17.99', rnMin: 75, rnMax: 79 },
+      { from: '3.18.0', to: '3.18.99', rnMin: 75, rnMax: 80 },
+      { from: '3.19.0', to: '3.19.99', rnMin: 78, rnMax: 81 },
+      { from: '4.0.0', to: '4.1.99', rnMin: 78, rnMax: 81 },
+      { from: '4.2.0', to: '4.3.99', rnMin: 80, rnMax: 84 },
+      { from: '4.4.0', to: '4.5.99', rnMin: 83, rnMax: 86 },
+      { from: '4.6.0', to: '4.6.99', rnMin: 83, rnMax: 88 },
+      { from: '4.7.0', to: '4.8.99', rnMin: 86, rnMax: 88 },
+    ],
+    legacy: [
+      { from: '3.0.0', to: '3.2.99', rnMin: 63, rnMax: 71 },
+      { from: '3.3.0', to: '3.4.99', rnMin: 63, rnMax: 72 },
+      { from: '3.5.0', to: '3.5.99', rnMin: 66, rnMax: 71 },
+      { from: '3.6.0', to: '3.8.99', rnMin: 66, rnMax: 72 },
+      { from: '3.9.0', to: '3.15.99', rnMin: 70, rnMax: 73 },
+      { from: '3.16.0', to: '3.16.99', rnMin: 71, rnMax: 77 },
+      { from: '3.17.0', to: '3.17.99', rnMin: 73, rnMax: 79 },
+      { from: '3.18.0', to: '3.18.99', rnMin: 73, rnMax: 80 },
+      { from: '3.19.0', to: '3.19.99', rnMin: 77, rnMax: 81 },
+      { from: '4.0.0', unsupported: true },
+    ],
+    note: 'Reanimated 4 also needs react-native-worklets; Reanimated 3.x is no longer actively maintained.',
+  },
+};
+
+const inRange = (version, row) =>
+  compareVersions(version, row.from) >= 0 && (!row.to || compareVersions(version, row.to) <= 0);
+
+const rnLabel = (row) => (row.rnMax ? `0.${row.rnMin}–0.${row.rnMax}` : `0.${row.rnMin}+`);
+function versionLabel(row) {
+  const from = row.from.replace(/\.0$/, '');
+  if (!row.to) return `${from}+`;
+  const to = row.to.replace(/\.99$/, '');
+  return from === to ? `${from}.x` : `${from}–${to}.x`;
+}
+
+// Problem with the installed version on this React Native minor and architecture, or null.
+export function checkCompat(pkg, version, rnMinor, newArch) {
+  const table = COMPAT[pkg];
+  if (!table || !version || rnMinor == null) return null;
+  const rows = newArch ? table.newArch : table.legacy;
+  const row = rows.find((r) => inRange(version, r));
+  if (!row) return null; // older than the table covers: no claim
+  if (row.unsupported) return `${pkg} ${version} does not support the ${newArch ? 'New' : 'legacy'} Architecture`;
+  if (rnMinor < row.rnMin || (row.rnMax && rnMinor > row.rnMax)) {
+    return `${pkg} ${version} supports React Native ${rnLabel(row)}${newArch ? '' : ' on the legacy architecture'}, not 0.${rnMinor}`;
+  }
+  return null;
+}
+
+// The newest version range of `pkg` that supports this React Native minor and architecture.
+// With `major`, only ranges of that major version (to avoid a major migration in a hop).
+export function bestRange(pkg, rnMinor, newArch, { major = null } = {}) {
+  const table = COMPAT[pkg];
+  if (!table) return null;
+  const rows = (newArch ? table.newArch : table.legacy).filter(
+    (r) =>
+      !r.unsupported &&
+      rnMinor >= r.rnMin &&
+      (!r.rnMax || rnMinor <= r.rnMax) &&
+      (major === null || Number(r.from.split('.')[0]) === major),
+  );
+  if (!rows.length) return null;
+  const best = rows.sort((a, b) => compareVersions(b.from, a.from))[0];
+  return { range: versionLabel(best), from: best.from, to: best.to || null };
+}

@@ -1,0 +1,101 @@
+# NativeKeel
+
+Health check for React Native and Expo apps. One command, no install, no account:
+
+```sh
+npx nativekeel
+```
+
+It answers the questions that decide whether your app can still ship:
+
+- **Is your React Native / Expo version still supported?** React Native supports the latest minor and the two before it.
+- **Can you upgrade at all?** The legacy architecture was removed in 0.82. If the New Architecture is off, you are stuck at 0.81.
+- **Which packages block the upgrade?** Native modules without New Architecture support, unmaintained or with no release in years, with known alternatives. Outdated "unmaintained" flags are cross-checked against the latest npm release.
+- **What can you simply delete?** Packages that are installed but never imported, referenced natively or required by another package. Every one you remove is one you never upgrade.
+- **Will the stores accept your next build?** Google Play `targetSdk` and 16 KB page size (it opens your built APK/AAB and checks the alignment of every native library), and the iOS privacy manifest.
+- **Are secrets shipped inside your app?** AWS, Stripe, OpenAI, Anthropic, GitHub, Slack, SendGrid, Twilio, Shopify, Google OAuth keys, private keys and Supabase `service_role` keys (anon keys are fine), plus `.env` values that `react-native-config` or `EXPO_PUBLIC_` compile into the bundle. Server-side folders are reported separately.
+- **Is transport security off?** Cleartext HTTP or `debuggable` in the release Android manifest, `NSAllowsArbitraryLoads` on iOS.
+- **Leftovers from old templates?** Flipper, JavaScriptCore instead of Hermes.
+
+```
+✖ CRITICAL React Native 0.77.1 is no longer supported
+           Latest is 0.87.1. You are 10 minor versions behind; only the latest 3 minors receive fixes.
+✖ CRITICAL New Architecture is disabled (android + ios)
+           The legacy architecture was removed in 0.82. This app cannot upgrade past 0.81 until it migrates.
+✖ CRITICAL AWS secret access key shipped inside the app (src/aws.js:4)
+           Value wJal…EY. Anyone who downloads the app can extract it. Revoke it now, then move the call to a server.
+▲ HIGH     react-native-fast-image: no New Architecture support, unmaintained
+           Likely upgrade blocker. Alternatives: expo-image.
+```
+
+## Usage
+
+```sh
+npx nativekeel [path]              # report
+npx nativekeel plan --out UPGRADE.md   # step-by-step upgrade plan
+npx nativekeel --html report.html  # shareable HTML report
+npx nativekeel --markdown pr.md    # summary for a pull request comment
+npx nativekeel --sarif nk.sarif    # GitHub code scanning
+npx nativekeel --json              # machine-readable output
+npx nativekeel --fail-on high      # exit 1 on high or critical (default: critical)
+npx nativekeel --offline           # no network at all, local checks only
+npx nativekeel --verbose           # list every outdated package
+```
+
+Everything is free. The scan exits with code `1` when it finds a critical issue, so it can gate CI.
+
+### Upgrade plan
+
+`nativekeel plan` turns the report into ordered work: stop leaks first, replace blocking packages, switch on the New Architecture on your current version, then upgrade React Native in small, reviewable hops with links to the Upgrade Helper diffs.
+
+### GitHub Action
+
+```yaml
+# .github/workflows/nativekeel.yml
+name: NativeKeel
+on: [pull_request]
+permissions:
+  contents: read
+  security-events: write   # only needed with sarif: true
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm ci
+      - uses: AlicanAkyol/nativekeel@v0
+        with:
+          fail-on: critical
+          baseline: .nativekeel-baseline.json   # optional
+          sarif: true                           # findings inline in the PR
+```
+
+The report is added to the job summary. With a baseline, only findings that are new since the baseline fail the build:
+
+```sh
+npx nativekeel --save-baseline .nativekeel-baseline.json   # commit this file
+```
+
+### Reports for clients
+
+Agencies can put their own name on the HTML report: `npx nativekeel plan --html plan.html --brand "Acme Mobile"`.
+
+## Why you can run this on private code
+
+- **Your code never leaves your machine.** The only requests are package-name lookups on npm and React Native Directory. `--offline` makes none; a test traps `fetch` to prove it.
+- **Zero dependencies, no install scripts.** Only Node.js built-ins.
+- **Read-only.** It never changes your project.
+- **Secrets are always masked** in every output.
+- **Verifiable releases.** Published with npm provenance from GitHub Actions: `npm audit signatures`.
+
+Details and vulnerability reporting: [SECURITY.md](SECURITY.md).
+
+## Need it done for you?
+
+We do fixed-price React Native and Expo upgrades on a branch of your repository, delivered as a pull request with test builds. No calls needed. See https://nativekeel.com/#services.
+
+## License
+
+MIT

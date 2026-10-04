@@ -1,0 +1,5 @@
+node_modules/
+*.pem
+.DS_Store
+report.html
+plan.md

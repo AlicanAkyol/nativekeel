@@ -1,0 +1,127 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { findPackageDir } from './project.js';
+
+// Finds runtime dependencies that nothing uses. A package only counts as unused when it is
+// (1) never imported from JS/TS, (2) not referenced from native code, (3) not required by
+// another dependency (e.g. @rneui/themed needs @rneui/base even if the app never imports it),
+// and (4) not mentioned in config files or package.json scripts. Removing unused native
+// modules is the cheapest way to shrink an upgrade.
+
+const SKIP_DIRS = new Set(['node_modules', '.git', 'Pods', 'build', '.gradle', 'DerivedData', '.expo', 'dist', 'coverage', 'vendor']);
+const JS_EXT = new Set(['.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs']);
+const NATIVE_EXT = new Set(['.m', '.mm', '.h', '.swift', '.java', '.kt', '.gradle', '.kts', '.xml', '.plist']);
+const MAX_FILE_BYTES = 1024 * 1024;
+
+// Packages that are used without being imported.
+const IMPLICIT = [
+  /^(react|react-native|expo|react-dom)$/,
+  /^@babel\//,
+  /^@types\//,
+  /babel-plugin|babel-preset|eslint|prettier|typescript|metro/,
+  /^@react-native\//, // versioned with React Native, used by the build
+  /^@react-native-community\/cli/,
+  /^react-native-vector-icons$/, // fonts linked by the build
+];
+
+function walk(dir, exts, out = []) {
+  let list;
+  try {
+    list = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return out;
+  }
+  for (const e of list) {
+    if (e.isDirectory()) {
+      if (!SKIP_DIRS.has(e.name) && !e.name.startsWith('.')) walk(path.join(dir, e.name), exts, out);
+    } else if (exts.has(path.extname(e.name))) {
+      out.push(path.join(dir, e.name));
+    }
+  }
+  return out;
+}
+
+const readSmall = (file) => {
+  try {
+    return fs.statSync(file).size > MAX_FILE_BYTES ? '' : fs.readFileSync(file, 'utf8');
+  } catch {
+    return '';
+  }
+};
+
+// 'lodash/fp' -> 'lodash', '@scope/pkg/sub' -> '@scope/pkg'
+export function packageOf(spec) {
+  if (!spec || spec.startsWith('.') || spec.startsWith('/')) return null;
+  const parts = spec.split('/');
+  return spec.startsWith('@') ? parts.slice(0, 2).join('/') : parts[0];
+}
+
+export function importedPackages(text) {
+  const found = new Set();
+  const re = /(?:\bfrom\s*|\bimport\s*\(?\s*|\brequire\s*\(\s*|\bjest\.(?:mock|requireActual)\s*\(\s*)['"]([^'"\n]+)['"]/g;
+  for (const m of text.matchAll(re)) {
+    const pkg = packageOf(m[1]);
+    if (pkg) found.add(pkg);
+  }
+  return found;
+}
+
+// Names a package is known by in native code: its podspec module and its Android namespace.
+function nativeTokens(root, name) {
+  const dir = findPackageDir(root, name);
+  if (!dir) return [];
+  const tokens = [];
+  try {
+    for (const f of fs.readdirSync(dir)) if (f.endsWith('.podspec')) tokens.push(f.replace(/\.podspec$/, ''));
+  } catch {
+    // no podspec
+  }
+  const manifest = readSmall(path.join(dir, 'android', 'src', 'main', 'AndroidManifest.xml'));
+  const gradle = readSmall(path.join(dir, 'android', 'build.gradle')) + readSmall(path.join(dir, 'android', 'build.gradle.kts'));
+  const pkg = manifest.match(/package="([\w.]+)"/) || gradle.match(/namespace\s*=?\s*["']([\w.]+)["']/);
+  if (pkg) tokens.push(pkg[1]);
+  return tokens.filter((t) => t.length >= 5);
+}
+
+export function findUnused(project) {
+  if (!project.hasNodeModules) return [];
+  const root = project.root;
+  const names = Object.keys(project.deps).filter((n) => !IMPLICIT.some((re) => re.test(n)));
+  if (!names.length) return [];
+
+  const used = new Set();
+  for (const file of walk(root, JS_EXT)) for (const p of importedPackages(readSmall(file))) used.add(p);
+
+  // Config and scripts: babel/metro/app config plugins, CLI tools in scripts.
+  const pkgText = readSmall(path.join(root, 'package.json'));
+  const pkgJson = JSON.parse(pkgText || '{}');
+  const configText = [
+    JSON.stringify(pkgJson.scripts || {}),
+    JSON.stringify(pkgJson.jest || {}),
+    readSmall(path.join(root, 'app.json')),
+    readSmall(path.join(root, 'app.config.js')),
+    readSmall(path.join(root, 'app.config.ts')),
+    readSmall(path.join(root, 'react-native.config.js')),
+  ].join('\n');
+
+  // Required by another dependency (peer or regular).
+  const requiredByOthers = new Set();
+  for (const other of Object.keys(project.deps)) {
+    const dir = findPackageDir(root, other);
+    if (!dir) continue;
+    try {
+      const m = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8'));
+      for (const k of ['peerDependencies', 'dependencies']) for (const d of Object.keys(m[k] || {})) requiredByOthers.add(d);
+    } catch {
+      // unreadable manifest
+    }
+  }
+
+  const candidates = names.filter((n) => !used.has(n) && !requiredByOthers.has(n) && !configText.includes(n));
+  if (!candidates.length) return [];
+
+  const nativeText = ['ios', 'android'].flatMap((d) => walk(path.join(root, d), NATIVE_EXT)).map(readSmall).join('\n');
+  return candidates
+    .filter((n) => !nativeText.includes(n) && !nativeTokens(root, n).some((t) => nativeText.includes(t)))
+    .map((name) => ({ name, native: nativeTokens(root, name).length > 0 }));
+}

@@ -1,0 +1,54 @@
+name: NativeKeel
+description: Health check for React Native and Expo apps. Fails the build on unsupported versions, New Architecture blockers, store requirements and leaked secrets.
+author: Alican Akyol
+branding:
+  icon: anchor
+  color: green
+inputs:
+  path:
+    description: App folder (where package.json is)
+    default: .
+  fail-on:
+    description: Fail at this severity or above (critical, high, medium, low, never)
+    default: critical
+  baseline:
+    description: Baseline file; only findings not in it are reported
+    default: ''
+  sarif:
+    description: Upload results to GitHub code scanning (needs `security-events: write`)
+    default: 'false'
+  offline:
+    description: Make no network requests (local checks only)
+    default: 'false'
+runs:
+  using: composite
+  steps:
+    - name: Run NativeKeel
+      shell: bash
+      env:
+        NK_PATH: ${{ inputs.path }}
+        NK_FAIL_ON: ${{ inputs.fail-on }}
+        NK_BASELINE: ${{ inputs.baseline }}
+        NK_SARIF: ${{ inputs.sarif }}
+        NK_OFFLINE: ${{ inputs.offline }}
+      run: |
+        args=("$NK_PATH" --fail-on "$NK_FAIL_ON" --markdown "$RUNNER_TEMP/nativekeel.md")
+        [ -n "$NK_BASELINE" ] && args+=(--baseline "$NK_BASELINE")
+        [ "$NK_SARIF" = "true" ] && args+=(--sarif "$RUNNER_TEMP/nativekeel.sarif")
+        [ "$NK_OFFLINE" = "true" ] && args+=(--offline)
+        set +e
+        node "$GITHUB_ACTION_PATH/bin/nativekeel.js" "${args[@]}"
+        code=$?
+        [ -f "$RUNNER_TEMP/nativekeel.md" ] && cat "$RUNNER_TEMP/nativekeel.md" >> "$GITHUB_STEP_SUMMARY"
+        echo "exit-code=$code" >> "$GITHUB_OUTPUT"
+      id: scan
+    - name: Upload SARIF
+      if: ${{ inputs.sarif == 'true' && always() }}
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: ${{ runner.temp }}/nativekeel.sarif
+        category: nativekeel
+    - name: Fail on findings
+      if: ${{ steps.scan.outputs.exit-code != '0' }}
+      shell: bash
+      run: exit ${{ steps.scan.outputs.exit-code }}

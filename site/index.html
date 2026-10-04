@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NativeKeel · Keep your React Native app shippable</title>
+<meta name="description" content="One command tells you if your React Native or Expo app can still upgrade and ship: version support, New Architecture blockers, Google Play target SDK and secrets leaked into the app bundle.">
+<meta property="og:title" content="NativeKeel · Keep your React Native app shippable">
+<meta property="og:description" content="npx nativekeel: a free health check for React Native and Expo apps.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b5d55'/%3E%3Cpath d='M16 6v16M9 22h14M11 26h10' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#fbfaf7;--surface:#ffffff;--text:#15171b;--muted:#5d6470;--line:#e4e2dc;
+  --accent:#0b5d55;--accent-ink:#ffffff;--accent-soft:#e3f1ee;
+  --term-bg:#12151a;--term-text:#d9dee6;--term-dim:#7d8693;--red:#ff6b6b;--yellow:#f0b43a;--blue:#6aa7ff;--green:#4cd3a5;
+  --radius:12px;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1013;--surface:#161a1f;--text:#e9ebef;--muted:#9aa2ad;--line:#262b32;
+    --accent:#3cc4b4;--accent-ink:#06201d;--accent-soft:#12302c;--term-bg:#090b0e;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e1013;--surface:#161a1f;--text:#e9ebef;--muted:#9aa2ad;--line:#262b32;
+  --accent:#3cc4b4;--accent-ink:#06201d;--accent-soft:#12302c;--term-bg:#090b0e;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+.wrap{max-width:1040px;margin:0 auto;padding:0 16px}
+header.top{display:flex;align-items:center;justify-content:space-between;padding:18px 0}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;color:var(--text);text-decoration:none}
+.logo svg{width:28px;height:28px}
+nav a{color:var(--muted);text-decoration:none;margin-left:20px;font-size:15px}
+nav a:hover{color:var(--text)}
+.hero{padding:48px 0 24px;display:grid;grid-template-columns:1.05fr 1fr;gap:40px;align-items:center}
+.hero>*,.grid3>*,.steps>*,.pricing>*,.buy>*{min-width:0}
+h1{font-size:clamp(32px,5vw,48px);line-height:1.1;letter-spacing:-.02em;margin:0 0 16px}
+.lead{font-size:19px;color:var(--muted);margin:0 0 28px;max-width:34em}
+.cmd{display:inline-flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 10px 10px 16px;font:15px ui-monospace,SFMono-Regular,Menlo,monospace}
+.cmd button{border:0;background:var(--accent);color:var(--accent-ink);font:600 13px system-ui,sans-serif;padding:7px 12px;border-radius:7px;cursor:pointer}
+.sub{margin-top:12px;font-size:14px;color:var(--muted)}
+.term{background:var(--term-bg);color:var(--term-text);border-radius:var(--radius);padding:18px 18px 16px;font:12.5px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;overflow-x:auto;box-shadow:0 20px 50px -25px rgba(0,0,0,.45)}
+.term .dots{display:flex;gap:6px;margin-bottom:12px}.term .dots i{width:10px;height:10px;border-radius:50%;background:#3a3f47}
+.term pre{margin:0;white-space:pre}
+.r{color:var(--red)}.y{color:var(--yellow)}.b{color:var(--blue)}.d{color:var(--term-dim)}.g{color:var(--green)}.w{color:#fff;font-weight:700}
+section{padding:56px 0}
+h2{font-size:clamp(24px,3.4vw,32px);letter-spacing:-.01em;margin:0 0 10px}
+.section-lead{color:var(--muted);margin:0 0 32px;max-width:40em}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:22px}
+.card h3{margin:0 0 6px;font-size:17px}.card p{margin:0;color:var(--muted);font-size:15px}
+.card .k{font:600 12px ui-monospace,monospace;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;display:block}
+.steps{counter-reset:s;display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.steps .card::before{counter-increment:s;content:counter(s);display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-weight:700;margin-bottom:10px}
+.pricing{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;align-items:stretch}
+.plan{display:flex;flex-direction:column}
+.plan.featured{border:2px solid var(--accent)}
+.plan .price{font-size:26px;font-weight:700;margin:6px 0 2px;line-height:1.25}
+.plan .price small{font-size:14px;font-weight:400;color:var(--muted);white-space:nowrap}
+.plan .note{font-size:13px;color:var(--muted);margin:0 0 14px}
+.plan ul{padding:0;margin:0 0 18px;list-style:none;font-size:14.5px;flex:1}
+.plan li{padding:5px 0 5px 22px;position:relative}
+.plan li::before{content:"";position:absolute;left:2px;top:12px;width:10px;height:6px;border-left:2px solid var(--accent);border-bottom:2px solid var(--accent);transform:rotate(-45deg)}
+.btn{display:block;text-align:center;text-decoration:none;font-weight:600;padding:11px 14px;border-radius:9px;border:1px solid var(--line);color:var(--text);background:var(--bg)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.buy{margin-top:28px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.buy .card{font-size:15px}
+.about{display:grid;grid-template-columns:auto 1fr;gap:28px;align-items:start}
+.avatar{width:120px;height:120px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font:700 40px ui-sans-serif,system-ui,sans-serif;overflow:hidden;position:relative}
+.avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.about h3{margin:0 0 2px;font-size:22px}.about .role{color:var(--muted);margin:0 0 14px}
+.about p{margin:0 0 12px}.about .links a{margin-right:16px;font-weight:600}
+.facts-row{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}.facts-row span{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-size:14px}
+@media (max-width:680px){.about{grid-template-columns:1fr}.avatar{width:88px;height:88px;font-size:30px}}
+details{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin-bottom:10px}
+summary{cursor:pointer;font-weight:600}
+details p{color:var(--muted);margin:10px 0 0}
+code{font:14px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--accent-soft);padding:1px 5px;border-radius:5px}
+footer{border-top:1px solid var(--line);padding:28px 0 40px;color:var(--muted);font-size:14px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
+footer a{color:var(--muted)}
+@media (max-width:900px){.hero{grid-template-columns:1fr}}
+@media (max-width:680px){.grid3,.steps,.buy,.pricing{grid-template-columns:1fr}nav a:not(:last-child){display:none}section{padding:40px 0}.cmd{font-size:13.5px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="logo" href="#">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="var(--accent)"/><path d="M16 6v16M9 22h14M11 26h10" stroke="var(--accent-ink)" stroke-width="3" stroke-linecap="round"/></svg>
+      NativeKeel
+    </a>
+    <nav><a href="#checks">What it checks</a><a href="#services">Services</a><a href="#trust">Security</a><a href="#about">About</a></nav>
+  </header>
+
+  <div class="hero">
+    <div>
+      <h1>Keep your React Native app shippable.</h1>
+      <p class="lead">One command tells you whether your app can still upgrade and still ship: unsupported versions, New Architecture blockers, Google Play deadlines and secrets leaked into the app bundle.</p>
+      <div class="cmd"><span>npx nativekeel</span><button type="button" id="copy">Copy</button></div>
+      <p class="sub">Free and open source. No signup. Your code never leaves your machine.</p>
+    </div>
+    <div class="term" aria-label="Example report">
+      <div class="dots"><i></i><i></i><i></i></div>
+<pre><span class="w">NativeKeel health report</span>  acme-app
+React Native 0.77.1 <span class="d">(latest 0.87.1)</span>
+New Architecture  android: <span class="r">off</span>  ios: <span class="r">off</span>
+
+<span class="r">✖ CRITICAL</span> <span class="w">React Native 0.77.1 is no longer supported</span>
+<span class="d">           You are 10 minor versions behind.</span>
+<span class="r">✖ CRITICAL</span> <span class="w">New Architecture is disabled</span>
+<span class="d">           Cannot upgrade past 0.81 until it migrates.</span>
+<span class="r">✖ CRITICAL</span> <span class="w">AWS secret key shipped inside the app</span>
+<span class="d">           Anyone who downloads the app can extract it.</span>
+<span class="y">▲ HIGH    </span> <span class="w">react-native-fast-image: unmaintained</span>
+<span class="d">           Alternatives: expo-image.</span>
+
+<span class="w">Summary</span>  <span class="r">3 critical</span> · <span class="y">7 high</span> · 4 medium · 34 low</pre>
+    </div>
+  </div>
+
+  <section id="checks">
+    <h2>What it checks</h2>
+    <p class="section-lead">The problems that quietly turn a routine update into a three-week project, found in seconds. Outputs for terminal, HTML, Markdown, JSON and GitHub code scanning (SARIF).</p>
+    <div class="grid3">
+      <div class="card"><span class="k">Versions</span><h3>Support status</h3><p>React Native supports only the latest three minors. Expo moves just as fast. Know where you stand before a store deadline decides for you.</p></div>
+      <div class="card"><span class="k">Architecture</span><h3>New Architecture blockers</h3><p>The legacy architecture is gone since 0.82. See which native modules block the switch, which library versions match each React Native release, and what to replace.</p></div>
+      <div class="card"><span class="k">Store</span><h3>Google Play and App Store rules</h3><p>Target SDK, the iOS privacy manifest, and 16 KB pages: it opens your built APK or AAB and measures the alignment of every native library.</p></div>
+      <div class="card"><span class="k">Security</span><h3>Secrets and signing keys</h3><p>API keys shipped in the bundle, <code>.env</code> values compiled into the app, committed keystores, signing passwords and App Store Connect keys.</p></div>
+      <div class="card"><span class="k">Cleanup</span><h3>Packages you can delete</h3><p>Installed but never imported, never referenced natively and not required by anything else. Every package you remove is one you never upgrade.</p></div>
+      <div class="card"><span class="k">Experience</span><h3>Known traps</h3><p>Version combinations that broke real apps, like a navigation library that crashes on launch with the New Architecture. The list grows with every upgrade we do.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>From report to fixed</h2>
+    <p class="section-lead">Use the report and the plan yourself, or hand the whole thing to us.</p>
+    <div class="steps">
+      <div class="card"><h3>Scan</h3><p>Run <code>npx nativekeel</code> in your app folder. Share the HTML report with your team or client.</p></div>
+      <div class="card"><h3>Plan</h3><p><code>nativekeel plan</code> orders the work: stop leaks, replace blockers, switch architecture, then upgrade React Native in reviewable hops.</p></div>
+      <div class="card"><h3>Ship</h3><p>Do it yourself with the plan, or we do it on a branch of your repo and send you a pull request with test builds.</p></div>
+    </div>
+  </section>
+
+  <section id="services">
+    <h2>Services</h2>
+    <p class="section-lead">The tool and the upgrade plan are free. If you would rather not do the work, we do it for a fixed price, entirely over email and your Git host. No calls needed.</p>
+    <div class="pricing">
+      <div class="card plan">
+        <h3>Tool</h3>
+        <div class="price">Free</div>
+        <p class="note">Open source, MIT licensed</p>
+        <ul><li>Health report and upgrade plan</li><li>HTML, JSON and CI baselines</li><li>White-label reports for agencies</li></ul>
+        <a class="btn" href="#">npx nativekeel</a>
+      </div>
+      <div class="card plan featured">
+        <h3>Upgrade</h3>
+        <div class="price">from $1,500 <small>once</small></div>
+        <p class="note">Fixed price, quoted from your report</p>
+        <ul><li>React Native or Expo upgraded to the latest version</li><li>New Architecture migration</li><li>Blocking packages replaced, leaked keys removed</li><li>Pull request with test builds</li><li>30-day warranty on our changes</li></ul>
+        <a class="btn primary" href="mailto:hello@nativekeel.com?subject=Upgrade%20quote&body=Please%20attach%20your%20report%3A%20npx%20nativekeel%20--html%20report.html%0A%0ARepository%20host%20(GitHub%2FGitLab%2FBitbucket)%3A%0ADeadline%2C%20if%20any%3A%0A">Get a fixed quote</a>
+      </div>
+      <div class="card plan">
+        <h3>Care</h3>
+        <div class="price">from $499 <small>/ month</small></div>
+        <p class="note">After an upgrade, for apps that must keep shipping</p>
+        <ul><li>Monthly dependency and SDK updates</li><li>New Apple and Google requirements handled</li><li>Build breakages fixed</li><li>Monthly health report</li></ul>
+        <a class="btn" href="mailto:hello@nativekeel.com?subject=NativeKeel%20Care&body=App%20name%3A%0AStores%20(iOS%2FAndroid)%3A%0APlease%20attach%20your%20report%3A%20npx%20nativekeel%20--html%20report.html%0A">Ask about Care</a>
+      </div>
+    </div>
+
+    <div class="buy">
+      <div class="card"><h3>1. Send your report</h3><p>Run <code>npx nativekeel --html report.html</code> and email it. Nothing else is needed for a quote.</p></div>
+      <div class="card"><h3>2. Get a fixed quote</h3><p>Within two business days: scope, price and delivery date in writing. 50% to start, 50% on delivery, by international bank transfer.</p></div>
+      <div class="card"><h3>3. Review a pull request</h3><p>We work on a branch. You test the builds, review every change and merge when you are happy.</p></div>
+    </div>
+  </section>
+
+  <section id="trust">
+    <h2>How we handle your code</h2>
+    <p class="section-lead">Giving someone access to your app is a big decision. These are commitments, and we put them in writing with every quote.</p>
+    <div class="grid3">
+      <div class="card"><span class="k">Control</span><h3>You merge, not us</h3><p>All work happens on a separate branch. We never push to your main branch or release to your users. You review and merge.</p></div>
+      <div class="card"><span class="k">Access</span><h3>The minimum, then removed</h3><p>Access to one repository, removed when the work ends. We never ask for your App Store or Google Play passwords, signing keys or production secrets.</p></div>
+      <div class="card"><span class="k">Confidentiality</span><h3>Your NDA, if you have one</h3><p>Happy to sign your NDA before seeing any code. Your code stays on an encrypted machine and is deleted when the work ends, confirmed in writing.</p></div>
+      <div class="card"><span class="k">AI tools</span><h3>Disclosed, never trained on</h3><p>We use AI coding assistants to work faster, only under terms that do not allow training on your code. If your policy forbids them, we work without.</p></div>
+      <div class="card"><span class="k">Price</span><h3>Fixed before we start</h3><p>The quote is the price. If we underestimated, that is our problem. Anything outside the agreed scope is quoted separately and only done if you say yes.</p></div>
+      <div class="card"><span class="k">Warranty</span><h3>30 days on our changes</h3><p>If something we changed breaks within 30 days of delivery, we fix it at no cost.</p></div>
+    </div>
+  </section>
+
+  <section id="about">
+    <h2>Who does the work</h2>
+    <p class="section-lead">NativeKeel is not an agency that hands your code to someone you never hear about. Every upgrade is done by one engineer, start to finish.</p>
+    <div class="about card">
+      <div class="avatar" aria-hidden="true">AA<img src="alican.jpg" alt="" onerror="this.remove()"></div>
+      <div>
+        <h3>Alican Akyol</h3>
+        <p class="role">Staff / lead engineer · mobile and frontend architecture</p>
+        <p>I have spent 14+ years shipping production systems, much of it in React Native, iOS and Android, for teams in banking, insurance, travel and research, including Fibabank, Anadolu Sigorta, Edenred, Turna.com, Setur and TÜBİTAK.</p>
+        <p>I also build and run my own React Native app in production, so I deal with store deadlines and native upgrades as an owner, not only as a contractor. My background in security engineering and malware analysis is why NativeKeel looks for leaked keys first.</p>
+        <div class="facts-row"><span>14+ years in production</span><span>React Native · iOS · Android</span><span>Security engineering</span></div>
+        <p class="links"><a href="https://www.linkedin.com/in/ali-akyol-751064112">LinkedIn</a><a href="https://alicanakyol.com">alicanakyol.com</a><a href="https://github.com/AlicanAkyol">GitHub</a></p>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq">
+    <h2>FAQ</h2>
+    <details><summary>Does my code leave my machine?</summary><p>No. The scan runs locally. The only network requests are package-name lookups on npm and React Native Directory. Secret values are masked in every report.</p></details>
+    <details><summary>Does it work with Expo and monorepos?</summary><p>Yes. It reads Expo SDK versions and <code>app.json</code>, supports managed apps without native folders, and finds packages hoisted to a parent <code>node_modules</code>.</p></details>
+    <details><summary>Is it really free? What is the catch?</summary><p>The tool and the plan are free and open source under MIT. We make money when teams ask us to do the upgrade for them. The report tells you honestly whether you need that.</p></details>
+    <details><summary>Do we need a call for the upgrade service?</summary><p>No. Everything runs over email and your Git host: you send the report, we send a fixed quote, you grant repository access, we deliver a pull request with test builds.</p></details>
+    <details><summary>Can I check what the tool does before running it on our code?</summary><p>Yes. It has no dependencies and no install scripts, the source is short and public, and releases are published with npm provenance so you can verify the package matches the source (<code>npm audit signatures</code>). Run it with <code>--offline</code> to forbid all network access.</p></details>
+    <details><summary>What if the report is wrong?</summary><p>Version and maintenance data comes from npm and React Native Directory and can lag. Write to us and we will fix the rule. A missed upgrade blocker is a bug to us.</p></details>
+    <details><summary>What if you cannot finish the upgrade?</summary><p>If we cannot deliver the agreed scope, you get your deposit back. You keep the plan and any partial work on the branch.</p></details>
+  </section>
+
+  <footer>
+    <span>© 2026 NativeKeel, run by <a href="https://alicanakyol.com">Alican Akyol</a> · <a href="mailto:hello@nativekeel.com">hello@nativekeel.com</a></span>
+    <span><a href="privacy.html">Privacy</a> · <a href="https://www.npmjs.com/package/nativekeel">npm</a></span>
+  </footer>
+</div>
+<script>
+document.getElementById('copy').addEventListener('click', async (e) => {
+  try { await navigator.clipboard.writeText('npx nativekeel'); e.target.textContent = 'Copied'; }
+  catch { e.target.textContent = 'Select it'; }
+  setTimeout(() => (e.target.textContent = 'Copy'), 1500);
+});
+</script>
+</body>
+</html>

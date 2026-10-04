@@ -1,0 +1,31 @@
+{
+  "name": "nativekeel",
+  "version": "0.1.0",
+  "description": "Health check for React Native apps: version support, New Architecture blockers, unmaintained native modules and leaked secrets.",
+  "type": "module",
+  "bin": {
+    "nativekeel": "bin/nativekeel.js"
+  },
+  "files": [
+    "bin",
+    "src"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "react-native",
+    "expo",
+    "upgrade",
+    "new-architecture",
+    "doctor",
+    "health-check",
+    "security"
+  ],
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test test/",
+    "scan": "node bin/nativekeel.js"
+  },
+  "homepage": "https://nativekeel.com"
+}
