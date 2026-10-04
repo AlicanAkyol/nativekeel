@@ -49,7 +49,7 @@ export function sarifReport(result, { version = '0.0.0' } = {}) {
             ruleId: f.id.split(':')[0],
             level: LEVEL[f.severity],
             message: { text: `${f.title}. ${f.detail}` },
-            locations: [{ physicalLocation: { artifactLocation: { uri: loc.uri }, region: { startLine: loc.line } } }],
+            locations: [{ physicalLocation: { artifactLocation: { uri: toUri(loc.uri) }, region: { startLine: loc.line } } }],
             // Stable across runs so code scanning tracks one alert per finding.
             partialFingerprints: { nativekeelId: f.id },
             properties: { severity: f.severity, area: f.area },
@@ -58,4 +58,9 @@ export function sarifReport(result, { version = '0.0.0' } = {}) {
       },
     ],
   };
+}
+
+// SARIF artifact locations are URIs: encode each path segment (spaces, #, %), keep the slashes.
+function toUri(file) {
+  return file.split(/[\\/]/).map(encodeURIComponent).join('/');
 }

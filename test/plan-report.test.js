@@ -237,3 +237,10 @@ test('HTML report: outdated packages collapse into one table', () => {
   assert.match(html, /<details class="bumps"><summary>3 packages are a major version behind/);
   assert.ok(!html.includes('Major version behind.'), 'no card per outdated package');
 });
+
+test('SARIF: file paths are valid URIs', async () => {
+  const { sarifReport } = await import('../src/report-sarif.js');
+  const r = { ...result, findings: [{ id: 'ios-ats:ios/Make Note/Info.plist', severity: 'medium', area: 'security', title: 'x', detail: 'x', fix: { kind: 'ats', file: 'ios/Make Note/Info.plist' } }] };
+  const loc = sarifReport(r, { version: '1' }).runs[0].results[0].locations[0].physicalLocation.artifactLocation.uri;
+  assert.equal(loc, 'ios/Make%20Note/Info.plist');
+});
