@@ -397,20 +397,33 @@ export function buildPlan(result) {
     let from = rn.from;
     const tracked = result.deps.filter((d) => COMPAT[d.name]);
     const lastRange = {};
-    const steps = upgradeHops(rn.from, rn.to).map((to) => {
+    const lastMajor = {};
+    const hopList = upgradeHops(rn.from, rn.to);
+    // When the New Architecture switch happens on the way, library versions up to that stop
+    // must still run on the legacy architecture (Reanimated 4, for one, does not).
+    const switchAt = deferredArch
+      ? hopList.findIndex((h) => Number(h.split('.')[1]) >= 76 && Number(h.split('.')[1]) < NEW_ARCH_ONLY_MINOR)
+      : -1;
+    const majorOf = (v) => Number(String(v).split('.')[0]);
+    const steps = hopList.map((to, i) => {
       const minor = Number(to.split('.')[1]);
+      const archOn = switchAt < 0 || i > switchAt;
       const bumps = tracked
         .map((d) => {
-          const best = bestRange(d.name, minor, true);
-          // Prefer staying on the installed major when it still supports this hop.
-          const major = d.version ? Number(d.version.split('.')[0]) : null;
-          const same = major !== null && best && Number(best.from.split('.')[0]) !== major ? bestRange(d.name, minor, true, { major }) : null;
+          const best = bestRange(d.name, minor, archOn);
+          // Stay on the major of the previous step (or the installed one) while it still works.
+          const major = lastMajor[d.name] ?? (d.version ? majorOf(d.version) : null);
+          const same = major !== null && best && majorOf(best.from) !== major ? bestRange(d.name, minor, archOn, { major }) : null;
           return { name: d.name, best, same };
         })
         .filter((b) => b.best && (b.same || b.best).range !== lastRange[b.name])
         .map((b) => {
-          lastRange[b.name] = (b.same || b.best).range;
-          return b.same ? `\`${b.name}\` ${b.same.range} (or ${b.best.range}, a major migration)` : `\`${b.name}\` ${b.best.range}`;
+          const chosen = b.same || b.best;
+          const forcedMajor = !b.same && lastMajor[b.name] !== undefined && majorOf(chosen.from) !== lastMajor[b.name];
+          lastRange[b.name] = chosen.range;
+          lastMajor[b.name] = majorOf(chosen.from);
+          if (b.same) return `\`${b.name}\` ${b.same.range} (or ${b.best.range}, a major migration)`;
+          return `\`${b.name}\` ${b.best.range}${forcedMajor ? ' (a major migration: read its migration guide first)' : ''}`;
         });
       const step = `${from} → ${to}: apply the diff from ${UPGRADE_HELPER_URL(from, to)}${bumps.length ? `, move ${bumps.join(' and ')}` : ''}, reinstall pods, build both platforms, commit.`;
       from = to;

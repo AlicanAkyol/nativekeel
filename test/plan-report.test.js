@@ -244,3 +244,21 @@ test('SARIF: file paths are valid URIs', async () => {
   const loc = sarifReport(r, { version: '1' }).runs[0].results[0].locations[0].physicalLocation.artifactLocation.uri;
   assert.equal(loc, 'ios/Make%20Note/Info.plist');
 });
+
+test('hops before a deferred New Architecture switch use legacy-compatible versions', () => {
+  const old = {
+    ...result,
+    project: { ...result.project, reactNative: '0.63.5' },
+    deps: [{ name: 'react-native-reanimated', version: '2.17.0', native: true }, { name: 'react-native-gesture-handler', version: '1.10.3', native: true }],
+    findings: [
+      { id: 'rn-unsupported', severity: 'critical', area: 'react-native', title: 'x', detail: 'x', fix: { kind: 'upgrade-rn', from: '0.63.5', to: '0.87.1' } },
+      { id: 'new-arch-disabled', severity: 'critical', area: 'new-architecture', title: 'x', detail: 'x', fix: { kind: 'enable-new-arch', platforms: ['android', 'ios'] } },
+    ],
+  };
+  const steps = buildPlan(old).phases.find((p) => p.title.startsWith('Upgrade React Native')).steps;
+  const at78 = steps.find((s) => s.includes('→ 0.78.0'));
+  assert.match(at78, /react-native-reanimated` 3\.19\.x/, 'Reanimated 4 needs the New Architecture, which is not on yet');
+  const at84 = steps.find((s) => s.includes('→ 0.84.0'));
+  assert.match(at84, /react-native-gesture-handler` 2\.32–2\.99\.x \(or 3\.0\+/, 'continue on the 2.x line recommended before');
+  assert.match(at84, /react-native-reanimated` 4\.6\.x \(a major migration/);
+});
