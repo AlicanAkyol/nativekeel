@@ -137,7 +137,18 @@ export function findUnused(project) {
     }
   }
 
-  const candidates = names.filter((n) => !used.has(n) && !requiredByOthers.has(n) && !configText.includes(n) && !usedByBin(n));
+  // A package someone patched (patch-package) is one they care about: never call it unused.
+  const patched = new Set();
+  try {
+    for (const f of fs.readdirSync(path.join(root, 'patches'))) {
+      const m = f.match(/^(@[^+]+\+[^+]+|[^+@][^+]*)\+/);
+      if (m) patched.add(m[1].replace('+', '/'));
+    }
+  } catch {
+    // no patches folder
+  }
+
+  const candidates = names.filter((n) => !used.has(n) && !requiredByOthers.has(n) && !configText.includes(n) && !usedByBin(n) && !patched.has(n));
   if (!candidates.length) return [];
 
   const nativeText = ['ios', 'android'].flatMap((d) => walk(path.join(root, d), NATIVE_EXT)).map(readSmall).join('\n');

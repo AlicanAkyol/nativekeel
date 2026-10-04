@@ -85,3 +85,15 @@ test('unused: config aliases, indirect peers, CLI command names and self-registe
   const unused = findUnused(loadProject(root)).map((u) => u.name);
   assert.deepEqual(unused, ['left-pad']);
 });
+
+test('unused: a patched package is never reported', () => {
+  const root = makeProject({
+    'package.json': { name: 'p', dependencies: { 'react-native': '0.80.0', '@react-native-community/toolbar-android': '0.2.1', 'left-pad': '1.3.0' } },
+    'patches/@react-native-community+toolbar-android+0.2.1.patch': 'diff --git a/x b/x\n',
+    'node_modules/react-native/package.json': { version: '0.80.0' },
+    'node_modules/@react-native-community/toolbar-android/package.json': { version: '0.2.1' },
+    'node_modules/left-pad/package.json': { version: '1.3.0' },
+    'src/App.js': 'export default 1;\n',
+  });
+  assert.deepEqual(findUnused(loadProject(root)).map((u) => u.name), ['left-pad']);
+});
