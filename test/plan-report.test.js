@@ -190,3 +190,18 @@ test('complexity: many routine bumps do not size a current app like a migration'
   assert.ok(['Large', 'Extra large'].includes(complexity(migration).size));
   assert.ok(complexity(migration).score > complexity(bumps).score * 2);
 });
+
+test('managed Expo plan: no native-folder commands', () => {
+  const managed = {
+    ...result,
+    project: { ...result.project, reactNative: '0.74.5', expo: '51.0.39', managed: true },
+    findings: [
+      { id: 'expo-unsupported', severity: 'critical', area: 'expo', title: 'x', detail: 'x', fix: { kind: 'upgrade-expo', from: 51, to: 54 } },
+      { id: 'new-arch-disabled', severity: 'critical', area: 'new-architecture', title: 'x', detail: 'x', fix: { kind: 'enable-new-arch', platforms: ['android', 'ios'] } },
+    ],
+  };
+  const md = planToMarkdown(managed, buildPlan(managed));
+  assert.ok(!/gradlew|ios\/Pods|Xcode Archive/.test(md), md.match(/.*(gradlew|ios\/Pods|Xcode Archive).*/)?.[0]);
+  assert.match(md, /eas build/);
+  assert.match(md, /At SDK 52, turn on the New Architecture/);
+});

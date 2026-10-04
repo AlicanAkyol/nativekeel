@@ -356,7 +356,7 @@ export function buildPlan(result) {
       steps.push(`In \`${depProvider.file}\`, add \`#import <ReactAppDependencyProvider/RCTAppDependencyProvider.h>\` and \`self.dependencyProvider = [RCTAppDependencyProvider new];\` before calling super. Without it the switch causes a launch crash in Release.`);
     }
     if (result.project.managed) {
-      steps.push('Set `"newArchEnabled": true` in `app.json` (under `expo`), then run `npx expo prebuild --clean` and build.');
+      steps.push('Set `"newArchEnabled": true` in `app.json` (under `expo`), then make a new development build (`eas build --profile development`, or `npx expo run:ios` / `npx expo run:android`). Expo Go cannot test this switch.');
     } else {
       if (arch.platforms.includes('android')) steps.push('Android: set `newArchEnabled=true` in `android/gradle.properties`.');
       if (arch.platforms.includes('ios')) steps.push('iOS: set `"newArchEnabled": "true"` in `ios/Podfile.properties.json` (or run `RCT_NEW_ARCH_ENABLED=1 bundle exec pod install`).');
@@ -364,8 +364,10 @@ export function buildPlan(result) {
     for (const c of byKind('compat').filter((x) => x.forNewArch && x.range)) {
       steps.unshift(`First move \`${c.name}\` to ${c.range}: the installed version does not support the New Architecture on this React Native version.`);
     }
-    steps.push('Clean everything (`./gradlew clean`, `watchman watch-del-all`, delete `ios/build` and `ios/Pods`). Switching architecture without a clean build fails on stale codegen output (e.g. missing `Native…Spec` classes).');
-    steps.push('Build debug and release on both platforms.');
+    if (!result.project.managed) {
+      steps.push('Clean everything (`./gradlew clean`, `watchman watch-del-all`, delete `ios/build` and `ios/Pods`). Switching architecture without a clean build fails on stale codegen output (e.g. missing `Native…Spec` classes).');
+    }
+    steps.push(result.project.managed ? 'Build a development and a production build for both platforms.' : 'Build debug and release on both platforms.');
     steps.push('Click through every screen that uses a native module. Interop-layer problems show up at runtime, not at build time.');
     // Before 0.76 the New Architecture is too immature to switch on in place: do it on the way,
     // at the first stop between 0.76 and 0.81 (or Expo SDK 52+), in its own commit.
@@ -496,7 +498,9 @@ export function buildPlan(result) {
     title: 'Verify before you ship',
     why: 'An upgrade is done when the release build works on real devices, not when it compiles.',
     steps: [
-      'Release builds on both platforms (`./gradlew bundleRelease`, Xcode Archive).',
+      result.project.managed
+        ? 'Production builds on both platforms (`eas build --platform all --profile production`, or `npx expo run:android --variant release` and `npx expo run:ios --configuration Release`).'
+        : 'Release builds on both platforms (`./gradlew bundleRelease`, Xcode Archive).',
       'Test on a low-end Android device and on the newest iOS and Android versions.',
       'Ship to internal testing / TestFlight first and watch crash-free sessions for a few days before a staged rollout.',
       'Run `npx nativekeel` again: the report should have no critical or high findings.',
