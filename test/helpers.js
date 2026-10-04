@@ -16,7 +16,8 @@ export function makeProject(files) {
 const versions = (list) => Object.fromEntries(list.map((v) => [v, {}]));
 
 // Canned registry answers so tests never touch the network.
-export function fakeRegistry({ directory = {}, latest = {}, published = {}, rnPeers = [] } = {}) {
+// `manifests` maps 'name@latest' or 'name@1.2.3' to a package.json (e.g. with codegenConfig).
+export function fakeRegistry({ directory = {}, latest = {}, published = {}, rnPeers = [], manifests = {} } = {}) {
   return async (url) => {
     if (url.startsWith('https://reactnative.directory/api/library?name=')) {
       const names = decodeURIComponent(url.split('name=')[1]).split(',');
@@ -40,10 +41,11 @@ export function fakeRegistry({ directory = {}, latest = {}, published = {}, rnPe
         versions: { [v]: rnPeers.includes(name) ? { peerDependencies: { 'react-native-vector-icons': '*' } } : {} },
       };
     }
-    const m = url.match(/^https:\/\/registry\.npmjs\.org\/(.+)\/latest$/);
+    const m = url.match(/^https:\/\/registry\.npmjs\.org\/(.+)\/(latest|\d+\.\d+\.\d+)$/);
     if (m) {
       const name = decodeURIComponent(m[1]);
-      return latest[name] ? { version: latest[name] } : null;
+      if (manifests[`${name}@${m[2]}`]) return manifests[`${name}@${m[2]}`];
+      return m[2] === 'latest' && latest[name] ? { version: latest[name] } : null;
     }
     return null;
   };

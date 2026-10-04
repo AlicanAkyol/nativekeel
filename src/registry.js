@@ -69,6 +69,26 @@ export function createRegistry(get = fetchJson) {
       return out;
     },
 
+    // Whether the version in use, and the latest, ship a codegen spec (`codegenConfig` in their
+    // package.json), i.e. native New Architecture support. React Native Directory's flag lags
+    // releases, so this is the tie-breaker before calling a package a blocker.
+    async codegenSupport(list, concurrency = 8) {
+      const out = {};
+      const queue = [...list];
+      const manifest = (name, tag) => get(`https://registry.npmjs.org/${name.replace('/', '%2F')}/${tag}`);
+      const worker = async () => {
+        while (queue.length) {
+          const { name, version } = queue.shift();
+          const latest = await manifest(name, 'latest');
+          if (!latest) continue;
+          const used = version && version !== latest.version ? await manifest(name, version) : latest;
+          out[name] = { latest: latest.version, latestHas: !!latest.codegenConfig, usedHas: !!(used && used.codegenConfig) };
+        }
+      };
+      await Promise.all(Array.from({ length: concurrency }, worker));
+      return out;
+    },
+
     // Stable versions of a package, newest release line first.
     async releaseLines(name, pick) {
       // The abbreviated "install" document is a fraction of the full packument's size.

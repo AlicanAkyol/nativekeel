@@ -247,3 +247,44 @@ test('React Native from a git fork: a clear warning instead of silence', async (
   const result = await analyze(loadProject(root), { get: registry, now: NOW });
   assert.ok(result.warnings.some((w) => /declared as "zulip\/react-native#b7b2f6c22"/.test(w)));
 });
+
+test('Directory says no New Architecture, npm knows better', async () => {
+  const project = (version) =>
+    loadProject(
+      makeProject({
+        'package.json': { name: 'tp', dependencies: { 'react-native': '0.80.3', 'react-native-track-player': version } },
+        'node_modules/react-native/package.json': { version: '0.80.3' },
+        'node_modules/react-native-track-player/package.json': { version },
+        'node_modules/react-native-track-player/ios/x.swift': '',
+        'src/App.js': "import TrackPlayer from 'react-native-track-player';\n",
+      }),
+    );
+  const get = fakeRegistry({
+    directory: { 'react-native-track-player': { ios: true, android: true, newArchitecture: false } },
+    latest: { 'react-native-track-player': '5.0.0' },
+    manifests: {
+      'react-native-track-player@latest': { version: '5.0.0', codegenConfig: { name: 'TrackPlayerSpec' } },
+      'react-native-track-player@4.1.2': { version: '4.1.2' },
+    },
+  });
+  const old = (await analyze(project('4.1.2'), { get, now: NOW })).findings.find((f) => f.id === 'dep-risk:react-native-track-player');
+  assert.equal(old.severity, 'medium');
+  assert.match(old.title, /New Architecture support needs 5\.0\.0/);
+  assert.equal(old.fix.kind, 'bump-dep');
+
+  const current = (await analyze(project('5.0.0'), { get, now: NOW })).findings.find((f) => f.id === 'dep-risk:react-native-track-player');
+  assert.equal(current, undefined, 'the version in use already has a codegen spec');
+});
+
+test('without node_modules, pure JS packages are not counted as native', async () => {
+  const root = makeProject({
+    'package.json': { name: 'js', dependencies: { 'react-native': '0.80.3', 'react-native-progress': '5.0.0' } },
+    'src/App.js': "import * as Progress from 'react-native-progress';\n",
+  });
+  const get = fakeRegistry({
+    directory: { 'react-native-progress': { ios: true, android: true, unmaintained: true, github: { hasNativeCode: false } } },
+  });
+  const f = (await analyze(loadProject(root), { get, now: NOW })).findings.find((x) => x.id === 'dep-risk:react-native-progress');
+  assert.equal(f.severity, 'medium', 'an abandoned JS package is not an upgrade blocker');
+  assert.equal(f.fix.native, false);
+});

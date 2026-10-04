@@ -47,7 +47,9 @@ function isNativeModule(root, name, dir) {
       return false;
     }
   }
-  // Without node_modules, trust React Native Directory's platform flags.
+  // Without node_modules, ask React Native Directory. Its ios/android flags mean "works on",
+  // not "has native code" (pure JS packages set them too), so prefer its hasNativeCode.
+  if (dir && dir.github && typeof dir.github.hasNativeCode === 'boolean') return dir.github.hasNativeCode;
   return !!(dir && (dir.ios || dir.android) && !dir.web);
 }
 
@@ -177,11 +179,16 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
   const published = forcedOffline ? {} : await registry.publishDates(recencyCandidates);
   const daysSince = (date) => (date ? Math.floor((now - new Date(`${date}T00:00:00Z`)) / 86400000) : null);
 
+  const nativeOf = Object.fromEntries(names.map((n) => [n, isNativeModule(project.root, n, directory[n])]));
+  const versionOf = (n) => cleanVersion(installedVersion(project.root, n) || declaredRange(n));
+  const archSuspects = names.filter((n) => nativeOf[n] && directory[n] && directory[n].newArchitecture === false);
+  const codegen = forcedOffline ? {} : await registry.codegenSupport(archSuspects.map((n) => ({ name: n, version: versionOf(n) })));
+
   const deps = [];
   for (const name of names) {
     const dir = directory[name];
-    const version = cleanVersion(installedVersion(project.root, name) || declaredRange(name));
-    const native = isNativeModule(project.root, name, dir);
+    const version = versionOf(name);
+    const native = nativeOf[name];
     const release = published[name] || {};
     const age = daysSince(release.date);
     const revived = !!(dir && dir.unmaintained && age !== null && age <= RECENT_RELEASE_DAYS);
@@ -196,7 +203,22 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
     };
     deps.push(dep);
 
-    const noNewArch = native && dir && dir.newArchitecture === false;
+    const cg = codegen[name];
+    // Directory says no New Architecture, but npm may know better.
+    const archFixedIn = native && dir && dir.newArchitecture === false && cg && !cg.usedHas && cg.latestHas ? cg.latest : null;
+    const noNewArch = native && dir && dir.newArchitecture === false && !(cg && (cg.usedHas || cg.latestHas));
+    if (cg && cg.usedHas) dep.newArch = true;
+    if (archFixedIn) {
+      add({
+        id: `dep-risk:${name}`,
+        severity: 'medium',
+        area: 'dependency',
+        title: `${name} ${version || ''}: New Architecture support needs ${archFixedIn}`.replace('  ', ' '),
+        detail: `React Native Directory lists it without New Architecture support, but ${archFixedIn} ships a codegen spec. Update to ${archFixedIn} (check its changelog for breaking changes) instead of replacing it.`,
+        fix: { kind: 'bump-dep', name, from: version, to: archFixedIn, native },
+      });
+      continue;
+    }
     // Only code that has to follow React Native or the OS goes stale; a finished JS utility does not.
     const stale = !dep.unmaintained && !revived && age !== null && age > STALE_RELEASE_DAYS && (native || !!release.rnLink);
     const alternatives = dir && dir.alternatives && dir.alternatives.length ? dir.alternatives : REPLACEMENTS[name] || [];
