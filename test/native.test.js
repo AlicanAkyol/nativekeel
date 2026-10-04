@@ -336,3 +336,17 @@ test('Hermes: only the platform that has it off', () => {
   assert.deepEqual(f.fix.platforms, ['ios']);
   assert.match(f.title, /on ios\)/);
 });
+
+test('sequenced and dev patch names are parsed', () => {
+  const files = rnApp('0.80.0', {
+    'node_modules/react-native-fs/package.json': { version: '2.20.0' },
+    'patches/react-native-fs+2.20.0+001+initial.patch': 'diff --git a/node_modules/react-native-fs/a.js b/node_modules/react-native-fs/a.js\n',
+    'patches/react-native-fs+2.20.0+002+error-on-cancel.patch': 'diff --git a/node_modules/react-native-fs/b.js b/node_modules/react-native-fs/b.js\n',
+    'patches/react-native-fs+2.20.0.dev.patch': 'diff --git a/node_modules/react-native-fs/c.js b/node_modules/react-native-fs/c.js\n',
+  });
+  const found = check(files);
+  assert.ok(!found.some((f) => f.id.startsWith('patch-version')), found.filter((f) => f.id.startsWith('patch-version')).map((f) => f.title).join('; '));
+  const present = found.find((f) => f.id === 'patches-present');
+  assert.match(present.title, /react-native-fs/);
+  assert.ok(!/react-native-fs, react-native-fs/.test(present.title), 'one package, listed once');
+});

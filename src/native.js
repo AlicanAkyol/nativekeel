@@ -191,7 +191,9 @@ export function nativeChecks(project, { rnLatest = null, now = new Date() } = {}
   }
   const patched = [];
   for (const f of patchFiles) {
-    const m = f.match(/^(.+?)\+(\d+\.\d+\.\d+[^.]*)(?:\+\d+)?\.patch$/);
+    // patch-package names: <pkg>+<version>.patch, <pkg>+<version>.dev.patch, and sequenced
+    // patches <pkg>+<version>+<NNN>[+<name>].patch (scoped packages use + for the slash).
+    const m = f.match(/^(.+?)\+(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)(?:\+\d+(?:\+[^/]*)?)?(?:\.dev)?\.patch$/);
     if (!m) continue;
     const pkg = m[1].replace(/\+/g, '/');
     const version = m[2];
@@ -226,7 +228,7 @@ export function nativeChecks(project, { rnLatest = null, now = new Date() } = {}
       id: 'patches-present',
       severity: 'info',
       area: 'native',
-      title: `${patched.length} patch-package patch${patched.length === 1 ? '' : 'es'}: ${patched.map((p) => p.pkg).join(', ')}`,
+      title: `${patched.length} patch-package patch${patched.length === 1 ? '' : 'es'}: ${[...new Set(patched.map((p) => p.pkg))].join(', ')}`,
       detail: 'Each was written against one library version and one React Native version. After every upgrade step check that each still applies and is still needed; a patch that adapted a library to an older React Native can break it on a newer one.',
       fix: { kind: 'patches-review', patches: patched },
     });
