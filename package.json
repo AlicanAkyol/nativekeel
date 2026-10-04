@@ -27,5 +27,12 @@
     "test": "node --test test/*.test.js",
     "scan": "node bin/nativekeel.js"
   },
-  "homepage": "https://nativekeel.com"
+  "homepage": "https://nativekeel.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AlicanAkyol/nativekeel.git"
+  },
+  "bugs": {
+    "url": "https://github.com/AlicanAkyol/nativekeel/issues"
+  }
 }
