@@ -156,7 +156,9 @@ async function main() {
   return result.findings.some((f) => SEVERITIES.indexOf(f.severity) <= threshold) ? 1 : 0;
 }
 
+// Exit only after stdout has flushed: process.exit() right after a large write to a pipe
+// cuts the output off at 8 KB (`npx nativekeel --json | jq` got broken JSON).
 main().then(
-  (code) => process.exit(code),
+  (code) => process.stdout.write('', () => process.exit(code)),
   (e) => fail(e.stack || e.message),
 );

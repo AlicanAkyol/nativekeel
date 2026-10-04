@@ -72,3 +72,12 @@ test('helpful errors', () => {
   assert.match(run(['--help']).stdout, /Usage/);
   assert.match(run(['--version']).stdout, /^\d+\.\d+\.\d+/);
 });
+
+test('large JSON through a pipe is complete, and the exit code survives', () => {
+  const files = { 'package.json': { name: 'big', dependencies: { 'react-native': '0.80.0' } } };
+  for (let i = 0; i < 60; i++) files[`src/keys${i}.js`] = "export const k = 'AKIAIOSFODNN7EXAMPLE';\n";
+  const r = run([makeProject(files), '--offline', '--json']);
+  assert.ok(r.stdout.length > 16384, `output should be large, got ${r.stdout.length}`);
+  assert.doesNotThrow(() => JSON.parse(r.stdout));
+  assert.equal(r.status, 1);
+});
