@@ -211,3 +211,16 @@ test('reports show what "not set" means for the New Architecture', () => {
   assert.match(textReport(r('0.74.5'), { color: false }), /android: off \(default\)/);
   assert.match(textReport(r('0.80.0'), { color: false }), /android: on \(default\)/);
 });
+
+test('bare app: prefer a non-Expo replacement, flag Expo-only ones', () => {
+  const r = {
+    ...result,
+    findings: [
+      { id: 'dep-risk:rn-fetch-blob', severity: 'high', area: 'dependency', title: 'x', detail: 'x', fix: { kind: 'replace-dep', name: 'rn-fetch-blob', native: true, noNewArch: false, unmaintained: true, alternatives: ['expo-file-system', 'react-native-blob-util'] } },
+      { id: 'dep-risk:@react-native-community/blur', severity: 'high', area: 'dependency', title: 'x', detail: 'x', fix: { kind: 'replace-dep', name: '@react-native-community/blur', native: true, noNewArch: false, unmaintained: true, alternatives: ['expo-blur'] } },
+    ],
+  };
+  const md = planToMarkdown(r, buildPlan(r));
+  assert.match(md, /npm uninstall rn-fetch-blob && npm install react-native-blob-util/);
+  assert.match(md, /npm install expo-blur` \(Expo packages need Expo modules first/);
+});

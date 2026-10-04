@@ -319,9 +319,16 @@ export function buildPlan(result) {
         if (owned) {
           return `\`${d.name}\` (${reason}${d.native ? ', native' : ''}). You already use \`${owned}\`: move the remaining usage there, then \`${pm.remove} ${d.name}\`.`;
         }
-        const to = d.alternatives[0];
-        const cmd = to ? ` \`${pm.remove} ${d.name} && ${pm.add} ${to}\`` : '';
-        const options = d.alternatives.length ? `Options: ${d.alternatives.map((a) => `\`${a}\``).join(', ')}.${cmd}` : 'No known replacement: check for a maintained fork, or vendor and patch it with `patch-package`.';
+        // expo-* packages need Expo modules; a bare app without them should get another option first.
+        const usesExpoModules = isExpo || installed.has('expo');
+        const to = usesExpoModules ? d.alternatives[0] : d.alternatives.find((a) => !a.startsWith('expo-')) || d.alternatives[0];
+        const needsExpo = to && to.startsWith('expo-') && !usesExpoModules ? ' (Expo packages need Expo modules first: `npx install-expo-modules@latest`)' : '';
+        const cmd = to ? ` \`${pm.remove} ${d.name} && ${pm.add} ${to}\`${needsExpo}` : '';
+        const options = d.alternatives.length
+          ? `Options: ${d.alternatives.map((a) => `\`${a}\``).join(', ')}.${cmd}`
+          : d.noNewArch
+            ? 'No known replacement: check for a maintained fork, or vendor and patch it with `patch-package`.'
+            : 'Not a known blocker: keep it while it builds and passes your UI flows at every step below, and replace it (or patch it with `patch-package`) when it breaks.';
         return `\`${d.name}\` (${reason}${d.native ? ', native' : ''}). ${options}`;
       }),
     });

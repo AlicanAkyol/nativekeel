@@ -53,6 +53,23 @@ export const REPLACEMENTS = {
   'react-native-code-push': ['expo-updates'],
   // react-native-elements was renamed to @rneui, which in turn is continued by @rn-vui.
   'react-native-elements': ['@rn-vui/themed'],
+  // Checked on npm and React Native Directory on 2026-10-04 (published and not flagged unmaintained).
+  'rn-fetch-blob': ['react-native-blob-util'],
+  '@react-native-community/blur': ['expo-blur'],
+  'react-native-randombytes': ['react-native-get-random-values', 'expo-crypto'],
+  'react-native-securerandom': ['react-native-get-random-values', 'expo-crypto'],
+  'react-native-tcp': ['react-native-tcp-socket'],
+  '@react-native-community/geolocation': ['expo-location'],
+  'react-native-geolocation-service': ['expo-location'],
+  'react-native-encrypted-storage': ['react-native-keychain', 'expo-secure-store'],
+  'react-native-navigation-bar-color': ['react-native-edge-to-edge', 'expo-navigation-bar'],
+  'react-native-quick-actions': ['expo-quick-actions'],
+  'react-native-version-number': ['react-native-device-info', 'expo-application'],
+  'react-native-mail': ['expo-mail-composer'],
+  'react-native-rate': ['expo-store-review'],
+  'react-native-print': ['expo-print'],
+  'react-native-i18n': ['react-native-localize', 'expo-localization'],
+  'expo-av': ['expo-audio', 'expo-video'],
 };
 
 export const UPGRADE_HELPER_URL = (from, to) =>
