@@ -80,6 +80,9 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
   if (!project.rnVersion && rnSpec) {
     warnings.push(`React Native is declared as "${rnSpec}", which has no version number (a git fork or a workspace reference). Install dependencies so NativeKeel can read the installed version; version checks were skipped.`);
   }
+  if (project.isLibrary) {
+    warnings.push('This looks like a React Native library, not an app (react-native is a peer dependency, or android/ builds a library). App Store and Google Play checks were skipped; scan the app that uses it for those.');
+  }
   if (!offline && project.rnVersion && !rn) warnings.push('Could not fetch React Native releases from npm; version and New Architecture checks were skipped. Run again.');
   if (!offline && project.expoVersion && !expo) warnings.push('Could not fetch Expo releases from npm; the SDK check was skipped. Run again.');
 
@@ -157,7 +160,7 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
   }
 
   // 4. Google Play target SDK
-  const target = project.android && project.android.targetSdk;
+  const target = !project.isLibrary && project.android && project.android.targetSdk;
   if (target) {
     const today = now.toISOString().slice(0, 10);
     const { updates, visibility } = PLAY_TARGET_SDK;

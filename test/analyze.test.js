@@ -294,3 +294,18 @@ test('without node_modules, pure JS packages are not counted as native', async (
   assert.equal(f.severity, 'medium', 'an abandoned JS package is not an upgrade blocker');
   assert.equal(f.fix.native, false);
 });
+
+test('a React Native library is recognised and store checks are skipped', async () => {
+  const root = makeProject({
+    'package.json': { name: 'react-native-thing', main: 'index.js', peerDependencies: { 'react-native': '*' }, devDependencies: { 'react-native': '0.80.3' } },
+    'android/build.gradle': "apply plugin: 'com.android.library'\nandroid { defaultConfig { targetSdkVersion 30 } }\n",
+    'ios/Thing.m': '',
+  });
+  const project = loadProject(root);
+  assert.equal(project.isLibrary, true);
+  const result = await analyze(project, { get: registry, now: NOW });
+  assert.ok(result.warnings.some((w) => /looks like a React Native library/.test(w)));
+  const ids = result.findings.map((f) => f.id);
+  assert.ok(!ids.includes('ios-privacy-manifest'));
+  assert.ok(!ids.some((i) => i.startsWith('play-target')));
+});

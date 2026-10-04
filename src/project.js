@@ -116,9 +116,16 @@ export function loadProject(root) {
   const hasIos = fs.existsSync(path.join(root, 'ios'));
   const appConfig = readJson(path.join(root, 'app.json'));
 
+  // A React Native library (or an example inside one) is not an app: store checks do not apply.
+  const androidGradle = readText(path.join(root, 'android', 'build.gradle')) || '';
+  const isLibrary =
+    !!(pkg.peerDependencies && pkg.peerDependencies['react-native']) ||
+    /apply plugin:\s*['"]com\.android\.library['"]|id\s*\(?\s*['"]com\.android\.library['"]/.test(androidGradle);
+
   return {
     root,
     name: pkg.name,
+    isLibrary,
     deps,
     devDeps,
     rnVersion: cleanVersion(installedVersion(root, 'react-native') || declared('react-native') || ''),

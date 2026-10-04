@@ -278,7 +278,7 @@ export function nativeChecks(project, { rnLatest = null, now = new Date() } = {}
 
   // iOS privacy manifest: required by App Store Connect since 1 May 2024. React Native itself
   // uses "required reason" APIs, so every React Native app needs one.
-  if (hasIos) {
+  if (hasIos && !project.isLibrary) {
     const manifests = findFiles(path.join(root, 'ios'), (name) => name.endsWith('.xcprivacy'));
     if (!manifests.length) {
       add({
