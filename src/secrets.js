@@ -44,7 +44,28 @@ const RULES = [
 const PLACEHOLDER = /example|test|dummy|fake|sample|placeholder|xxxx|changeme|redacted|your[_-]?(?:api[_-]?)?(?:key|token|secret)/i;
 
 // Test code is never part of the app bundle.
-const TEST_PATH = /(^|\/)(__tests__|__mocks__|__fixtures__|test|tests|e2e|fixtures)\/|\.(test|spec)\.[cm]?[jt]sx?$/;
+const TEST_PATH = /(^|\/)(__tests__|__mocks__|__fixtures__|test|tests|e2e|fixtures)\/|\.(test|spec)\.[cm]?[jt]sx?$|(^|\/)tests?\.[cm]?[jt]sx?$|[a-z]Test\.[cm]?[jt]sx?$/;
+
+const JS_FILE = /\.[cm]?[jt]sx?$/;
+
+// A JSON file only ends up in the JavaScript bundle when code imports it (a service-account
+// file lying in the project root is committed, not shipped). Native resources (plist, xml) and
+// assets under android/ and ios/ are packaged by the build, so they always ship.
+function importedJsonNames(files) {
+  const names = new Set();
+  for (const file of files) {
+    if (!JS_FILE.test(file)) continue;
+    let text;
+    try {
+      if (fs.statSync(file).size > MAX_FILE_BYTES) continue;
+      text = fs.readFileSync(file, 'utf8');
+    } catch {
+      continue;
+    }
+    for (const m of text.matchAll(/['"`]([^'"`\n]+\.json)['"`]/g)) names.add(path.basename(m[1]));
+  }
+  return names;
+}
 
 const isCommentLine = (line) => /^\s*(\/\/|\/\*|\*|#|<!--)/.test(line);
 
@@ -77,7 +98,9 @@ function gitTrackedFiles(root) {
 export function scanSecrets(root) {
   const findings = [];
   const tracked = gitTrackedFiles(root);
-  for (const file of walk(root)) {
+  const files = [...walk(root)];
+  let jsonImports = null; // computed only if a JSON file holds a secret
+  for (const file of files) {
     let text;
     try {
       if (fs.statSync(file).size > MAX_FILE_BYTES) continue;
@@ -96,13 +119,18 @@ export function scanSecrets(root) {
         const line = text.slice(0, m.index).split('\n').length;
         // Comments are stripped from the bundle; a key there is committed, not shipped.
         const inComment = isCommentLine(lines[line - 1] || '');
+        let unreferencedJson = false;
+        if (file.endsWith('.json') && !/^(android|ios)\//.test(posix)) {
+          jsonImports = jsonImports || importedJsonNames(files);
+          unreferencedJson = !jsonImports.has(path.basename(file));
+        }
         findings.push({
           rule: rule.id,
           label: rule.label,
           file: rel,
           line,
           preview: value ? mask(value) : null,
-          inAppBundle: !SERVER_DIRS.has(posix.split('/')[0]) && !TEST_PATH.test(posix) && !inComment,
+          inAppBundle: !SERVER_DIRS.has(posix.split('/')[0]) && !TEST_PATH.test(posix) && !inComment && !unreferencedJson,
           inComment,
           committed: tracked ? tracked.has(posix) : null,
         });

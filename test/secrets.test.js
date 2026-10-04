@@ -55,3 +55,17 @@ test('where a secret sits decides whether it ships', () => {
   assert.equal(byFile['src/old.js'].inComment, true);
   assert.equal(byFile['src/__tests__/a.test.js'].inAppBundle, false, 'test code is not bundled');
 });
+
+test('a JSON file ships only when the code imports it', () => {
+  const pem = ['-----BEGIN ', 'PRIVATE KEY-----'].join('');
+  const sa = JSON.stringify({ type: 'service_account', private_key: `${pem}\nabc` });
+  const loose = makeProject({ 'package.json': '{}', 'service-account.json': sa, 'src/App.js': "export default 1;\n" });
+  assert.equal(scanSecrets(loose)[0].inAppBundle, false, 'committed, not shipped');
+  const imported = makeProject({ 'package.json': '{}', 'src/sa.json': sa, 'src/App.js': "import sa from './sa.json';\n" });
+  assert.equal(scanSecrets(imported)[0].inAppBundle, true);
+  const testFiles = makeProject({ 'package.json': '{}', 'test.js': `const k = "${pem}";\n`, 'src/cryptoTest.ts': `const k = "${pem}";\n`, 'src/latest.js': `const k = "${pem}";\n` });
+  const byFile = Object.fromEntries(scanSecrets(testFiles).map((f) => [f.file, f.inAppBundle]));
+  assert.equal(byFile['test.js'], false);
+  assert.equal(byFile['src/cryptoTest.ts'], false);
+  assert.equal(byFile['src/latest.js'], true, '"latest.js" is not a test file');
+});
