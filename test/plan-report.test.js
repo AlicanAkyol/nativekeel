@@ -224,3 +224,16 @@ test('bare app: prefer a non-Expo replacement, flag Expo-only ones', () => {
   assert.match(md, /npm uninstall rn-fetch-blob && npm install react-native-blob-util/);
   assert.match(md, /npm install expo-blur` \(Expo packages need Expo modules first/);
 });
+
+test('HTML report: outdated packages collapse into one table', () => {
+  const r = {
+    ...result,
+    findings: [
+      ...result.findings,
+      ...['a', 'b', 'c'].map((name) => ({ id: `dep-major:${name}`, severity: 'low', area: 'dependency', title: `${name} 1.0.0 → 2.0.0`, detail: 'Major version behind.', fix: { kind: 'bump-dep', name, from: '1.0.0', to: '2.0.0', native: false } })),
+    ],
+  };
+  const html = htmlReport(r);
+  assert.match(html, /<details class="bumps"><summary>3 packages are a major version behind/);
+  assert.ok(!html.includes('Major version behind.'), 'no card per outdated package');
+});

@@ -15,11 +15,19 @@ export function htmlReport(result, { brand = null, plan = null } = {}) {
   const defaultOn = !!result.project.reactNative && Number(result.project.reactNative.split('.')[1]) >= 76;
   const arch = (v) => (v === true ? 'on' : v === false ? 'off' : defaultOn ? 'on (default)' : 'off (default)');
 
+  // Outdated packages are many and alike: one collapsible table instead of a card each.
+  const isBump = (f) => f.id.startsWith('dep-major:');
   const rows = SEVERITIES.flatMap((sev) =>
     result.findings
-      .filter((f) => f.severity === sev)
+      .filter((f) => f.severity === sev && !isBump(f))
       .map((f) => `<li class="f ${sev}"><span class="tag">${sevLabel[sev]}</span><div><strong>${rich(f.title)}</strong><p>${rich(f.detail)}</p></div></li>`),
   ).join('\n');
+  const bumps = result.findings.filter(isBump);
+  const bumpTable = bumps.length
+    ? `<details class="bumps"><summary>${bumps.length} package${bumps.length === 1 ? ' is' : 's are'} a major version behind <span class="muted">(low)</span></summary><table><thead><tr><th>Package</th><th>Installed</th><th>Latest</th><th></th></tr></thead><tbody>${bumps
+        .map((f) => `<tr><td>${esc(f.fix.name)}</td><td>${esc(f.fix.from || '')}</td><td>${esc(f.fix.to || '')}</td><td class="muted">${f.fix.native ? 'native' : ''}</td></tr>`)
+        .join('')}</tbody></table></details>`
+    : '';
 
   const planHtml = plan
     ? `<section><h2>Upgrade plan <small>scope: ${esc(plan.complexity.size)}</small></h2>${plan.phases
@@ -50,6 +58,7 @@ h1{font-size:26px;margin:0 0 4px}h2{font-size:19px;margin:32px 0 12px}h2 small{f
 .stat.critical b{color:var(--critical)}.stat.high b{color:var(--high)}
 .facts{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin-top:12px;display:flex;flex-wrap:wrap;gap:6px 24px;font-size:14px}
 ul.list{list-style:none;padding:0;margin:0;display:grid;gap:8px}
+details.bumps{margin-top:8px;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--low);border-radius:8px;padding:10px 14px}details.bumps summary{cursor:pointer;font-weight:600}details.bumps table{width:100%;border-collapse:collapse;margin-top:10px;font-size:14px}details.bumps th,details.bumps td{text-align:left;padding:4px 8px;border-top:1px solid var(--line)}.muted{color:var(--muted);font-weight:400}
 .f{display:flex;gap:12px;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--low);border-radius:8px;padding:10px 14px}
 .f p{margin:2px 0 0;color:var(--muted);font-size:14px}.f strong{overflow-wrap:anywhere}
 .tag{flex:none;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;min-width:64px;padding-top:2px}
@@ -80,7 +89,7 @@ ${p.android && p.android.targetSdk ? `<span>targetSdk <b>${p.android.targetSdk}<
 <span>${result.deps.length} dependencies (${result.deps.filter((d) => d.native).length} native)</span>
 </div>
 <h2>Findings</h2>
-${result.findings.length ? `<ul class="list">${rows}</ul>` : '<p>No issues found.</p>'}
+${result.findings.length ? `${rows ? `<ul class="list">${rows}</ul>` : ''}${bumpTable}` : '<p>No issues found.</p>'}
 ${planHtml}
 <footer>${footer}</footer>
 </main></body></html>
