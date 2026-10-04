@@ -15,6 +15,7 @@ import {
   RECENT_RELEASE_DAYS,
   STALE_RELEASE_DAYS,
   PLAY_TARGET_SDK,
+  RENAMED,
   REPLACEMENTS,
   SUPPORTED_EXPO_MAJORS,
   SUPPORTED_RN_MINORS,
@@ -263,7 +264,7 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
     }
     // Only code that has to follow React Native or the OS goes stale; a finished JS utility does not.
     const stale = !dep.unmaintained && !revived && age !== null && age > STALE_RELEASE_DAYS && (native || !!release.rnLink);
-    const alternatives = dir && dir.alternatives && dir.alternatives.length ? dir.alternatives : REPLACEMENTS[name] || [];
+    const alternatives = RENAMED[name] ? [RENAMED[name]] : dir && dir.alternatives && dir.alternatives.length ? dir.alternatives : REPLACEMENTS[name] || [];
     if (noNewArch || dep.unmaintained || stale) {
       const problems = [
         noNewArch && 'no New Architecture support',
@@ -279,7 +280,7 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
         area: 'dependency',
         title: `${name}: ${problems.join(', ')}`,
         detail: `${why}${alternatives.length ? ` Alternatives: ${alternatives.join(', ')}.` : ''}`,
-        fix: { kind: 'replace-dep', name, native, noNewArch, unmaintained: dep.unmaintained || stale, alternatives },
+        fix: { kind: 'replace-dep', name, native, noNewArch, unmaintained: dep.unmaintained || stale, alternatives, renamedTo: RENAMED[name] || null },
       });
     } else if (revived) {
       add({

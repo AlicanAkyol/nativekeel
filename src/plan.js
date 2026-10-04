@@ -314,6 +314,9 @@ export function buildPlan(result) {
       why: 'These packages decide how far you can upgrade. Swap them while the app still runs on its current version, so every problem has one cause.',
       steps: replace.map((d) => {
         const reason = [d.noNewArch && 'no New Architecture support', d.unmaintained && 'unmaintained'].filter(Boolean).join(', ');
+        if (d.renamedTo) {
+          return `\`${d.name}\` moved to \`${d.renamedTo}\` (same API). \`${pm.remove} ${d.name} && ${pm.add} ${d.renamedTo}\`, then update the imports.`;
+        }
         if (interopPatched.has(d.name) && !d.unmaintained) {
           return `\`${d.name}\` (${reason}, native). The New Architecture step below patches it so it loads; move to a release with a TurboModule spec once one exists.`;
         }

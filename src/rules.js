@@ -70,6 +70,21 @@ export const REPLACEMENTS = {
   'react-native-print': ['expo-print'],
   'react-native-i18n': ['react-native-localize', 'expo-localization'],
   'expo-av': ['expo-audio', 'expo-video'],
+  'react-native-snap-carousel': ['react-native-reanimated-carousel'],
+  'react-native-iphone-x-helper': ['react-native-safe-area-context'],
+  'react-native-slider': ['@react-native-community/slider'],
+  'react-native-datepicker': ['@react-native-community/datetimepicker'],
+};
+
+// Packages that moved to a new name with the same API: swap the package, update the imports.
+export const RENAMED = {
+  '@react-native-community/async-storage': '@react-native-async-storage/async-storage',
+  '@react-native-community/cameraroll': '@react-native-camera-roll/camera-roll',
+  '@react-native-community/masked-view': '@react-native-masked-view/masked-view',
+  '@react-native-community/viewpager': 'react-native-pager-view',
+  '@react-native-community/picker': '@react-native-picker/picker',
+  '@react-native-community/clipboard': '@react-native-clipboard/clipboard',
+  'react-native-netinfo': '@react-native-community/netinfo',
 };
 
 export const UPGRADE_HELPER_URL = (from, to) =>

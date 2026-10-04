@@ -262,3 +262,9 @@ test('hops before a deferred New Architecture switch use legacy-compatible versi
   assert.match(at84, /react-native-gesture-handler` 2\.32–2\.99\.x \(or 3\.0\+/, 'continue on the 2.x line recommended before');
   assert.match(at84, /react-native-reanimated` 4\.6\.x \(a major migration/);
 });
+
+test('renamed packages: swap and update imports', () => {
+  const r = { ...result, findings: [{ id: 'dep-risk:@react-native-community/async-storage', severity: 'high', area: 'dependency', title: 'x', detail: 'x', fix: { kind: 'replace-dep', name: '@react-native-community/async-storage', native: true, noNewArch: false, unmaintained: true, alternatives: ['@react-native-async-storage/async-storage'], renamedTo: '@react-native-async-storage/async-storage' } }] };
+  const md = planToMarkdown(r, buildPlan(r));
+  assert.match(md, /moved to `@react-native-async-storage\/async-storage` \(same API\)/);
+});
