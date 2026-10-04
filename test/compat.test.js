@@ -19,12 +19,14 @@ test('installed versions that cannot work are reported', () => {
 
 test('Reanimated 4 needs the New Architecture and a bounded React Native range', () => {
   assert.match(checkCompat('react-native-reanimated', '4.7.1', 87, false), /does not support the legacy/);
-  assert.match(checkCompat('react-native-reanimated', '4.1.0', 84, true), /0.78–0.81, not 0.84/);
+  assert.match(checkCompat('react-native-reanimated', '4.1.0', 84, true), /0.78–0.82, not 0.84/);
   assert.equal(bestRange('react-native-reanimated', 77, true).range, '3.18.x', 'newest Reanimated 3 range that includes RN 0.77');
-  assert.equal(bestRange('react-native-reanimated', 80, true).range, '4.2–4.3.x');
+  assert.equal(bestRange('react-native-reanimated', 80, true).range, '4.2.x', '4.3 starts at 0.81 (Reanimated compatibility.json)');
   assert.equal(bestRange('react-native-reanimated', 80, true, { major: 3 }).range, '3.19.x', 'same-major option');
   assert.equal(checkCompat('react-native-reanimated', '3.17.5', 77, true), null);
   assert.match(checkCompat('react-native-reanimated', '3.17.5', 80, true), /0.75–0.79, not 0.80/);
+  // Expo SDK 51 pairs Reanimated 3.10 with React Native 0.74 on the legacy architecture.
+  assert.equal(checkCompat('react-native-reanimated', '3.10.1', 74, false), null);
 });
 
 test('Gesture Handler: 2.x minimums and 3.x needs RN 0.82', () => {
