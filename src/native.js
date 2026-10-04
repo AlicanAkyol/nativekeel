@@ -62,7 +62,7 @@ export function nativeChecks(project, { rnLatest = null, now = new Date() } = {}
         severity: 'critical',
         area: 'store',
         title: `React Native ${project.rnVersion} does not support 16 KB memory pages`,
-        detail: `Google Play rejects updates without 16 KB page support since ${PAGE_SIZE_16K.since} (extensions ended ${PAGE_SIZE_16K.extensionUntil}). React Native supports it from 0.${PAGE_SIZE_16K.firstRnMinor}.`,
+        detail: `Google Play rejects updates without 16 KB page support since ${PAGE_SIZE_16K.since} (extensions ended ${PAGE_SIZE_16K.extensionUntil}). React Native supports it from 0.${PAGE_SIZE_16K.firstRnMinor}${project.expoVersion ? ', which in Expo means SDK 53 or later (SDK 52 ships React Native 0.76)' : ''}.`,
         fix: { kind: 'upgrade-rn-min', to: `0.${PAGE_SIZE_16K.firstRnMinor}.0` },
       });
     }
