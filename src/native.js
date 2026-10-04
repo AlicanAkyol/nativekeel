@@ -131,7 +131,8 @@ export function nativeChecks(project, { rnLatest = null, now = new Date() } = {}
   const appGradle = read(path.join(root, 'android', 'app', 'build.gradle')) || read(path.join(root, 'android', 'app', 'build.gradle.kts')) || '';
   const gradleProps = read(path.join(root, 'android', 'gradle.properties')) || '';
   const podfile = read(path.join(root, 'ios', 'Podfile')) || '';
-  if (/com\.facebook\.flipper|FLIPPER_VERSION/.test(appGradle + gradleProps) || /use_flipper!|FlipperConfiguration\.enabled/.test(podfile)) {
+  const flipperWired = /com\.facebook\.flipper/.test(appGradle) || /^\s*[^#\n]*(use_flipper!|FlipperConfiguration\.enabled)/m.test(podfile);
+  if (flipperWired) {
     add({
       id: 'flipper',
       severity: 'medium',
@@ -139,6 +140,15 @@ export function nativeChecks(project, { rnLatest = null, now = new Date() } = {}
       title: 'Flipper is still integrated',
       detail: 'Flipper was removed from React Native in 0.74 and its native libraries are not 16 KB aligned. Remove the Flipper dependencies and initialization code before upgrading; use React Native DevTools instead.',
       fix: { kind: 'remove-flipper' },
+    });
+  } else if (/^\s*FLIPPER_VERSION\s*=/m.test(gradleProps)) {
+    // A leftover property from an old template: harmless, but worth deleting.
+    add({
+      id: 'flipper-leftover',
+      severity: 'low',
+      area: 'native',
+      title: 'Leftover FLIPPER_VERSION in android/gradle.properties',
+      detail: 'Nothing uses it (Flipper is not wired into the build). Delete the line so nobody wonders whether Flipper is still there.',
     });
   }
 
@@ -417,7 +427,8 @@ export function nativeChecks(project, { rnLatest = null, now = new Date() } = {}
       const text = read(path.join(root, f)) || '';
       const leaked = [
         ...[...text.matchAll(/^\s*([A-Z0-9_]*(?:STORE|KEY)_PASSWORD)\s*=\s*(\S+)\s*$/gm)].map((m) => ({ name: m[1], value: m[2] })),
-        ...[...text.matchAll(/\b(storePassword|keyPassword)\s*=?\s*["']([^"']+)["']/g)].map((m) => ({ name: m[1], value: m[2] })),
+        // Not `props['storePassword']`: there the name is a lookup key, not an assignment.
+        ...[...text.matchAll(/(?<![\w'"[])(storePassword|keyPassword)\s*=?\s*["']([^"'\n]+)["']/g)].map((m) => ({ name: m[1], value: m[2] })),
       ].filter((l) => l.value !== 'android' && !/^System\.getenv|^\$\{?[A-Z_]+\}?$/.test(l.value));
       if (leaked.length) {
         add({

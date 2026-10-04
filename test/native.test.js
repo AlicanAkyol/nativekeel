@@ -131,8 +131,12 @@ test('iOS privacy manifest', () => {
 test('Flipper and Hermes', () => {
   const found = ids(check(rnApp('0.73.0', {
     'android/gradle.properties': 'FLIPPER_VERSION=0.182.0\nhermesEnabled=false\n',
+    'android/app/build.gradle': 'debugImplementation("com.facebook.flipper:flipper:${FLIPPER_VERSION}")\n',
   })));
   assert.ok(found.includes('flipper'));
+  const leftover = ids(check(rnApp('0.80.0', { 'android/gradle.properties': 'FLIPPER_VERSION=0.182.0\n' })));
+  assert.ok(leftover.includes('flipper-leftover') && !leftover.includes('flipper'), 'a lone property is a leftover, not an integration');
+  assert.ok(!ids(check(rnApp('0.80.0', { 'ios/Podfile': "# use_flipper!\n" }))).includes('flipper'), 'commented out in the Podfile');
   assert.ok(found.includes('hermes-disabled'));
   assert.ok(!ids(check(rnApp('0.80.0', { 'android/gradle.properties': 'hermesEnabled=true\n' }))).includes('hermes-disabled'));
 });
@@ -299,4 +303,15 @@ test('empty signing placeholders are not reported', () => {
   spawnSync('git', ['add', '-A'], { cwd: root });
   const ids = nativeChecks(loadProject(root), { rnLatest: '0.87.1', now: new Date('2026-10-04') }).map((f) => f.id);
   assert.ok(!ids.some((i) => i.startsWith('signing-')), ids.join(','));
+});
+
+test('signing passwords read from a properties lookup are not leaks', () => {
+  const root = makeProject(rnApp('0.80.0', {
+    'android/app/build.gradle': "signingConfigs {\n debug { storePassword 'android'\n keyPassword 'android' }\n release {\n storePassword keystoreProperties['storePassword']\n keyAlias keystoreProperties['keyAlias']\n keyPassword keystoreProperties['keyPassword']\n }\n}\n",
+    'ios/App/PrivacyInfo.xcprivacy': '',
+  }));
+  spawnSync('git', ['init', '-q'], { cwd: root });
+  spawnSync('git', ['add', '-A'], { cwd: root });
+  const ids = nativeChecks(loadProject(root), { now: NOW }).map((f) => f.id);
+  assert.ok(!ids.some((i) => i.startsWith('signing-password')), ids.join(','));
 });
