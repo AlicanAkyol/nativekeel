@@ -224,3 +224,26 @@ test('linear-gradient: high only when a LinearGradient file also renders a Modal
   assert.equal(plain.severity, 'low');
   assert.match(plain.title, /interop layer/);
 });
+
+test('pnpm and Bun catalogs resolve `catalog:` versions', () => {
+  const pnpm = makeProject({
+    'pnpm-workspace.yaml': 'packages:\n  - "apps/*"\ncatalog:\n  "react-native": 0.81.6\n  react: 19.1.0 # comment\ncatalogs:\n  legacy:\n    "react-native-screens": "4.13.1"\n',
+    'apps/mobile/package.json': { name: 'm', dependencies: { 'react-native': 'catalog:', react: 'catalog:default', 'react-native-screens': 'catalog:legacy' } },
+  });
+  const p = loadProject(path.join(pnpm, 'apps/mobile'));
+  assert.equal(p.rnVersion, '0.81.6');
+  assert.equal(p.deps.react, '19.1.0');
+  assert.equal(p.deps['react-native-screens'], '4.13.1');
+
+  const bun = makeProject({
+    'package.json': { name: 'root', workspaces: { packages: ['apps/*'], catalog: { 'react-native': '0.80.2' } } },
+    'apps/mobile/package.json': { name: 'm', dependencies: { 'react-native': 'catalog:' } },
+  });
+  assert.equal(loadProject(path.join(bun, 'apps/mobile')).rnVersion, '0.80.2');
+});
+
+test('React Native from a git fork: a clear warning instead of silence', async () => {
+  const root = makeProject({ 'package.json': { name: 'z', dependencies: { 'react-native': 'zulip/react-native#b7b2f6c22', expo: '^45.0.0' } } });
+  const result = await analyze(loadProject(root), { get: registry, now: NOW });
+  assert.ok(result.warnings.some((w) => /declared as "zulip\/react-native#b7b2f6c22"/.test(w)));
+});

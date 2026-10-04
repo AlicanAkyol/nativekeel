@@ -42,12 +42,71 @@ export function installedVersion(root, name) {
   return pkg ? pkg.version : null;
 }
 
+// pnpm and Bun "catalogs": a dependency declared as `catalog:` or `catalog:<name>` takes its
+// version from the workspace root (pnpm-workspace.yaml, or package.json `workspaces.catalog`).
+// Returns { default: {pkg: range}, <name>: {...} } or null.
+export function readCatalogs(root) {
+  let dir = root;
+  while (true) {
+    const yaml = readText(path.join(dir, 'pnpm-workspace.yaml'));
+    if (yaml) return parsePnpmCatalogs(yaml);
+    const pkg = dir !== root ? readJson(path.join(dir, 'package.json')) : null;
+    const ws = pkg && pkg.workspaces && !Array.isArray(pkg.workspaces) ? pkg.workspaces : pkg;
+    if (ws && (ws.catalog || ws.catalogs)) return { default: ws.catalog || {}, ...(ws.catalogs || {}) };
+    const parent = path.dirname(dir);
+    if (parent === dir) return null;
+    dir = parent;
+  }
+}
+
+// Just enough YAML for the two catalog sections: `catalog:` and `catalogs: <name>:` maps of
+// "package": version lines. Anything else in the file is ignored.
+function parsePnpmCatalogs(text) {
+  const out = { default: {} };
+  let section = null; // 'default' or a named catalog
+  let inCatalogs = false;
+  const unquote = (v) => v.trim().replace(/^["']|["']$/g, '');
+  for (const raw of text.split('\n')) {
+    const line = raw.replace(/\s+#.*$/, '');
+    if (!line.trim()) continue;
+    const indent = line.length - line.trimStart().length;
+    const m = line.trim().match(/^("[^"]+"|'[^']+'|[^:\s]+)\s*:\s*(.*)$/);
+    if (!m) continue;
+    const key = unquote(m[1]);
+    const value = m[2];
+    if (indent === 0) {
+      inCatalogs = key === 'catalogs';
+      section = key === 'catalog' ? 'default' : null;
+    } else if (inCatalogs && !value) {
+      section = key;
+      out[section] = out[section] || {};
+    } else if (section && value) {
+      out[section][key] = unquote(value);
+    }
+  }
+  return out;
+}
+
+function resolveCatalogRefs(deps, catalogs) {
+  if (!catalogs) return deps;
+  const out = { ...deps };
+  for (const [name, spec] of Object.entries(deps)) {
+    if (typeof spec !== 'string' || !spec.startsWith('catalog:')) continue;
+    const which = spec.slice('catalog:'.length) || 'default';
+    const version = catalogs[which] && catalogs[which][name];
+    if (version) out[name] = version;
+  }
+  return out;
+}
+
 export function loadProject(root) {
   const pkg = readJson(path.join(root, 'package.json'));
   if (!pkg) throw new Error(`No package.json found in ${root}`);
-  const deps = { ...(pkg.dependencies || {}) };
+  const usesCatalog = JSON.stringify([pkg.dependencies, pkg.devDependencies]).includes('"catalog:');
+  const catalogs = usesCatalog ? readCatalogs(root) : null;
+  const deps = resolveCatalogRefs({ ...(pkg.dependencies || {}) }, catalogs);
   // Monorepos often keep react-native in devDependencies; autolinking still links native modules from there.
-  const devDeps = { ...(pkg.devDependencies || {}) };
+  const devDeps = resolveCatalogRefs({ ...(pkg.devDependencies || {}) }, catalogs);
   const declared = (name) => deps[name] || devDeps[name];
   if (!declared('react-native') && !declared('expo')) {
     throw new Error('This does not look like a React Native app (no react-native or expo dependency). Run it inside your app folder.');

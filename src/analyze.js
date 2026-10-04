@@ -74,6 +74,10 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
   if (!project.hasNodeModules) {
     warnings.push('node_modules not found: versions are read from package.json ranges and native detection is less accurate. Install dependencies for a precise report.');
   }
+  const rnSpec = project.deps['react-native'] || project.devDeps['react-native'];
+  if (!project.rnVersion && rnSpec) {
+    warnings.push(`React Native is declared as "${rnSpec}", which has no version number (a git fork or a workspace reference). Install dependencies so NativeKeel can read the installed version; version checks were skipped.`);
+  }
   if (!offline && project.rnVersion && !rn) warnings.push('Could not fetch React Native releases from npm; version and New Architecture checks were skipped. Run again.');
   if (!offline && project.expoVersion && !expo) warnings.push('Could not fetch Expo releases from npm; the SDK check was skipped. Run again.');
 
