@@ -19,4 +19,4 @@ jobs:
           registry-url: https://registry.npmjs.org
       - run: npm install -g npm@^11.5.1
       - run: npm test
-      - run: npm publish --access public
+      - run: npm publish --access public --loglevel verbose
