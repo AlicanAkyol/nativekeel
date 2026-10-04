@@ -6,6 +6,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { loadProject } from '../src/project.js';
 import { analyze } from '../src/analyze.js';
+import { buildPlan } from '../src/plan.js';
 import { applyBaseline, saveBaseline } from '../src/baseline.js';
 import { makeProject, fakeRegistry, FAKE_AWS_ID, FAKE_AWS_SECRET } from './helpers.js';
 
@@ -88,6 +89,11 @@ test('expo managed app reads New Architecture from app.json and checks the SDK',
 
   const result = await analyze(project, { get: registry, now: NOW });
   assert.ok(result.findings.some((f) => f.id === 'expo-unsupported'));
+  // React Native moves with the SDK: one problem, reported once.
+  assert.ok(!result.findings.some((f) => f.id === 'rn-unsupported'));
+  assert.equal(result.findings.find((f) => f.id === 'rn-via-expo').severity, 'info');
+  const plan = buildPlan(result);
+  assert.ok(!plan.phases.some((p) => p.title.startsWith('Upgrade React Native')), 'no manual React Native hops in an Expo app');
 });
 
 test('monorepo: packages hoisted to a parent node_modules are found', () => {

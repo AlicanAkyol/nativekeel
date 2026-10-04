@@ -85,9 +85,20 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
 
   // 1. React Native version support
   const current = project.rnVersion;
+  // In an Expo project the SDK pins React Native: upgrading the SDK is how React Native moves,
+  // so the Expo finding carries the severity and this one only explains the link.
+  const rnFollowsExpo = !!(project.expoVersion && expo);
   if (rn && current) {
     const behind = rn.lines[0] - minorOf(current);
-    if (behind >= SUPPORTED_RN_MINORS) {
+    if (rnFollowsExpo && behind > 0) {
+      add({
+        id: 'rn-via-expo',
+        severity: 'info',
+        area: 'react-native',
+        title: `React Native ${current} comes with Expo SDK ${majorOf(project.expoVersion)}`,
+        detail: `Latest React Native is ${rn.latest} (${behind} minor${behind === 1 ? '' : 's'} behind). Upgrading the Expo SDK upgrades React Native with it.`,
+      });
+    } else if (behind >= SUPPORTED_RN_MINORS) {
       add({
         id: 'rn-unsupported',
         severity: behind >= CRITICAL_RN_MINORS_BEHIND ? 'critical' : 'high',

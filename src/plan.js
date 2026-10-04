@@ -350,6 +350,10 @@ export function buildPlan(result) {
   if (expo) {
     const steps = [];
     for (let v = expo.from + 1; v <= expo.to; v++) steps.push(`SDK ${v - 1} → ${v}: \`npx expo install expo@^${v}.0.0 --fix\`, read the SDK ${v} changelog, run \`npx expo-doctor\`, build.`);
+    steps.push('Each SDK brings its own React Native version; do not upgrade React Native separately.');
+    if (!result.project.managed) {
+      steps.push('This app has its own android/ and ios/ folders: after each SDK, apply the native changes from Expo\'s native project upgrade helper (docs.expo.dev/bare/upgrade), then `pod install` and build both platforms.');
+    }
     phases.push({ title: `Upgrade Expo SDK ${expo.from} → ${expo.to}`, why: 'Expo only supports one SDK step at a time reliably.', steps });
   }
 
