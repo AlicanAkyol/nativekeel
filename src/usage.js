@@ -26,6 +26,10 @@ const IMPLICIT = [
   /^react-native-webp-format$/, // iOS WebP decoder registers itself with the image loader
   /^@react-native-firebase\/(crashlytics|perf)$/, // collect natively without any JS call
   /^react-compiler-runtime$/, // imported by babel-plugin-react-compiler output
+  /^@react-native-vector-icons\//, // per-font packages: fonts linked by the build
+  /^(hermes-engine|postinstall-postinstall|react-native-web)$/, // engine, install hook, web target
+  // Named after Node.js core modules: dependencies require('stream'), Metro resolves the package.
+  /^(assert|buffer|constants|crypto|events|os|path|process|punycode|querystring|stream|string_decoder|timers|tty|url|util|vm|zlib)$/,
 ];
 
 function walk(dir, exts, out = []) {
@@ -102,6 +106,9 @@ export function findUnused(project) {
   const configText = [
     JSON.stringify(pkgJson.scripts || {}),
     JSON.stringify(pkgJson.jest || {}),
+    // rn-nodeify style aliases: { "react-native": { "crypto": "react-native-crypto" } }
+    JSON.stringify(pkgJson['react-native'] || {}),
+    JSON.stringify(pkgJson.browser || {}),
     readSmall(path.join(root, 'app.json')),
     readSmall(path.join(root, 'app.config.js')),
     readSmall(path.join(root, 'app.config.ts')),

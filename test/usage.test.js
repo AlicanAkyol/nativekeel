@@ -97,3 +97,19 @@ test('unused: a patched package is never reported', () => {
   });
   assert.deepEqual(findUnused(loadProject(root)).map((u) => u.name), ['left-pad']);
 });
+
+test('unused: package.json alias fields and Node core polyfills count as used', () => {
+  const root = makeProject({
+    'package.json': {
+      name: 'n',
+      'react-native': { crypto: 'react-native-crypto' },
+      dependencies: { 'react-native': '0.80.0', 'react-native-crypto': '2.2.0', stream: '0.0.3', 'left-pad': '1.3.0' },
+    },
+    'node_modules/react-native/package.json': { version: '0.80.0' },
+    'node_modules/react-native-crypto/package.json': { version: '2.2.0' },
+    'node_modules/stream/package.json': { version: '0.0.3' },
+    'node_modules/left-pad/package.json': { version: '1.3.0' },
+    'src/App.js': 'export default 1;\n',
+  });
+  assert.deepEqual(findUnused(loadProject(root)).map((u) => u.name), ['left-pad']);
+});
