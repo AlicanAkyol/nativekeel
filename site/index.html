@@ -92,7 +92,7 @@ footer a{color:var(--muted)}
       <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="var(--accent)"/><path d="M16 6v16M9 22h14M11 26h10" stroke="var(--accent-ink)" stroke-width="3" stroke-linecap="round"/></svg>
       NativeKeel
     </a>
-    <nav><a href="#checks">What it checks</a><a href="#services">Services</a><a href="#trust">Security</a><a href="#about">About</a></nav>
+    <nav><a href="#checks">What it checks</a><a href="sample-report.html">Sample report</a><a href="#services">Services</a><a href="#trust">Security</a><a href="https://github.com/AlicanAkyol/nativekeel">GitHub</a></nav>
   </header>
 
   <div class="hero">
@@ -100,7 +100,7 @@ footer a{color:var(--muted)}
       <h1>Keep your React Native app shippable.</h1>
       <p class="lead">One command tells you whether your app can still upgrade and still ship: unsupported versions, New Architecture blockers, Google Play deadlines and secrets leaked into the app bundle.</p>
       <div class="cmd"><span>npx nativekeel</span><button type="button" id="copy">Copy</button></div>
-      <p class="sub">Free and open source. No signup. Your code never leaves your machine.</p>
+      <p class="sub">Free and open source. No signup. Your code never leaves your machine.<br><a href="sample-report.html">See a sample report and upgrade plan →</a></p>
     </div>
     <div class="term" aria-label="Example report">
       <div class="dots"><i></i><i></i><i></i></div>
@@ -112,12 +112,12 @@ New Architecture  android: <span class="r">off</span>  ios: <span class="r">off<
 <span class="d">           You are 10 minor versions behind.</span>
 <span class="r">✖ CRITICAL</span> <span class="w">New Architecture is disabled</span>
 <span class="d">           Cannot upgrade past 0.81 until it migrates.</span>
-<span class="r">✖ CRITICAL</span> <span class="w">AWS secret key shipped inside the app</span>
+<span class="r">✖ CRITICAL</span> <span class="w">AWS access key ID shipped inside the app</span>
 <span class="d">           Anyone who downloads the app can extract it.</span>
-<span class="y">▲ HIGH    </span> <span class="w">react-native-fast-image: unmaintained</span>
-<span class="d">           Alternatives: expo-image.</span>
+<span class="y">▲ HIGH    </span> <span class="w">iOS AppDelegate is missing RCTAppDependencyProvider</span>
+<span class="d">           A launch crash in Release once the New Architecture is on.</span>
 
-<span class="w">Summary</span>  <span class="r">3 critical</span> · <span class="y">7 high</span> · 4 medium · 34 low</pre>
+<span class="w">Summary</span>  <span class="r">4 critical</span> · <span class="y">6 high</span> · 4 medium · 5 low</pre>
     </div>
   </div>
 
@@ -130,7 +130,7 @@ New Architecture  android: <span class="r">off</span>  ios: <span class="r">off<
       <div class="card"><span class="k">Store</span><h3>Google Play and App Store rules</h3><p>Target SDK, the iOS privacy manifest, and 16 KB pages: it opens your built APK or AAB and measures the alignment of every native library.</p></div>
       <div class="card"><span class="k">Security</span><h3>Secrets and signing keys</h3><p>API keys shipped in the bundle, <code>.env</code> values compiled into the app, committed keystores, signing passwords and App Store Connect keys.</p></div>
       <div class="card"><span class="k">Cleanup</span><h3>Packages you can delete</h3><p>Installed but never imported, never referenced natively and not required by anything else. Every package you remove is one you never upgrade.</p></div>
-      <div class="card"><span class="k">Experience</span><h3>Known traps</h3><p>Version combinations that broke real apps, like a navigation library that crashes on launch with the New Architecture. The list grows with every upgrade we do.</p></div>
+      <div class="card"><span class="k">Experience</span><h3>Known traps</h3><p>Things that broke real upgrades, like an AppDelegate missing the one line React Native 0.77 requires, which crashes release builds with the New Architecture. The list grows with every upgrade we do.</p></div>
     </div>
   </section>
 
@@ -213,14 +213,14 @@ New Architecture  android: <span class="r">off</span>  ios: <span class="r">off<
     <details><summary>Does it work with Expo and monorepos?</summary><p>Yes. It reads Expo SDK versions and <code>app.json</code>, supports managed apps without native folders, and finds packages hoisted to a parent <code>node_modules</code>.</p></details>
     <details><summary>Is it really free? What is the catch?</summary><p>The tool and the plan are free and open source under MIT. We make money when teams ask us to do the upgrade for them. The report tells you honestly whether you need that.</p></details>
     <details><summary>Do we need a call for the upgrade service?</summary><p>No. Everything runs over email and your Git host: you send the report, we send a fixed quote, you grant repository access, we deliver a pull request with test builds.</p></details>
-    <details><summary>Can I check what the tool does before running it on our code?</summary><p>Yes. It has no dependencies and no install scripts, the source is short and public, and releases are published with npm provenance so you can verify the package matches the source (<code>npm audit signatures</code>). Run it with <code>--offline</code> to forbid all network access.</p></details>
+    <details><summary>Can I check what the tool does before running it on our code?</summary><p>Yes. It has no dependencies and no install scripts, the <a href="https://github.com/AlicanAkyol/nativekeel">source is short and public</a>, and releases are published with npm provenance so you can verify the package matches the source (<code>npm audit signatures</code>). Run it with <code>--offline</code> to forbid all network access.</p></details>
     <details><summary>What if the report is wrong?</summary><p>Version and maintenance data comes from npm and React Native Directory and can lag. Write to us and we will fix the rule. A missed upgrade blocker is a bug to us.</p></details>
     <details><summary>What if you cannot finish the upgrade?</summary><p>If we cannot deliver the agreed scope, you get your deposit back. You keep the plan and any partial work on the branch.</p></details>
   </section>
 
   <footer>
     <span>© 2026 NativeKeel, run by <a href="https://alicanakyol.com">Alican Akyol</a> · <a href="mailto:hello@nativekeel.com">hello@nativekeel.com</a></span>
-    <span><a href="privacy.html">Privacy</a> · <a href="https://www.npmjs.com/package/nativekeel">npm</a></span>
+    <span><a href="privacy.html">Privacy</a> · <a href="https://github.com/AlicanAkyol/nativekeel">GitHub</a> · <a href="https://www.npmjs.com/package/nativekeel">npm</a></span>
   </footer>
 </div>
 <script>
