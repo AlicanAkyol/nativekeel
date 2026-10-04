@@ -200,7 +200,8 @@ export function buildPlan(result) {
     });
   }
 
-  const known = byKind('known-issue');
+  // Low-severity notes stay in the report; the plan only carries what can break the app.
+  const known = byKind('known-issue').filter((k) => k.severity !== 'low');
   if (known.length) {
     phases.push({
       title: 'Avoid known traps',
@@ -227,6 +228,11 @@ export function buildPlan(result) {
     storeSteps.push('Run `pod install`, commit the generated `PrivacyInfo.xcprivacy`, and add your collected data types and tracking to it (React Native only fills in the required-reason APIs).');
   } else if (privacy) {
     storeSteps.push('Add `PrivacyInfo.xcprivacy` to the iOS app target. Start from the file in the React Native template and declare the required-reason APIs your app and SDKs use (UserDefaults, file timestamps, system boot time, disk space).');
+  }
+  if (byKind('upgrade-rn-min').length) {
+    storeSteps.push(isExpo
+      ? '**16 KB memory pages:** Google Play rejects updates until the app is on Expo SDK 53 (React Native 0.79) or later. The Expo SDK phase below gets you there; reach SDK 53 before your next Play release.'
+      : '**16 KB memory pages:** Google Play rejects updates until the app is on React Native 0.77 or later. The React Native phase below gets you there; reach 0.77 before your next Play release.');
   }
   const align = byKind('align-16kb')[0];
   if (align) {
@@ -279,13 +285,20 @@ export function buildPlan(result) {
     phases.push({ title: 'Remove legacy tooling', why: 'Leftovers from older templates break on newer React Native versions; removing them first shrinks the upgrade diff.', steps: cleanup });
   }
 
-  const replace = byKind('replace-dep').sort((a, b) => Number(b.noNewArch) - Number(a.noNewArch) || Number(b.native) - Number(a.native));
+  const allReplace = byKind('replace-dep');
+  // Abandoned pure-JS packages do not block an upgrade; they get their own, later phase.
+  const jsAbandoned = allReplace.filter((d) => !d.native && !d.noNewArch);
+  const interopPatched = new Set(byKind('interop-job').map((j) => j.name));
+  const replace = allReplace.filter((d) => d.native || d.noNewArch).sort((a, b) => Number(b.noNewArch) - Number(a.noNewArch) || Number(b.native) - Number(a.native));
   if (replace.length) {
     phases.push({
       title: 'Replace blocking and abandoned packages',
       why: 'These packages decide how far you can upgrade. Swap them while the app still runs on its current version, so every problem has one cause.',
       steps: replace.map((d) => {
         const reason = [d.noNewArch && 'no New Architecture support', d.unmaintained && 'unmaintained'].filter(Boolean).join(', ');
+        if (interopPatched.has(d.name) && !d.unmaintained) {
+          return `\`${d.name}\` (${reason}, native). The New Architecture step below patches it so it loads; move to a release with a TurboModule spec once one exists.`;
+        }
         const owned = d.alternatives.find((a) => installed.has(a));
         if (owned) {
           return `\`${d.name}\` (${reason}${d.native ? ', native' : ''}). You already use \`${owned}\`: move the remaining usage there, then \`${pm.remove} ${d.name}\`.`;
@@ -423,6 +436,18 @@ export function buildPlan(result) {
       steps.push('This app has its own android/ and ios/ folders: after each SDK, apply the native changes from Expo\'s native project upgrade helper (docs.expo.dev/bare/upgrade), then `pod install` and build both platforms.');
     }
     phases.push({ title: `Upgrade Expo SDK ${expo.from} → ${expo.to}`, why: 'Expo only supports one SDK step at a time reliably.', steps });
+  }
+
+  if (jsAbandoned.length) {
+    phases.push({
+      title: 'Plan replacements for abandoned JavaScript packages',
+      why: 'These do not block the upgrade (no native code), but nobody fixes their bugs any more. Replace them when you next touch that code.',
+      steps: jsAbandoned.map((d) => {
+        const owned = d.alternatives.find((a) => installed.has(a));
+        if (owned) return `\`${d.name}\`: you already use \`${owned}\`; move the remaining usage there, then \`${pm.remove} ${d.name}\`.`;
+        return `\`${d.name}\`${d.alternatives.length ? `: options ${d.alternatives.map((a) => `\`${a}\``).join(', ')}` : ': look for a maintained alternative, or keep it if it does what you need'}.`;
+      }),
+    });
   }
 
   const jsBumps = byKind('bump-dep').filter((d) => !d.native && !movesWithExpo(d.name));

@@ -159,3 +159,25 @@ test('old app: the New Architecture switch goes inside the React Native hops, at
   assert.ok(steps[stop - 1].includes('→ 0.78.0'), 'right after reaching 0.78');
   assert.ok(steps[stop + 1].startsWith('New Architecture: '));
 });
+
+test('plan: JS-only abandoned packages are not blockers, low notes stay out, 16 KB deadline is explicit', () => {
+  const r = {
+    ...result,
+    findings: [
+      { id: 'android-16kb-rn', severity: 'critical', area: 'store', title: 'x', detail: 'x', fix: { kind: 'upgrade-rn-min', to: '0.77.0' } },
+      { id: 'rn-unsupported', severity: 'critical', area: 'react-native', title: 'x', detail: 'x', fix: { kind: 'upgrade-rn', from: '0.76.5', to: '0.87.1' } },
+      { id: 'dep-risk:crypto-js', severity: 'medium', area: 'dependency', title: 'x', detail: 'x', fix: { kind: 'replace-dep', name: 'crypto-js', native: false, noNewArch: false, unmaintained: true, alternatives: [] } },
+      { id: 'dep-risk:react-native-track-player', severity: 'high', area: 'dependency', title: 'x', detail: 'x', fix: { kind: 'replace-dep', name: 'react-native-track-player', native: true, noNewArch: true, unmaintained: false, alternatives: [] } },
+      { id: 'interop-job:react-native-track-player', severity: 'high', area: 'new-architecture', title: 'x', detail: 'x', fix: { kind: 'interop-job', name: 'react-native-track-player', methods: ['play'] } },
+      { id: 'known:linear-gradient-interop-unmount', severity: 'low', area: 'dependency', title: 'note', detail: 'x', fix: { kind: 'known-issue', name: 'react-native-linear-gradient', title: 'note', detail: 'x', severity: 'low' } },
+    ],
+  };
+  const plan = buildPlan(r);
+  const titles = plan.phases.map((p) => p.title);
+  const blockers = plan.phases.find((p) => p.title === 'Replace blocking and abandoned packages');
+  assert.ok(!blockers.steps.some((s) => s.includes('crypto-js')));
+  assert.ok(titles.includes('Plan replacements for abandoned JavaScript packages'));
+  assert.match(blockers.steps.find((s) => s.includes('track-player')), /patches it so it loads/);
+  assert.ok(!titles.includes('Avoid known traps'), 'a low note is not a trap');
+  assert.ok(plan.phases.find((p) => p.title.startsWith('Meet App Store')).steps.some((s) => s.includes('React Native 0.77 or later')));
+});

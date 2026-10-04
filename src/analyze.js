@@ -342,7 +342,7 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
       area: 'dependency',
       title,
       detail: `${detail} (installed: ${dep.name} ${dep.version}; seen in: ${issue.source})`,
-      fix: { kind: 'known-issue', name: dep.name, title, detail },
+      fix: { kind: 'known-issue', name: dep.name, title, detail, severity },
     });
   }
 
