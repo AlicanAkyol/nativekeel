@@ -65,6 +65,7 @@ const WEIGHTS = {
   'patch-version': () => 1,
   'folly-flags': () => 0.25,
   'default-react-host': () => 0.25,
+  crash: () => 1,
 };
 
 // Routine version bumps are many but cheap next to a React Native, architecture or store
@@ -217,6 +218,15 @@ export function buildPlan(result) {
   }
 
   // Low-severity notes stay in the report; the plan only carries what can break the app.
+  const crashes = byKind('crash');
+  if (crashes.length) {
+    phases.push({
+      title: 'Fix crash risks',
+      why: 'These setups build fine and crash at runtime. They are cheap to fix and every later step is easier to test without them.',
+      steps: crashes.map((c) => c.step),
+    });
+  }
+
   const known = byKind('known-issue').filter((k) => k.severity !== 'low');
   if (known.length) {
     phases.push({

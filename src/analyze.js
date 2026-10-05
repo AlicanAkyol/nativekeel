@@ -4,6 +4,7 @@ import { cleanVersion, findPackageDir, installedVersion } from './project.js';
 import { createRegistry, fetchJson } from './registry.js';
 import { scanSecrets } from './secrets.js';
 import { nativeChecks } from './native.js';
+import { stabilityChecks } from './stability.js';
 import { findUnused, filesImportingWith } from './usage.js';
 import { matchKnownIssues, compareVersions } from './known-issues.js';
 import { COMPAT, bestRange, checkCompat } from './compat.js';
@@ -398,6 +399,9 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
   findings.push(...nativeChecks(project, { rnLatest: rn && rn.latest, now }));
 
   // 7. Secrets
+  // Setups that build and then crash at runtime.
+  for (const f of stabilityChecks(project)) add(f);
+
   for (const s of scanSecrets(project.root)) {
     const value = s.preview ? `Value ${s.preview}. ` : '';
     const where = `${s.file}:${s.line}`;
