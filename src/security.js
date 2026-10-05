@@ -46,6 +46,7 @@ export async function vulnerableDependencies(registry, versions) {
   const findings = [];
   for (const [name, list] of Object.entries(advisories)) {
     const version = versions[name];
+    if (!version || !Array.isArray(list)) continue; // only what we asked about
     // The endpoint answers for the versions we sent; double-check the range where it is simple.
     const relevant = list.filter((a) => applies(version, a.vulnerable_versions));
     if (!relevant.length) continue;
@@ -572,4 +573,25 @@ export function tokenStorage(root) {
       fix: { kind: 'security', step: 'Move auth tokens from AsyncStorage to the Keychain/Keystore (`react-native-keychain` or `expo-secure-store`).' },
     },
   ];
+}
+
+// OWASP MASVS control group of a security finding, by id. Shown in reports so a security
+// reviewer can map findings to the standard they audit against.
+export const MASVS_GROUPS = {
+  STORAGE: 'Data on the device',
+  CRYPTO: 'Keys and cryptography',
+  AUTH: 'Access control (backend rules)',
+  NETWORK: 'Network traffic',
+  PLATFORM: 'WebViews and platform interaction',
+  CODE: 'Dependencies and build',
+};
+
+export function masvsOf(id) {
+  if (/^(secret:|env-bundled|crypto-)/.test(id)) return 'CRYPTO';
+  if (/^(password-leak|token-unencrypted|android-allow-backup)/.test(id)) return 'STORAGE';
+  if (/^(insecure-tls|user-certificates|plain-http|ios-ats|android-cleartext)/.test(id)) return 'NETWORK';
+  if (/^(webview-|android-exported)/.test(id)) return 'PLATFORM';
+  if (/^firebase-/.test(id)) return 'AUTH';
+  if (/^(vuln:|signing-|android-debuggable)/.test(id)) return 'CODE';
+  return null;
 }

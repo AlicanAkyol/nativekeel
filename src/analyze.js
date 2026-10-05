@@ -5,7 +5,7 @@ import { createRegistry, fetchJson } from './registry.js';
 import { scanSecrets } from './secrets.js';
 import { nativeChecks } from './native.js';
 import { stabilityChecks } from './stability.js';
-import { vulnerableDependencies, passwordLeaks, webViewRisks, androidBackup, exportedComponents, plainHttpCalls, cloudRules, insecureTls, weakCrypto, tokenStorage } from './security.js';
+import { vulnerableDependencies, passwordLeaks, webViewRisks, androidBackup, exportedComponents, plainHttpCalls, cloudRules, insecureTls, weakCrypto, tokenStorage, masvsOf, MASVS_GROUPS } from './security.js';
 import { lockedVersions } from './lockfile.js';
 import { findUnused, filesImportingWith } from './usage.js';
 import { matchKnownIssues, compareVersions } from './known-issues.js';
@@ -411,6 +411,10 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
     const locked = lockedVersions(project.root, project.deps);
     const exact = {};
     for (const name of Object.keys(project.deps)) {
+      // Advisories describe npm registry packages. A dependency from git, a URL or a local
+      // path is a different package that only shares the name (e.g. a squatted name with a
+      // malware advisory), so it is not matched.
+      if (/:\/\/|^(github|gitlab|bitbucket|git|file|link|workspace|portal|patch):|^[\w.-]+\/[\w.-]+(#|$)/.test(String(project.deps[name]))) continue;
       const v = installedVersion(project.root, name) || locked[name];
       if (v && /^\d+\.\d+\.\d+/.test(v)) exact[name] = v;
     }
@@ -453,6 +457,14 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
   }
 
   reportIncomplete();
+  // OWASP MASVS group for every security finding, and a per-group count (zero means checked, clean).
+  const security = Object.fromEntries(Object.keys(MASVS_GROUPS).map((g) => [g, 0]));
+  for (const f of findings) {
+    const g = masvsOf(f.id);
+    if (!g) continue;
+    f.masvs = g;
+    if (f.severity !== 'info') security[g]++;
+  }
   findings.sort((a, b) => SEVERITIES.indexOf(a.severity) - SEVERITIES.indexOf(b.severity));
   return {
     tool: 'nativekeel',
@@ -467,6 +479,7 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
       android: project.android,
     },
     latest: { reactNative: rn && rn.latest, expo: expo && expo.latest },
+    security,
     offline,
     offlineRequested: forcedOffline,
     warnings,

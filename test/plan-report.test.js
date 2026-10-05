@@ -291,3 +291,11 @@ test('reports open with "Start here": the first step of the first phases', () =>
   assert.match(text, /Start here\n {2}1\. Revoke the AWS access key ID/);
   assert.match(htmlReport(result), /<section class="start"><h2>Start here<\/h2><ol><li>/);
 });
+
+test('security summary by OWASP MASVS group, in text and HTML', () => {
+  const r = { ...result, security: { STORAGE: 0, CRYPTO: 1, AUTH: 0, NETWORK: 2, PLATFORM: 0, CODE: 0 } };
+  assert.match(textReport(r, { color: false }), /Security \(OWASP MASVS\) {2}crypto 1 · network 2/);
+  const html = htmlReport(r);
+  assert.match(html, /<h2>Security <small>OWASP MASVS<\/small><\/h2>/);
+  assert.match(html, /do not replace a penetration test/);
+});

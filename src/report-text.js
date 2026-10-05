@@ -62,6 +62,11 @@ export function textReport(result, { color = true, verbose = false } = {}) {
   }
   const n = countBySeverity(result.findings);
   out.push(`${c.bold('Summary')}  ${c.red(`${n.critical} critical`)} · ${c.yellow(`${n.high} high`)} · ${n.medium} medium · ${n.low} low`);
+  if (result.security) {
+    const groups = Object.entries(result.security);
+    const withIssues = groups.filter(([, k]) => k > 0).map(([g, k]) => `${g.toLowerCase()} ${k}`);
+    out.push(`${c.bold('Security')} (OWASP MASVS)  ${withIssues.length ? withIssues.join(' · ') : c.green('no issues')}${c.gray(`  ·  ${groups.length} groups checked`)}`);
+  }
 
   if (n.critical + n.high > 0) {
     out.push('');

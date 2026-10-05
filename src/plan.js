@@ -274,21 +274,25 @@ export function buildPlan(result) {
     });
   }
 
-  const securitySteps = [];
-  for (const m of byKind('manifest')) {
-    securitySteps.push(m.attr === 'android:debuggable'
-      ? 'Remove `android:debuggable="true"` from `android/app/src/main/AndroidManifest.xml`.'
-      : 'Move `android:usesCleartextTraffic="true"` to `android/app/src/debug/AndroidManifest.xml`, or allow only specific hosts with a network security config.');
+  // Security steps, most severe first (they feed "Start here").
+  const sevRank = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
+  const sec = [];
+  for (const f of result.findings) {
+    if (!f.fix) continue;
+    const sev = sevRank[f.severity] ?? 4;
+    if (f.fix.kind === 'manifest') {
+      sec.push({ sev, step: f.fix.attr === 'android:debuggable' ? 'Remove `android:debuggable="true"` from `android/app/src/main/AndroidManifest.xml`.' : 'Move `android:usesCleartextTraffic="true"` to `android/app/src/debug/AndroidManifest.xml`, or allow only specific hosts with a network security config.' });
+    } else if (f.fix.kind === 'ats') {
+      sec.push({ sev, step: `In \`${f.fix.file}\`, set \`NSAllowsArbitraryLoads\` to false and list only the hosts that need HTTP under \`NSExceptionDomains\`.` });
+    } else if (f.fix.kind === 'security') {
+      sec.push({ sev, step: f.fix.step });
+    } else if (f.fix.kind === 'vuln-dep' && (f.fix.severity === 'critical' || f.fix.severity === 'high')) {
+      const v = f.fix;
+      sec.push({ sev, step: `Update \`${v.name}\` ${v.from}${v.to ? ` to ${v.to} or later` : ''}: it has ${v.severity} known vulnerabilities. ${movesWithExpo(v.name) ? 'Expo pins it: the SDK upgrade below moves it.' : 'Check its changelog for breaking changes.'}` });
+    }
   }
-  for (const a of byKind('ats')) {
-    securitySteps.push(`In \`${a.file}\`, set \`NSAllowsArbitraryLoads\` to false and list only the hosts that need HTTP under \`NSExceptionDomains\`.`);
-  }
-  for (const f of byKind('security')) securitySteps.push(f.step);
-  const vulns = byKind('vuln-dep').filter((v) => v.severity === 'critical' || v.severity === 'high');
-  for (const v of vulns) {
-    securitySteps.push(`Update \`${v.name}\` ${v.from}${v.to ? ` to ${v.to} or later` : ''}: it has ${v.severity} known vulnerabilities. ${movesWithExpo(v.name) ? 'Expo pins it: the SDK upgrade below moves it.' : 'Check its changelog for breaking changes.'}`);
-  }
-  const minorVulns = byKind('vuln-dep').length - vulns.length;
+  const securitySteps = sec.sort((a, b) => a.sev - b.sev).map((x) => x.step);
+  const minorVulns = byKind('vuln-dep').filter((v) => v.severity !== 'critical' && v.severity !== 'high').length;
   if (minorVulns) securitySteps.push(`${minorVulns} more package${minorVulns === 1 ? ' has' : 's have'} moderate or low advisories: update them with the routine package updates below.`);
   if (securitySteps.length) {
     phases.push({ title: 'Close security gaps', why: 'Attackers read app bundles, network traffic and logs. These are the ways in this app hands them something.', steps: securitySteps });

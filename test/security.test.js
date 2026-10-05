@@ -165,3 +165,17 @@ test('auth tokens in AsyncStorage are a low finding', async () => {
   assert.equal(f.severity, 'low');
   assert.match(f.detail, /accessToken/);
 });
+
+test('dependencies from git are never matched against npm advisories', async () => {
+  const { analyze } = await import('../src/analyze.js');
+  const { loadProject } = await import('../src/project.js');
+  const { fakeRegistry } = await import('./helpers.js');
+  const root = makeProject({
+    'package.json': { name: 'g', dependencies: { 'react-native': '0.80.0', 'react-native-blue-crypto': 'github:Owner/react-native-blue-crypto#3cb5442' } },
+    'node_modules/react-native/package.json': { version: '0.80.0' },
+    'node_modules/react-native-blue-crypto/package.json': { version: '1.0.0' },
+  });
+  const get = fakeRegistry({ advisories: { 'react-native-blue-crypto': [{ title: 'Malware in react-native-blue-crypto', severity: 'critical', vulnerable_versions: '>=0' }] } });
+  const result = await analyze(loadProject(root), { get, now: new Date('2026-10-05') });
+  assert.ok(!result.findings.some((f) => f.id === 'vuln:react-native-blue-crypto'));
+});
