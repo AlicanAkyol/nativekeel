@@ -19,7 +19,7 @@ function* jsFiles(dir) {
   for (const e of entries) {
     if (e.isDirectory()) {
       if (!SKIP_DIRS.has(e.name) && !e.name.startsWith('.')) yield* jsFiles(path.join(dir, e.name));
-    } else if (JS_EXT.test(e.name) && !/\.(test|spec)\./.test(e.name)) {
+    } else if (JS_EXT.test(e.name) && !/\.(test|spec)[._]/.test(e.name)) {
       yield path.join(dir, e.name);
     }
   }
@@ -254,6 +254,82 @@ export function androidBackup(root) {
       title: 'Android backups include all app data (allowBackup="true")',
       detail: 'Without backup rules, tokens and databases are copied by device and cloud backups and can be restored on another device. The React Native template sets allowBackup="false"; set it back, or add dataExtractionRules that exclude credentials.',
       fix: { kind: 'security', step: 'Set `android:allowBackup="false"` in `android/app/src/main/AndroidManifest.xml`, or add `dataExtractionRules` that exclude credentials.' },
+    },
+  ];
+}
+
+const SYSTEM_ACTIONS = new Set([
+  'android.appwidget.action.APPWIDGET_UPDATE',
+  'android.intent.action.BOOT_COMPLETED',
+  'android.intent.action.LOCKED_BOOT_COMPLETED',
+  'android.intent.action.QUICKBOOT_POWERON',
+  'com.htc.intent.action.QUICKBOOT_POWERON',
+  'android.intent.action.MY_PACKAGE_REPLACED',
+  'android.intent.action.PACKAGE_REPLACED',
+  'android.intent.action.DOWNLOAD_COMPLETE',
+  'android.intent.action.REBOOT',
+]);
+
+// Services, receivers and providers in the app's own manifest that other apps can start or
+// query: exported without a permission. (Launcher activities are meant to be exported.)
+export function exportedComponents(root) {
+  const file = path.join(root, 'android', 'app', 'src', 'main', 'AndroidManifest.xml');
+  const text = read(file);
+  if (!text) return [];
+  const open = [];
+  for (const m of text.matchAll(/<(service|receiver|provider)\b([^>]*?)(?:\/>|>([\s\S]*?)<\/\1>)/g)) {
+    const attrs = m[2];
+    if (!/android:exported\s*=\s*"true"/.test(attrs) || /android:(?:permission|readPermission|writePermission)\s*=/.test(attrs)) continue;
+    // Widgets and receivers for system broadcasts (boot, package replaced, download complete)
+    // have to be exported for Android to reach them.
+    const actions = [...(m[3] || '').matchAll(/<action\s+android:name\s*=\s*"([^"]+)"/g)].map((a) => a[1]);
+    const isWidget = /android\.appwidget\.provider/.test(m[3] || '');
+    if (isWidget || (actions.length && actions.every((a) => SYSTEM_ACTIONS.has(a) || (m[1] === 'receiver' && /^android\.(?:intent\.action|appwidget\.action)\./.test(a))))) continue;
+    const name = (attrs.match(/android:name\s*=\s*"([^"]+)"/) || [])[1] || m[1];
+    open.push(`${m[1]} ${name}`);
+  }
+  if (!open.length) return [];
+  return [
+    {
+      id: 'android-exported-components',
+      severity: 'medium',
+      area: 'security',
+      title: `${open.length} Android component${open.length === 1 ? '' : 's'} open to every other app`,
+      detail: `${open.slice(0, 4).join(', ')}${open.length > 4 ? ', …' : ''}: exported="true" without a permission, so any installed app can start it or read from it. Set exported="false" unless another app must call it, or protect it with android:permission.`,
+      fix: { kind: 'security', step: 'In `android/app/src/main/AndroidManifest.xml`, set `android:exported="false"` on services/receivers/providers no other app needs, or add `android:permission`.' },
+    },
+  ];
+}
+
+// API calls over plain HTTP/WS to a real host. Android (API 28+) and iOS block these unless
+// security is turned off, so they either fail in production or travel unencrypted.
+const LOCAL_HOST = /^(?:localhost|127\.|10\.|192\.168\.|172\.(?:1[6-9]|2\d|3[01])\.|0\.0\.0\.0|\[?::1)/;
+export function plainHttpCalls(root) {
+  const hosts = new Map();
+  for (const file of jsFiles(root)) {
+    const text = read(file);
+    if (!text || !/(?:http|ws):\/\//.test(text)) continue;
+    const lines = text.split('\n');
+    lines.forEach((line, i) => {
+      if (/Linking\.|openURL|openBrowser|WebBrowser\.|href=|xmlns|schemas\.|w3\.org|example\.(?:com|org)/.test(line)) return;
+      if (!/\bfetch\s*\(|axios|baseURL|baseUrl|BASE_URL|API_URL|apiUrl|new WebSocket\s*\(|\.get\s*\(|\.post\s*\(/.test(line)) return;
+      for (const m of line.matchAll(/['"`](?:http|ws):\/\/([^/'"`:\s$]+)/g)) {
+        // Real hosts only: not local addresses, not placeholders like http://dummy used for URL parsing.
+        if (LOCAL_HOST.test(m[1]) || /^\$\{/.test(m[1]) || !m[1].includes('.')) continue;
+        if (!hosts.has(m[1])) hosts.set(m[1], `${path.relative(root, file)}:${i + 1}`);
+      }
+    });
+  }
+  if (!hosts.size) return [];
+  const list = [...hosts].map(([h, at]) => `${h} (${at})`);
+  return [
+    {
+      id: 'plain-http-calls',
+      severity: 'medium',
+      area: 'security',
+      title: `API calls over plain HTTP to ${hosts.size} host${hosts.size === 1 ? '' : 's'}`,
+      detail: `${list.slice(0, 4).join(', ')}${list.length > 4 ? ', …' : ''}. Anyone on the same network can read or change this traffic, and Android and iOS block it unless cleartext is allowed. Use https:// (wss:// for sockets).`,
+      fix: { kind: 'security', step: `Switch ${[...hosts.keys()].slice(0, 3).map((h) => `\`${h}\``).join(', ')}${hosts.size > 3 ? ' and the others' : ''} to https:// (wss:// for sockets), then remove any cleartext exceptions you added for them.` },
     },
   ];
 }

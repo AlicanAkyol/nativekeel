@@ -94,3 +94,26 @@ test('Node.js-only advisories do not raise the severity of a mobile dependency',
   assert.equal(f.severity, 'low');
   assert.match(f.detail, /Node\.js\/server use only/);
 });
+
+test('exported components: widgets and system-broadcast receivers are fine, an open service is not', async () => {
+  const { exportedComponents } = await import('../src/security.js');
+  const manifest = `<manifest><application>
+    <receiver android:name=".PriceWidget" android:exported="true"><intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/><action android:name="android.intent.action.SCREEN_ON"/></intent-filter><meta-data android:name="android.appwidget.provider" android:resource="@xml/w"/></receiver>
+    <receiver android:name=".Boot" android:exported="true"><intent-filter><action android:name="android.intent.action.BOOT_COMPLETED"/></intent-filter></receiver>
+    <service android:name=".Messaging" android:exported="true"><intent-filter><action android:name="com.google.firebase.MESSAGING_EVENT"/></intent-filter></service>
+    <service android:name=".Protected" android:exported="true" android:permission="android.permission.BIND_JOB_SERVICE"/>
+  </application></manifest>`;
+  const [f] = exportedComponents(makeProject({ 'android/app/src/main/AndroidManifest.xml': manifest }));
+  assert.match(f.title, /^1 Android component/);
+  assert.match(f.detail, /service \.Messaging/);
+});
+
+test('plain HTTP API calls: real hosts only', async () => {
+  const { plainHttpCalls } = await import('../src/security.js');
+  const root = makeProject({
+    'src/api.js': "const api = axios.create({ baseURL: 'http://api.example-shop.com' });\nfetch('http://10.0.2.2:3000/x');\nconst u = new URL(path, 'http://dummy');\nLinking.openURL('http://help.example-shop.com');",
+  });
+  const [f] = plainHttpCalls(root);
+  assert.match(f.title, /1 host/);
+  assert.match(f.detail, /api\.example-shop\.com/);
+});
