@@ -24,3 +24,12 @@ jobs:
           test -s "$RUNNER_TEMP/nativekeel.md"
           grep -q "allowBackup" "$RUNNER_TEMP/nativekeel.sarif"
           echo "exit code: ${{ steps.nk.outputs.exit-code }}"
+  published-tag:
+    # What users run: the v0 tag, not this checkout.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: AlicanAkyol/nativekeel@v0
+        with:
+          path: test/fixtures/action-app
+          fail-on: never
