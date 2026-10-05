@@ -23,6 +23,13 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 280+ open-source React Native and Expo apps to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.9</h2><p class="date">5 October 2026</p>
+<ul>
+<li><span class="tag">Security</span><b>Android components open to every app.</b> Services, receivers and providers exported without a permission. Widgets and receivers for system broadcasts are left alone, because Android needs them exported.</li>
+<li><span class="tag">Security</span><b>API calls over plain HTTP.</b> fetch, axios and WebSocket calls to real hosts over http:// or ws://; local addresses and links opened in the browser are ignored.</li>
+<li><span class="tag">Expo</span>Old Expo projects (SDK 44 and earlier) are read correctly: React Native comes from Expo's fork, and the plan uses the right upgrade command for each SDK (the legacy CLI before SDK 46). For very long jumps it also weighs starting a fresh project.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.8</h2><p class="date">5 October 2026</p>
 <ul>
 <li><span class="tag">Security</span><b>Known vulnerabilities in what you ship.</b> Advisories from the GitHub Advisory Database for the exact versions in your lockfile or node_modules (npm, yarn, pnpm). Advisories that only affect Node.js servers stay visible at low severity instead of raising false alarms.</li>
