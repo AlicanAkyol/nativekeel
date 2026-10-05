@@ -6,7 +6,7 @@ Health check for React Native and Expo apps. One command, no install, no account
 npx nativekeel
 ```
 
-**What's new in 0.1.10:** every report opens with *Start here*, the three most urgent first steps; missing iOS permission texts (a crash and an App Review rejection) are caught. Recent releases added known vulnerabilities in the exact versions you ship, password leaks into logs and databases, unsafe WebViews, open Android components, plain-HTTP API calls and runtime crash risks. Tuned on 280+ open-source React Native and Expo apps to keep false alarms out. [All releases →](https://nativekeel.com/changelog)
+**What's new in 0.1.11:** the GitHub Action is fixed and tested on every change. **0.1.10:** every report opens with *Start here*, the three most urgent first steps; missing iOS permission texts (a crash and an App Review rejection) are caught. Recent releases added known vulnerabilities in the exact versions you ship, password leaks into logs and databases, unsafe WebViews, open Android components, plain-HTTP API calls and runtime crash risks. Tuned on 280+ open-source React Native and Expo apps to keep false alarms out. [All releases →](https://nativekeel.com/changelog)
 
 It answers the questions that decide whether your app can still ship:
 

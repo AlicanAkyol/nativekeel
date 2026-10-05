@@ -23,6 +23,11 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 280+ open-source React Native and Expo apps to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.11</h2><p class="date">5 October 2026</p>
+<ul>
+<li><span class="tag">Fix</span><b>The GitHub Action works.</b> A colon inside one input description made <code>action.yml</code> invalid, so <code>uses: AlicanAkyol/nativekeel@v0</code> failed to load. It is fixed, the Action now has an <code>exit-code</code> output, and a workflow runs it on a sample app on every change so this cannot slip again.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.10</h2><p class="date">5 October 2026</p>
 <ul>
 <li><span class="tag">Experience</span><b>Start here.</b> Every report now opens with the three most urgent first steps (leaked keys, crash risks, store deadlines, security gaps), in the terminal and in the HTML report. On the real app our case study is based on, it picked the same three priorities we had reached by hand.</li>
