@@ -177,7 +177,7 @@ export function buildPlan(result) {
   // In Expo projects `npx expo install` picks the version that matches the SDK.
   const pm = isExpo ? { ...basePm, add: 'npx expo install' } : basePm;
   const pinned = isExpo ? expoPinnedNames(result.project.root) : new Set();
-  const movesWithExpo = (name) => isExpo && (/^(expo-|@expo\/)/.test(name) || name === 'expo' || name === 'jest-expo' || pinned.has(name));
+  const movesWithExpo = (name) => isExpo && (/^(expo-|@expo\/)/.test(name) || ['expo', 'jest-expo', 'react-native', 'react', 'react-dom'].includes(name) || pinned.has(name));
   const installed = new Set(result.deps.map((d) => d.name));
   const byKind = (kind) => result.findings.filter((f) => f.fix && f.fix.kind === kind).map((f) => f.fix);
   const phases = [];
@@ -481,8 +481,18 @@ export function buildPlan(result) {
   const expo = byKind('upgrade-expo')[0];
   if (expo) {
     const steps = [];
+    if (expo.to - expo.from >= 6) {
+      steps.push(`**${expo.to - expo.from} SDKs is a long way.** Weigh it against starting a fresh project on SDK ${expo.to} (\`npx create-expo-app\`) and moving your screens, assets and app config over: with few custom native modules that is often faster than ${expo.to - expo.from} upgrades.`);
+    }
     for (let v = expo.from + 1; v <= expo.to; v++) {
-      steps.push(`SDK ${v - 1} → ${v}: \`npx expo install expo@^${v}.0.0 --fix\`, read the SDK ${v} changelog, run \`npx expo-doctor\`, build.`);
+      // The local Expo CLI (`npx expo`) exists from SDK 46; older SDKs upgrade with expo-cli.
+      steps.push(
+        v < 46
+          ? `SDK ${v - 1} → ${v}: \`npx expo-cli upgrade ${v}\` (the legacy CLI; the local \`npx expo\` CLI arrives with SDK 46), read the SDK ${v} changelog, build.`
+          : v === 46
+            ? `SDK 45 → 46: \`${basePm.add} expo@^46.0.0\`, then \`npx expo install --fix\` (the first SDK with the local CLI), read the SDK 46 changelog, build.`
+            : `SDK ${v - 1} → ${v}: \`npx expo install expo@^${v}.0.0 --fix\`, read the SDK ${v} changelog, run \`npx expo-doctor\`, build.`,
+      );
       // SDK 52 ships React Native 0.76, the first version where switching is practical.
       if (deferredArch && v >= 52) {
         steps.push(`**At SDK ${v}, turn on the New Architecture** before going further (it is the default from SDK 53, and React Native 0.${NEW_ARCH_ONLY_MINOR} removed the legacy one):`, ...deferredArch.map((x) => `New Architecture: ${x}`));

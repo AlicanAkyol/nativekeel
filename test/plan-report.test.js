@@ -268,3 +268,20 @@ test('renamed packages: swap and update imports', () => {
   const md = planToMarkdown(r, buildPlan(r));
   assert.match(md, /moved to `@react-native-async-storage\/async-storage` \(same API\)/);
 });
+
+test('old Expo SDKs: legacy CLI before 46, local CLI after, long-jump advice, React Native moves with the SDK', () => {
+  const r = {
+    ...result,
+    project: { ...result.project, reactNative: '0.61.4', expo: '37.0.3', managed: true },
+    findings: [
+      { id: 'expo-unsupported', severity: 'critical', area: 'expo', title: 'x', detail: 'x', fix: { kind: 'upgrade-expo', from: 37, to: 48 } },
+      { id: 'vuln:react-native', severity: 'high', area: 'security', title: 'x', detail: 'x', fix: { kind: 'vuln-dep', name: 'react-native', from: '0.61.4', to: '0.62.3', severity: 'high' } },
+    ],
+  };
+  const md = planToMarkdown(r, buildPlan(r));
+  assert.match(md, /SDK 37 → 38: `npx expo-cli upgrade 38`/);
+  assert.match(md, /SDK 45 → 46: `npm install expo@\^46\.0\.0`, then `npx expo install --fix`/);
+  assert.match(md, /SDK 47 → 48: `npx expo install expo@\^48\.0\.0 --fix`/);
+  assert.match(md, /11 SDKs is a long way/);
+  assert.match(md, /`react-native` 0\.61\.4 .*Expo pins it/);
+});
