@@ -1,28 +1,28 @@
 name: NativeKeel
-description: Health check for React Native and Expo apps. Fails the build on unsupported versions, New Architecture blockers, store deadlines, crash risks, vulnerable dependencies and leaked secrets.
+description: 'Health check for React Native and Expo apps. Fails the build on unsupported versions, New Architecture blockers, store deadlines, crash risks, vulnerable dependencies and leaked secrets.'
 author: Alican Akyol
 branding:
   icon: anchor
   color: green
 inputs:
   path:
-    description: App folder (where package.json is)
+    description: 'App folder (where package.json is)'
     default: .
   fail-on:
-    description: Fail at this severity or above (critical, high, medium, low, never)
+    description: 'Fail at this severity or above (critical, high, medium, low, never)'
     default: critical
   baseline:
-    description: Baseline file; only findings not in it are reported
+    description: 'Baseline file; only findings not in it are reported'
     default: ''
   sarif:
-    description: Upload results to GitHub code scanning (needs `security-events: write`)
+    description: 'Upload results to GitHub code scanning (needs `security-events: write`)'
     default: 'false'
   offline:
-    description: Make no network requests (local checks only)
+    description: 'Make no network requests (local checks only)'
     default: 'false'
 outputs:
   exit-code:
-    description: Exit code of the scan (0 = nothing at or above fail-on)
+    description: 'Exit code of the scan (0 = nothing at or above fail-on)'
     value: ${{ steps.scan.outputs.exit-code }}
 runs:
   using: composite
