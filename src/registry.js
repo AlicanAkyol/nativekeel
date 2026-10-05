@@ -5,10 +5,12 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // GET a JSON document. Returns null for "not found" (a package that does not exist is an
 // answer, not an error). Rate limits (429) and server errors are retried with backoff; if the
 // request still fails, `stats.failed` is incremented so the report can say it is incomplete.
-export async function fetchJson(url, headers = {}, stats = null, { retries = 3, wait = sleep } = {}) {
+export async function fetchJson(url, headers = {}, stats = null, { retries = 3, wait = sleep, body = null } = {}) {
   for (let attempt = 0; ; attempt++) {
     try {
-      const res = await fetch(url, { headers: { ...UA, ...headers }, signal: AbortSignal.timeout(30000) });
+      const init = { headers: { ...UA, ...headers }, signal: AbortSignal.timeout(30000) };
+      if (body) Object.assign(init, { method: 'POST', body });
+      const res = await fetch(url, init);
       if (res.ok) return await res.json();
       if (res.status === 404) return null;
       if ((res.status === 429 || res.status >= 500) && attempt < retries) {
@@ -103,6 +105,20 @@ export function createRegistry(get = fetchJson) {
         }
       };
       await Promise.all(Array.from({ length: concurrency }, worker));
+      return out;
+    },
+
+    // Security advisories for exact versions (the endpoint `npm audit` uses). Sends package
+    // names and versions, nothing else. Returns { name: [advisory] }, or null if it failed.
+    async advisories(versions) {
+      const out = {};
+      const names = Object.keys(versions);
+      for (let i = 0; i < names.length; i += 200) {
+        const chunk = Object.fromEntries(names.slice(i, i + 200).map((n) => [n, [versions[n]]]));
+        const data = await get('https://registry.npmjs.org/-/npm/v1/security/advisories/bulk', { 'Content-Type': 'application/json' }, JSON.stringify(chunk));
+        if (!data) return null;
+        Object.assign(out, data);
+      }
       return out;
     },
 

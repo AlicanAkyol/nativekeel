@@ -5,6 +5,8 @@ import { createRegistry, fetchJson } from './registry.js';
 import { scanSecrets } from './secrets.js';
 import { nativeChecks } from './native.js';
 import { stabilityChecks } from './stability.js';
+import { vulnerableDependencies, passwordLeaks, webViewRisks, androidBackup } from './security.js';
+import { lockedVersions } from './lockfile.js';
 import { findUnused, filesImportingWith } from './usage.js';
 import { matchKnownIssues, compareVersions } from './known-issues.js';
 import { COMPAT, bestRange, checkCompat } from './compat.js';
@@ -80,7 +82,7 @@ export function satisfiesExpoRange(version, range) {
 export async function analyze(project, { get, now = new Date(), offline: forcedOffline = false } = {}) {
   // Requests that failed even after retries (rate limits, network): reported, never hidden.
   const net = { failed: 0 };
-  const registry = createRegistry(get || ((url, headers) => fetchJson(url, headers, net)));
+  const registry = createRegistry(get || ((url, headers, body) => fetchJson(url, headers, net, { body })));
   const findings = [];
   const add = (f) => findings.push(f);
 
@@ -401,6 +403,21 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
   // 7. Secrets
   // Setups that build and then crash at runtime.
   for (const f of stabilityChecks(project)) add(f);
+
+  // Security beyond leaked keys.
+  for (const f of [...passwordLeaks(project.root), ...webViewRisks(project.root), ...androidBackup(project.root)]) add(f);
+  if (!forcedOffline) {
+    // Exact versions only (installed, else the lockfile): a range would be a guess.
+    const locked = lockedVersions(project.root, project.deps);
+    const exact = {};
+    for (const name of Object.keys(project.deps)) {
+      const v = installedVersion(project.root, name) || locked[name];
+      if (v && /^\d+\.\d+\.\d+/.test(v)) exact[name] = v;
+    }
+    const vulns = await vulnerableDependencies(registry, exact);
+    if (vulns === null) net.failed++;
+    for (const f of vulns || []) add(f);
+  }
 
   for (const s of scanSecrets(project.root)) {
     const value = s.preview ? `Value ${s.preview}. ` : '';

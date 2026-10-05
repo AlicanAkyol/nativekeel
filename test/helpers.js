@@ -17,7 +17,7 @@ const versions = (list) => Object.fromEntries(list.map((v) => [v, {}]));
 
 // Canned registry answers so tests never touch the network.
 // `manifests` maps 'name@latest' or 'name@1.2.3' to a package.json (e.g. with codegenConfig).
-export function fakeRegistry({ directory = {}, latest = {}, published = {}, rnPeers = [], manifests = {} } = {}) {
+export function fakeRegistry({ directory = {}, latest = {}, published = {}, rnPeers = [], manifests = {}, advisories = {} } = {}) {
   return async (url) => {
     if (url.startsWith('https://reactnative.directory/api/library?name=')) {
       const names = decodeURIComponent(url.split('name=')[1]).split(',');
@@ -41,6 +41,7 @@ export function fakeRegistry({ directory = {}, latest = {}, published = {}, rnPe
         versions: { [v]: rnPeers.includes(name) ? { peerDependencies: { 'react-native-vector-icons': '*' } } : {} },
       };
     }
+    if (url.endsWith('/-/npm/v1/security/advisories/bulk')) return advisories;
     const m = url.match(/^https:\/\/registry\.npmjs\.org\/(.+)\/(latest|\d+\.\d+\.\d+)$/);
     if (m) {
       const name = decodeURIComponent(m[1]);

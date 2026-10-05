@@ -66,6 +66,8 @@ const WEIGHTS = {
   'folly-flags': () => 0.25,
   'default-react-host': () => 0.25,
   crash: () => 1,
+  security: () => 1,
+  'vuln-dep': (f) => (f.severity === 'critical' || f.severity === 'high' ? 1 : 0.25),
 };
 
 // Routine version bumps are many but cheap next to a React Native, architecture or store
@@ -281,8 +283,15 @@ export function buildPlan(result) {
   for (const a of byKind('ats')) {
     securitySteps.push(`In \`${a.file}\`, set \`NSAllowsArbitraryLoads\` to false and list only the hosts that need HTTP under \`NSExceptionDomains\`.`);
   }
+  for (const f of byKind('security')) securitySteps.push(f.step);
+  const vulns = byKind('vuln-dep').filter((v) => v.severity === 'critical' || v.severity === 'high');
+  for (const v of vulns) {
+    securitySteps.push(`Update \`${v.name}\` ${v.from}${v.to ? ` to ${v.to} or later` : ''}: it has ${v.severity} known vulnerabilities. ${movesWithExpo(v.name) ? 'Expo pins it: the SDK upgrade below moves it.' : 'Check its changelog for breaking changes.'}`);
+  }
+  const minorVulns = byKind('vuln-dep').length - vulns.length;
+  if (minorVulns) securitySteps.push(`${minorVulns} more package${minorVulns === 1 ? ' has' : 's have'} moderate or low advisories: update them with the routine package updates below.`);
   if (securitySteps.length) {
-    phases.push({ title: 'Tighten transport security', why: 'Unencrypted traffic exposes user data on public networks.', steps: securitySteps });
+    phases.push({ title: 'Close security gaps', why: 'Attackers read app bundles, network traffic and logs. These are the ways in this app hands them something.', steps: securitySteps });
   }
 
   const cleanup = [];
