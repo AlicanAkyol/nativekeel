@@ -87,3 +87,10 @@ test('lockfiles: npm, yarn 1, yarn berry, pnpm (several YAML documents)', () => 
   });
   assert.deepEqual(lockedVersions(`${pnpm}/apps/mobile`, declared), { axios: '1.8.0' });
 });
+
+test('Node.js-only advisories do not raise the severity of a mobile dependency', async () => {
+  const registry = createRegistry(async () => ({ axios: [{ title: 'Credential leak in Axios Node.js HTTP Adapter', severity: 'high', vulnerable_versions: '<1.8.0' }] }));
+  const [f] = await vulnerableDependencies(registry, { axios: '1.6.0' });
+  assert.equal(f.severity, 'low');
+  assert.match(f.detail, /Node\.js\/server use only/);
+});

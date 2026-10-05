@@ -33,6 +33,7 @@ const read = (file) => {
   }
 };
 
+const SERVER_ONLY = /node\.?js|server[- ]side|\bhttp adapter\b|\bssr\b/i;
 const SEVERITY = { critical: 'critical', high: 'high', moderate: 'medium', low: 'low', info: 'low' };
 const RANK = ['low', 'medium', 'high', 'critical'];
 
@@ -48,11 +49,15 @@ export async function vulnerableDependencies(registry, versions) {
     // The endpoint answers for the versions we sent; double-check the range where it is simple.
     const relevant = list.filter((a) => applies(version, a.vulnerable_versions));
     if (!relevant.length) continue;
-    const severity = relevant.map((a) => SEVERITY[a.severity] || 'low').sort((a, b) => RANK.indexOf(b) - RANK.indexOf(a))[0];
+    // Advisories about Node.js-only code paths (axios' HTTP adapter, server rendering) do not
+    // reach a React Native app: keep them visible, but at low severity.
+    const sevOf = (a) => (SERVER_ONLY.test(a.title || '') ? 'low' : SEVERITY[a.severity] || 'low');
+    const severity = relevant.map(sevOf).sort((a, b) => RANK.indexOf(b) - RANK.indexOf(a))[0];
+    const serverOnly = relevant.filter((a) => SERVER_ONLY.test(a.title || '')).length;
     const fixedIn = minimumFixed(relevant);
     const top = relevant
       .slice()
-      .sort((a, b) => RANK.indexOf(SEVERITY[b.severity]) - RANK.indexOf(SEVERITY[a.severity]))
+      .sort((a, b) => RANK.indexOf(sevOf(b)) - RANK.indexOf(sevOf(a)))
       .slice(0, 3)
       .map((a) => `${a.title}${a.url ? ` (${a.url})` : ''}`);
     findings.push({
@@ -60,7 +65,7 @@ export async function vulnerableDependencies(registry, versions) {
       severity,
       area: 'security',
       title: `${name} ${version}: ${relevant.length} known vulnerabilit${relevant.length === 1 ? 'y' : 'ies'}`,
-      detail: `${top.join('; ')}${relevant.length > 3 ? `; and ${relevant.length - 3} more` : ''}. ${fixedIn ? `Fixed in ${fixedIn} or later.` : 'Check the advisories for a fixed version.'}`,
+      detail: `${top.join('; ')}${relevant.length > 3 ? `; and ${relevant.length - 3} more` : ''}. ${fixedIn ? `Fixed in ${fixedIn} or later.` : 'Check the advisories for a fixed version.'}${serverOnly ? ` ${serverOnly} of them concern Node.js/server use only and are counted as low.` : ''} Source: GitHub Advisory Database (via npm).`,
       fix: { kind: 'vuln-dep', name, from: version, to: fixedIn, severity },
     });
   }
