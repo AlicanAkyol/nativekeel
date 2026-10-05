@@ -6,7 +6,7 @@ Health check for React Native and Expo apps. One command, no install, no account
 npx nativekeel
 ```
 
-**What's new in 0.1.9:** Android components open to every app, API calls over plain HTTP, and correct plans for old Expo projects. Since 0.1.8: known vulnerabilities in the exact dependency versions you ship, passwords that leak into crash reports, databases or AsyncStorage, unsafe WebViews, and setups that build fine but crash at runtime. Tuned on 280+ open-source React Native and Expo apps to keep false alarms out. [All releases →](https://nativekeel.com/changelog)
+**What's new in 0.1.10:** every report opens with *Start here*, the three most urgent first steps; missing iOS permission texts (a crash and an App Review rejection) are caught. Recent releases added known vulnerabilities in the exact versions you ship, password leaks into logs and databases, unsafe WebViews, open Android components, plain-HTTP API calls and runtime crash risks. Tuned on 280+ open-source React Native and Expo apps to keep false alarms out. [All releases →](https://nativekeel.com/changelog)
 
 It answers the questions that decide whether your app can still ship:
 
@@ -19,7 +19,7 @@ It answers the questions that decide whether your app can still ship:
 - **Is transport security off?** Cleartext HTTP or `debuggable` in the release Android manifest, `NSAllowsArbitraryLoads` on iOS.
 - **Do you ship known vulnerabilities?** Advisories from the GitHub Advisory Database for the exact versions in your lockfile or `node_modules`. Advisories that only affect Node.js servers are kept, at low severity.
 - **Can someone read your users' data?** Passwords that flow into crash reports, analytics, remote databases or plain AsyncStorage (followed through intermediate variables), WebViews that let page scripts read local files or load HTTP into HTTPS, Android backups that copy tokens, Android components any app can start, API calls over plain HTTP.
-- **Will it crash at runtime?** Reanimated without its Babel plugin or `react-native-worklets`, mixed `@react-native-firebase/*` or `@react-navigation/*` majors, a second copy of React or React Native inside a dependency, Kotlin modules that cannot load through the New Architecture interop layer, AppDelegate setups that crash in Release.
+- **Will it crash at runtime?** Reanimated without its Babel plugin or `react-native-worklets`, mixed `@react-native-firebase/*` or `@react-navigation/*` majors, a second copy of React or React Native inside a dependency, Kotlin modules that cannot load through the New Architecture interop layer, AppDelegate setups that crash in Release, camera/photos/location access without the Info.plist description iOS requires.
 - **Leftovers from old templates?** Flipper, JavaScriptCore instead of Hermes.
 
 ```

@@ -23,6 +23,13 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 280+ open-source React Native and Expo apps to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.10</h2><p class="date">5 October 2026</p>
+<ul>
+<li><span class="tag">Experience</span><b>Start here.</b> Every report now opens with the three most urgent first steps (leaked keys, crash risks, store deadlines, security gaps), in the terminal and in the HTML report. On the real app our case study is based on, it picked the same three priorities we had reached by hand.</li>
+<li><span class="tag">Stability</span><b>Missing iOS permission texts.</b> Using the camera, photos, location, microphone, contacts, calendars, Bluetooth or Face ID without the matching Info.plist description makes iOS close the app and App Review reject it. Expo config plugins are taken into account.</li>
+<li><span class="tag">Plan</span>Store deadlines (target SDK, 16 KB pages, privacy manifest) now sit together at the start of the plan.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.9</h2><p class="date">5 October 2026</p>
 <ul>
 <li><span class="tag">Security</span><b>Android components open to every app.</b> Services, receivers and providers exported without a permission. Widgets and receivers for system broadcasts are left alone, because Android needs them exported.</li>

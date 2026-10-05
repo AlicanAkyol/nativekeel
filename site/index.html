@@ -124,7 +124,12 @@ New Architecture  android: <span class="r">off</span>  ios: <span class="r">off<
 <span class="y">▲ HIGH    </span> <span class="w">iOS AppDelegate is missing RCTAppDependencyProvider</span>
 <span class="d">           A launch crash in Release once the New Architecture is on.</span>
 
-<span class="w">Summary</span>  <span class="r">4 critical</span> · <span class="y">5 high</span> · 4 medium · 6 low</pre>
+<span class="w">Summary</span>  <span class="r">4 critical</span> · <span class="y">5 high</span> · 4 medium · 6 low
+
+<span class="w">Start here</span>
+  1. Revoke the AWS access key ID in src/App.js:6 today.
+  2. Set targetSdkVersion = 36 in android/build.gradle.
+  3. Commit the generated PrivacyInfo.xcprivacy.</pre>
     </div>
   </div>
 
@@ -158,7 +163,7 @@ New Architecture  android: <span class="r">off</span>  ios: <span class="r">off<
       <div class="card"><span class="k">Store</span><h3>Google Play and App Store rules</h3><p>Target SDK, the iOS privacy manifest, and 16 KB pages: it opens your built APK or AAB and measures the alignment of every native library.</p></div>
       <div class="card"><span class="k">Security</span><h3>Secrets and signing keys</h3><p>API keys shipped in the bundle, <code>.env</code> values compiled into the app, committed keystores, signing passwords and App Store Connect keys.</p></div>
       <div class="card"><span class="k">Security</span><h3>Vulnerable dependencies and data leaks</h3><p>Known vulnerabilities in the exact versions you ship (GitHub Advisory Database), passwords that end up in crash reports, databases or plain AsyncStorage, unsafe WebView settings, Android backups that copy tokens, components any app can start and API calls over plain HTTP.</p></div>
-      <div class="card"><span class="k">Stability</span><h3>Crash risks</h3><p>Setups that build fine and crash at runtime: Reanimated without its Babel plugin or worklets, mixed Firebase or React Navigation majors, a second copy of React inside a dependency, native modules that cannot load on the New Architecture.</p></div>
+      <div class="card"><span class="k">Stability</span><h3>Crash risks</h3><p>Setups that build fine and crash at runtime: Reanimated without its Babel plugin or worklets, mixed Firebase or React Navigation majors, a second copy of React inside a dependency, native modules that cannot load on the New Architecture, camera or location access without the iOS permission text.</p></div>
       <div class="card"><span class="k">Cleanup</span><h3>Packages you can delete</h3><p>Installed but never imported, never referenced natively and not required by anything else. Every package you remove is one you never upgrade.</p></div>
       <div class="card"><span class="k">Experience</span><h3>Known traps</h3><p>Things that broke real upgrades, like an AppDelegate missing the one line React Native 0.77 requires, which crashes release builds with the New Architecture. The list grows with every upgrade we do.</p></div>
     </div>
