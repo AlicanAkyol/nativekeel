@@ -1,0 +1,8 @@
+{
+  "name": "action-fixture",
+  "private": true,
+  "dependencies": {
+    "react": "19.1.0",
+    "react-native": "0.80.0"
+  }
+}

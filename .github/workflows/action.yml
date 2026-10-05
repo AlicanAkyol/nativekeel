@@ -1,0 +1,26 @@
+name: Action
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+  security-events: write
+jobs:
+  self-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run the action on a fixture app
+        id: nk
+        uses: ./
+        with:
+          path: test/fixtures/action-app
+          fail-on: never
+          sarif: 'true'
+      - name: Check the outputs
+        run: |
+          test -s "$RUNNER_TEMP/nativekeel.sarif"
+          test -s "$RUNNER_TEMP/nativekeel.md"
+          grep -q "allowBackup" "$RUNNER_TEMP/nativekeel.sarif"
+          echo "exit code: ${{ steps.nk.outputs.exit-code }}"
