@@ -135,3 +135,16 @@ test('Firebase rules: open writes, whole-database reads, test mode; public folde
   const used = cloudRules(makeProject({ 'package.json': '{}' }), { '@react-native-firebase/database': '22.0.0' }, now);
   assert.equal(used[0].id, 'firebase-rules-not-in-repo');
 });
+
+test('TLS bypasses: unconditional is critical, behind a setting is high; user CAs only in release', async () => {
+  const { insecureTls } = await import('../src/security.js');
+  const trustAll = 'object : X509TrustManager {\n  override fun checkServerTrusted(chain: Array<X509Certificate>, authType: String) {}\n}';
+  const always = insecureTls(makeProject({ 'android/app/src/main/java/a/Main.kt': `class Main { val tm = ${trustAll} }` }));
+  assert.equal(always[0].severity, 'critical');
+  const optIn = insecureTls(makeProject({ 'android/app/src/main/java/a/Client.kt': `fun socket(validateCertificates: Boolean) {\n  if (!validateCertificates) {\n    val tm = ${trustAll}\n  }\n}` }));
+  assert.equal(optIn[0].severity, 'high');
+  assert.equal(insecureTls(makeProject({ 'android/app/src/main/java/a/Ok.kt': 'override fun checkServerTrusted(chain: Array<X509Certificate>, authType: String) { delegate.checkServerTrusted(chain, authType) }' })).length, 0);
+  const nsc = (body) => insecureTls(makeProject({ 'android/app/src/main/res/xml/network_security_config.xml': `<network-security-config>${body}</network-security-config>` }));
+  assert.equal(nsc('<base-config><trust-anchors><certificates src="user"/></trust-anchors></base-config>').length, 1);
+  assert.equal(nsc('<debug-overrides><trust-anchors><certificates src="user"/></trust-anchors></debug-overrides>').length, 0);
+});

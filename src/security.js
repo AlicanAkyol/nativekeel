@@ -421,3 +421,100 @@ function scanAllowRules(text) {
   });
   return { openWrite, openReadAll };
 }
+
+// Native code that turns off TLS certificate checks: anyone on the same Wi-Fi can read and
+// change the app's HTTPS traffic (MASVS-NETWORK-1).
+export function insecureTls(root) {
+  const files = [];
+  const collect = (dir, exts) => {
+    let entries = [];
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const e of entries) {
+      const full = path.join(dir, e.name);
+      if (e.isDirectory()) {
+        if (!['Pods', 'build', 'node_modules', '.gradle', 'DerivedData', 'test', 'androidTest'].includes(e.name) && !/Tests?$/.test(e.name)) collect(full, exts);
+      } else if (exts.test(e.name)) {
+        files.push(full);
+      }
+    }
+  };
+  collect(path.join(root, 'android'), /\.(java|kt)$/);
+  collect(path.join(root, 'ios'), /\.(m|mm|swift)$/);
+  const PATTERNS = [
+    { re: /checkServerTrusted\s*\([^)]*\)\s*(?:throws[^{]*)?(?::\s*Unit\s*)?\{\s*\}/, what: 'a TrustManager whose checkServerTrusted accepts every certificate' },
+    { re: /(?:ALLOW_ALL_HOSTNAME_VERIFIER|NoopHostnameVerifier|AllowAllHostnameVerifier)|verify\s*\(\s*\w+\s*:?\s*String\??[^)]*\)\s*(?::\s*Boolean\s*)?(?:\{\s*return\s+true\s*;?\s*\}|=\s*true)|hostnameVerifier\s*\{\s*_\s*,\s*_\s*->\s*true\s*\}/, what: 'a hostname verifier that accepts every host' },
+    { re: /onReceivedSslError[\s\S]{0,300}?\.proceed\s*\(\s*\)/, what: 'a WebView that proceeds on SSL errors' },
+    { re: /allowsAnyHTTPSCertificateForHost|setAllowsAnyHTTPSCertificate/, what: 'an iOS API that accepts any HTTPS certificate' },
+  ];
+  const hits = [];
+  // A setting like "ignore TLS errors" or "trust self-signed" anywhere in the native code: the
+  // bypass is often defined in one file and switched on from another.
+  const optInSetting = /(?:ignore\w*(?:ssl|tls|cert)\w*|trustSelfSigned|allowSelfSigned|selfSignedCert)/i;
+  const projectOptIn = files.some((f) => optInSetting.test(read(f)));
+  for (const f of files) {
+    const text = read(f);
+    if (!text) continue;
+    // A bypass behind a setting (trust a self-signed home server, an "ignore TLS errors" switch)
+    // is an opt-in feature: still worth reviewing, but not the same as trusting everything.
+    const OPT_IN = /\bif\s*\(?[^\n]*(?:validate|verif|trust|self.?signed|ignore\w*(?:ssl|tls|cert)|insecure|allowInvalid|acceptInvalid|unsafe)/i;
+    const optIn = (index) => {
+      const before = text.slice(Math.max(0, index - 1200), index).split('\n').slice(-25).join('\n');
+      return OPT_IN.test(before) || projectOptIn;
+    };
+    for (const p of PATTERNS) {
+      const m = text.match(p.re);
+      if (m) hits.push({ file: path.relative(root, f), line: text.slice(0, m.index).split('\n').length, what: p.what, optIn: optIn(m.index) });
+    }
+    // iOS: answering a server-trust challenge with the server's own trust, without evaluating it.
+    if (/\.(m|mm|swift)$/.test(f) && /(?:URLCredential\(\s*trust:|credentialForTrust:)/.test(text) && !/SecTrustEvaluate|SecTrustEvaluateWithError|evaluate\(/.test(text)) {
+      const idx = text.search(/URLCredential\(\s*trust:|credentialForTrust:/);
+      hits.push({ file: path.relative(root, f), line: text.slice(0, idx).split('\n').length, what: 'a URL session that trusts the server certificate without evaluating it', optIn: optIn(idx) });
+    }
+  }
+  const findings = hits.map((h) =>
+    h.optIn
+      ? {
+          id: `insecure-tls:${h.file}`,
+          severity: 'high',
+          area: 'security',
+          title: `TLS certificate checks can be switched off (${h.file}:${h.line})`,
+          detail: `This file has ${h.what}, behind a setting (it looks like an opt-in for self-signed or self-hosted servers). While it is on, anyone on the same network can read and change that traffic. Keep it off by default, limit it to the one server the user chose (or pin that server's certificate), and say so clearly in the UI. (OWASP MASVS-NETWORK-1)`,
+          fix: { kind: 'security', step: `Review the certificate bypass in \`${h.file}:${h.line}\`: off by default, limited to the user's own server, ideally certificate pinning instead.` },
+        }
+      : {
+          id: `insecure-tls:${h.file}`,
+          severity: 'critical',
+          area: 'security',
+          title: `TLS certificate checks are turned off (${h.file}:${h.line})`,
+          detail: `This file has ${h.what}, with no setting around it. Anyone on the same network (public Wi-Fi, a compromised router) can read and change the app's HTTPS traffic, including logins and tokens. Remove it; for a self-signed development server, use a debug-only network security config instead. (OWASP MASVS-NETWORK-1)`,
+          fix: { kind: 'security', step: `Remove the certificate bypass in \`${h.file}:${h.line}\` (${h.what}).` },
+        },
+  );
+
+  // Release builds that trust user-installed certificates: a classic interception setup.
+  const xmlDir = path.join(root, 'android', 'app', 'src', 'main', 'res', 'xml');
+  let xmls = [];
+  try {
+    xmls = fs.readdirSync(xmlDir).filter((f) => f.endsWith('.xml'));
+  } catch {
+    // no res/xml
+  }
+  for (const x of xmls) {
+    const text = read(path.join(xmlDir, x)).replace(/<debug-overrides>[\s\S]*?<\/debug-overrides>/g, '');
+    if (/<network-security-config/.test(text) && /<certificates\s+src\s*=\s*"user"/.test(text)) {
+      findings.push({
+        id: `user-certificates:${x}`,
+        severity: 'low',
+        area: 'security',
+        title: `Release builds trust user-installed certificates (res/xml/${x})`,
+        detail: 'A certificate the user (or malware, or a device profile) installs can intercept the app\'s HTTPS traffic. Apps for company servers with a private CA sometimes need this; otherwise keep <certificates src="user"/> inside <debug-overrides> only. (OWASP MASVS-NETWORK-1)',
+        fix: { kind: 'security', step: `In \`android/app/src/main/res/xml/${x}\`, move \`<certificates src="user"/>\` into \`<debug-overrides>\`.` },
+      });
+    }
+  }
+  return findings;
+}
