@@ -19,6 +19,7 @@ h1{font-size:26px;margin:0 0 4px}h2{font-size:19px;margin:32px 0 12px}h2 small{f
 .facts{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin-top:12px;display:flex;flex-wrap:wrap;gap:6px 24px;font-size:14px}
 ul.list{list-style:none;padding:0;margin:0;display:grid;gap:8px}
 .start{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;padding:6px 18px 10px;margin-top:20px}.start h2{margin:10px 0 6px}.start li{margin:6px 0}
+.secgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.sg{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column}.sg b{font-size:20px}.sg.ok b{color:var(--accent)}.sg.bad b{color:var(--critical)}.sg small{color:var(--muted)}@media (max-width:560px){.secgrid{grid-template-columns:1fr 1fr}}
 details.bumps{margin-top:8px;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--low);border-radius:8px;padding:10px 14px}details.bumps summary{cursor:pointer;font-weight:600}details.bumps table{width:100%;border-collapse:collapse;margin-top:10px;font-size:14px}details.bumps th,details.bumps td{text-align:left;padding:4px 8px;border-top:1px solid var(--line)}.muted{color:var(--muted);font-weight:400}
 .f{display:flex;gap:12px;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--low);border-radius:8px;padding:10px 14px}
 .f p{margin:2px 0 0;color:var(--muted);font-size:14px}.f strong{overflow-wrap:anywhere}
@@ -36,7 +37,7 @@ footer{margin-top:40px;color:var(--muted);font-size:13px}a{color:var(--accent)}
 <body><main>
 <p style="background:color-mix(in srgb,var(--accent) 12%,transparent);border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin:0 0 20px;font-size:14px">Sample report for a fictional app, generated with <code>npx nativekeel plan --html report.html</code>. <a href="/">Back to NativeKeel</a></p>
 <h1>acme-app health report</h1>
-<p class="meta">Scanned 2026-10-05 18:41 UTC</p>
+<p class="meta">Scanned 2026-10-05 19:42 UTC</p>
 <div class="stats">
 <div class="stat critical"><b>4</b><span>critical</span></div>
 <div class="stat high"><b>5</b><span>high</span></div>
@@ -51,6 +52,7 @@ footer{margin-top:40px;color:var(--muted);font-size:13px}a{color:var(--accent)}
 <span>9 dependencies (8 native)</span>
 </div>
 <section class="start"><h2>Start here</h2><ol><li>**Revoke the AWS access key ID** in <code>src/App.js:6</code> at the provider today. Removing it from code is not enough: every installed copy of the app still contains it. <span class="muted">(Stop the leaks)</span></li><li>Set <code>targetSdkVersion = 36</code> and <code>compileSdkVersion = 36</code> in <code>android/build.gradle</code>. <span class="muted">(Meet the Google Play target SDK)</span></li><li>Run <code>pod install</code>, commit the generated <code>PrivacyInfo.xcprivacy</code>, and add your collected data types and tracking to it (React Native only fills in the required-reason APIs). <span class="muted">(Meet App Store and Google Play requirements)</span></li></ol><p class="muted">The full, ordered plan: <code>npx nativekeel plan</code>.</p></section>
+<section class="sec"><h2>Security <small>OWASP MASVS</small></h2><div class="secgrid"><div class="sg ok"><b>✓</b><span>Data on the device</span><small>MASVS-STORAGE</small></div><div class="sg bad"><b>1</b><span>Keys and cryptography</span><small>MASVS-CRYPTO</small></div><div class="sg ok"><b>✓</b><span>Access control (backend rules)</span><small>MASVS-AUTH</small></div><div class="sg bad"><b>1</b><span>Network traffic</span><small>MASVS-NETWORK</small></div><div class="sg ok"><b>✓</b><span>WebViews and platform interaction</span><small>MASVS-PLATFORM</small></div><div class="sg bad"><b>1</b><span>Dependencies and build</span><small>MASVS-CODE</small></div></div><p class="muted">Static checks of code, config and dependencies. They find the common, detectable mistakes; they do not replace a penetration test of the running app and its backend.</p></section>
 <h2>Findings</h2>
 <ul class="list"><li class="f critical"><span class="tag">Critical</span><div><strong>React Native 0.77.1 is no longer supported</strong><p>Latest is 0.87.1. You are 10 minor versions behind; only the latest 3 minors receive fixes.</p></div></li>
 <li class="f critical"><span class="tag">Critical</span><div><strong>New Architecture is disabled (android + ios)</strong><p>The legacy architecture was removed in 0.82. This app cannot upgrade past 0.81 until it migrates.</p></div></li>

@@ -23,6 +23,15 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 280+ open-source React Native and Expo apps to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.12</h2><p class="date">5 October 2026</p>
+<ul>
+<li><span class="tag">Security</span><b>Hacking risks, mapped to OWASP MASVS.</b> Every security finding now names its MASVS group, and reports show a security overview: which groups were checked and how many issues each has.</li>
+<li><span class="tag">Security</span><b>Open Firebase rules.</b> Realtime Database, Firestore and Storage rules that let anyone read or write, root rules that give every signed-in user everything, and test-mode rules (open until a date, or expired). Public folders such as event images are left alone.</li>
+<li><span class="tag">Security</span><b>TLS certificate checks turned off.</b> Trust-all managers, hostname verifiers that accept everything, WebViews that proceed on SSL errors and iOS sessions that trust any server. A bypass behind a "trust my self-signed server" setting is reported as such, at lower severity.</li>
+<li><span class="tag">Security</span><b>Weak cryptography and token storage.</b> Hardcoded encryption keys, MD5/SHA-1 on passwords, ECB mode, Math.random for nonces and salts, auth tokens in AsyncStorage.</li>
+<li><span class="tag">Accuracy</span>Dependencies installed from git are never matched against npm advisories (a wallet app was flagged with a malware advisory that belongs to a different package with the same name).</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.11</h2><p class="date">5 October 2026</p>
 <ul>
 <li><span class="tag">Fix</span><b>The GitHub Action works.</b> A colon inside one input description made <code>action.yml</code> invalid, so <code>uses: AlicanAkyol/nativekeel@v0</code> failed to load. It is fixed, the Action now has an <code>exit-code</code> output, and a workflow runs it on a sample app on every change so this cannot slip again.</li>
