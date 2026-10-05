@@ -117,3 +117,21 @@ test('plain HTTP API calls: real hosts only', async () => {
   assert.match(f.title, /1 host/);
   assert.match(f.detail, /api\.example-shop\.com/);
 });
+
+test('Firebase rules: open writes, whole-database reads, test mode; public folders are fine', async () => {
+  const { cloudRules } = await import('../src/security.js');
+  const now = new Date('2026-10-05');
+  const ids = (files) => cloudRules(makeProject({ 'package.json': '{}', ...files }), {}, now).map((f) => `${f.id}:${f.severity}`);
+  assert.deepEqual(ids({ 'database.rules.json': '{"rules":{".read":true,".write":true}}' }), ['firebase-rtdb-open:critical']);
+  assert.deepEqual(ids({ 'database.rules.json': '{"rules":{".read":"auth != null",".write":"auth != null"}}' }), ['firebase-rtdb-any-user:medium']);
+  assert.deepEqual(ids({ 'firestore.rules': "service cloud.firestore {\n match /databases/{db}/documents {\n  match /{document=**} {\n   allow read, write: if request.time < timestamp.date(2027, 1, 1);\n  }\n }\n}" }), ['firebase-firestore-test-mode:critical']);
+  assert.deepEqual(ids({ 'firestore.rules': "service cloud.firestore {\n match /databases/{db}/documents {\n  match /posts/{id} {\n   allow write: if true;\n  }\n }\n}" }), ['firebase-firestore-open-write:critical']);
+  assert.deepEqual(ids({ 'storage.rules': "service firebase.storage {\n match /b/{bucket}/o {\n  match /{allPaths=**} {\n   allow read;\n  }\n }\n}" }), ['firebase-storage-open-read:high']);
+  assert.deepEqual(
+    ids({ 'storage.rules': "service firebase.storage {\n match /b/{bucket}/o {\n  match /events/{id}/{file=**} {\n   allow read: if true;\n   allow write: if request.auth != null;\n  }\n  match /{allPaths=**} {\n   allow read, write: if false;\n  }\n }\n}" }),
+    [],
+    'public event images, everything else closed',
+  );
+  const used = cloudRules(makeProject({ 'package.json': '{}' }), { '@react-native-firebase/database': '22.0.0' }, now);
+  assert.equal(used[0].id, 'firebase-rules-not-in-repo');
+});

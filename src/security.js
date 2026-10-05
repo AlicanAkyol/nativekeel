@@ -333,3 +333,91 @@ export function plainHttpCalls(root) {
     },
   ];
 }
+
+// Firebase security rules kept in the repo. An open database or bucket is the most common way
+// mobile app data leaks: anyone with the project id (it ships in the app) can read or wipe it.
+export function cloudRules(root, deps, now = new Date()) {
+  const findings = [];
+  const dirs = [root, path.dirname(root), path.dirname(path.dirname(root))];
+  const findFile = (names) => {
+    for (const d of dirs) for (const n of names) if (fs.existsSync(path.join(d, n))) return path.join(d, n);
+    return null;
+  };
+  const rel = (f) => path.relative(root, f) || path.basename(f);
+  const usesFirebaseData = Object.keys(deps).some((n) => /^@react-native-firebase\/(database|firestore|storage)$|^firebase$/.test(n));
+
+  // Realtime Database (JSON). `.read`/`.write` set to true, or "auth != null" at the root.
+  const rtdb = findFile(['database.rules.json']);
+  if (rtdb) {
+    const text = read(rtdb);
+    const openWrite = /"\.write"\s*:\s*(?:true|"true")/.test(text);
+    const openRead = /"\.read"\s*:\s*(?:true|"true")/.test(text);
+    const rootAuthOnly = /"rules"\s*:\s*\{\s*"\.(?:read|write)"\s*:\s*"auth\s*!==?\s*null"/.test(text);
+    if (openWrite || openRead) {
+      findings.push(rulesFinding('firebase-rtdb-open', openWrite ? 'critical' : 'high', `Realtime Database rules let anyone ${openWrite ? 'write' : 'read'} (${rel(rtdb)})`, `A rule sets ${openWrite ? '".write"' : '".read"'} to true. The database URL ships inside the app, so anyone can ${openWrite ? 'change or delete your data' : 'download it'} without signing in.`, `In \`${rel(rtdb)}\`, replace the true rules with auth and owner checks (e.g. "auth.uid === $uid").`));
+    } else if (rootAuthOnly) {
+      findings.push(rulesFinding('firebase-rtdb-any-user', 'medium', `Realtime Database rules give every signed-in user the whole database (${rel(rtdb)})`, 'The root rule only checks "auth != null". Anyone who can create an account (or sign in anonymously) can read or write every user\'s data.', `In \`${rel(rtdb)}\`, scope the rules per path, e.g. "auth.uid === $uid".`));
+    }
+  }
+
+  // Firestore and Storage rules: `allow ...: if true`, a bare `allow read, write;`, or
+  // test-mode rules (`request.time < timestamp.date(...)`).
+  for (const [names, label, id] of [[['firestore.rules'], 'Firestore', 'firebase-firestore'], [['storage.rules'], 'Cloud Storage', 'firebase-storage']]) {
+    const file = findFile(names);
+    if (!file) continue;
+    const text = read(file).replace(/\/\/.*$/gm, '');
+    const testMode = text.match(/request\.time\s*<\s*timestamp\.date\(\s*(\d{4})\s*,\s*(\d{1,2})\s*,\s*(\d{1,2})\s*\)/);
+    const { openWrite, openReadAll } = scanAllowRules(text);
+    if (testMode) {
+      const until = new Date(Date.UTC(Number(testMode[1]), Number(testMode[2]) - 1, Number(testMode[3])));
+      if (until > now) {
+        findings.push(rulesFinding(`${id}-test-mode`, 'critical', `${label} is in test mode until ${until.toISOString().slice(0, 10)} (${rel(file)})`, 'Test-mode rules allow every read and write from anyone until that date.', `Replace the test-mode rules in \`${rel(file)}\` with rules that check request.auth and the document owner.`));
+      } else {
+        findings.push(rulesFinding(`${id}-test-mode-expired`, 'high', `${label} test-mode rules expired on ${until.toISOString().slice(0, 10)} (${rel(file)})`, 'Past that date every request is denied, so the app cannot read or write its data, and the rules in the repo do not describe real access control.', `Write real rules in \`${rel(file)}\` (request.auth and owner checks).`));
+      }
+    } else if (openWrite) {
+      findings.push(rulesFinding(`${id}-open-write`, 'critical', `${label} rules let anyone write (${rel(file)}:${openWrite})`, 'A write rule has no condition (or "if true"). Your Firebase project id ships inside the app, so anyone can change or delete this data without signing in.', `In \`${rel(file)}\`, require request.auth (and the owner's uid) for every write.`));
+    } else if (openReadAll) {
+      findings.push(rulesFinding(`${id}-open-read`, 'high', `${label} rules let anyone read everything (${rel(file)}:${openReadAll})`, 'A recursive wildcard match ({path=**}) allows reads with no condition, so all data is public to anyone who has the project id (it ships inside the app).', `In \`${rel(file)}\`, limit public reads to the paths that are meant to be public.`));
+    }
+  }
+
+  if (!findings.length && usesFirebaseData && !rtdb && !findFile(['firestore.rules', 'storage.rules'])) {
+    findings.push({
+      id: 'firebase-rules-not-in-repo',
+      severity: 'info',
+      area: 'security',
+      title: 'Firebase data is used, but its security rules are not in the repository',
+      detail: 'Open database or storage rules are the most common way mobile app data leaks, and NativeKeel cannot see rules that live only in the Firebase console. Review them there (no "if true", no root-level "auth != null"), or keep them in the repo (firebase init) so they are reviewed and checked.',
+    });
+  }
+  return findings;
+}
+
+function rulesFinding(id, severity, title, detail, step) {
+  return { id, severity, area: 'security', title, detail, fix: { kind: 'security', step } };
+}
+
+// Line numbers of an unconditional write anywhere, and of an unconditional read in a match that
+// is only a recursive wildcard (/{document=**}). Public reads of specific paths can be intentional.
+function scanAllowRules(text) {
+  const lines = text.split('\n');
+  const stack = []; // match paths of the open blocks
+  let openWrite = 0;
+  let openReadAll = 0;
+  lines.forEach((line, i) => {
+    const code = line.replace(/\/\/.*$/, '');
+    const m = code.match(/match\s+(\S+)\s*\{/);
+    if (m) stack.push(m[1]);
+    const allow = code.match(/allow\s+([\w,\s]+?)\s*(?::\s*if\s+(.+?))?\s*;/);
+    if (allow) {
+      const unconditional = !allow[2] || /^true$/.test(allow[2].trim());
+      const ops = allow[1];
+      if (unconditional && /\b(write|create|update|delete)\b/.test(ops)) openWrite = openWrite || i + 1;
+      if (unconditional && /\b(read|get|list)\b/.test(ops) && /^\/\{[^}]*=\*\*\}$/.test(stack.at(-1) || '')) openReadAll = openReadAll || i + 1;
+    }
+    const closes = (code.match(/\}/g) || []).length - (code.match(/\{/g) || []).length;
+    for (let k = 0; k < closes && stack.length; k++) stack.pop();
+  });
+  return { openWrite, openReadAll };
+}
