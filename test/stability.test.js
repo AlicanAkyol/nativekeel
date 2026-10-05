@@ -46,3 +46,12 @@ test('a second React inside a runtime dependency, not inside dev tooling', () =>
   assert.match(dup.detail, /icons \(16\.5\.0\)/);
   assert.ok(!dup.detail.includes('storybook'));
 });
+
+test('Babel config in a monorepo root counts; no config anywhere says nothing', () => {
+  const mono = makeProject({
+    'babel.config.js': "module.exports = { plugins: ['react-native-reanimated/plugin'] };",
+    'apps/mobile/package.json': { name: 'm', dependencies: { 'react-native': '0.80.0', 'react-native-reanimated': '3.19.1' } },
+  });
+  assert.ok(!stabilityChecks(loadProject(`${mono}/apps/mobile`)).some((f) => f.id === 'crash-reanimated-babel'));
+  assert.ok(!ids(app({ 'react-native-reanimated': '3.19.1' })).includes('crash-reanimated-babel'), 'no Babel config found at all');
+});

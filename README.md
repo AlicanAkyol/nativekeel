@@ -6,6 +6,8 @@ Health check for React Native and Expo apps. One command, no install, no account
 npx nativekeel
 ```
 
+**What's new in 0.1.8:** known vulnerabilities in the exact dependency versions you ship, passwords that leak into crash reports, databases or AsyncStorage, unsafe WebViews, and setups that build fine but crash at runtime. Tuned on 280+ open-source React Native and Expo apps to keep false alarms out. [All releases →](https://nativekeel.com/changelog)
+
 It answers the questions that decide whether your app can still ship:
 
 - **Is your React Native / Expo version still supported?** React Native supports the latest minor and the two before it.
@@ -15,6 +17,9 @@ It answers the questions that decide whether your app can still ship:
 - **Will the stores accept your next build?** Google Play `targetSdk` and 16 KB page size (it opens your built APK/AAB and checks the alignment of every native library), and the iOS privacy manifest.
 - **Are secrets shipped inside your app?** AWS, Stripe, OpenAI, Anthropic, GitHub, Slack, SendGrid, Twilio, Shopify, Google OAuth keys, private keys and Supabase `service_role` keys (anon keys are fine), plus `.env` values that `react-native-config` or `EXPO_PUBLIC_` compile into the bundle. Server-side folders are reported separately.
 - **Is transport security off?** Cleartext HTTP or `debuggable` in the release Android manifest, `NSAllowsArbitraryLoads` on iOS.
+- **Do you ship known vulnerabilities?** Advisories from the GitHub Advisory Database for the exact versions in your lockfile or `node_modules`. Advisories that only affect Node.js servers are kept, at low severity.
+- **Can someone read your users' data?** Passwords that flow into crash reports, analytics, remote databases or plain AsyncStorage (followed through intermediate variables), WebViews that let page scripts read local files or load HTTP into HTTPS, Android backups that copy tokens.
+- **Will it crash at runtime?** Reanimated without its Babel plugin or `react-native-worklets`, mixed `@react-native-firebase/*` or `@react-navigation/*` majors, a second copy of React or React Native inside a dependency, Kotlin modules that cannot load through the New Architecture interop layer, AppDelegate setups that crash in Release.
 - **Leftovers from old templates?** Flipper, JavaScriptCore instead of Hermes.
 
 ```
@@ -84,7 +89,7 @@ Agencies can put their own name on the HTML report: `npx nativekeel plan --html 
 
 ## Why you can run this on private code
 
-- **Your code never leaves your machine.** The only requests are package-name lookups on npm and React Native Directory. `--offline` makes none; a test traps `fetch` to prove it.
+- **Your code never leaves your machine.** The only requests are package-name lookups on npm and React Native Directory, and one request to npm's advisory endpoint with the names and exact versions of your runtime dependencies (what `npm audit` sends). `--offline` makes none; a test traps `fetch` to prove it.
 - **Zero dependencies, no install scripts.** Only Node.js built-ins.
 - **Read-only.** It never changes your project.
 - **Secrets are always masked** in every output.

@@ -16,9 +16,20 @@ const readText = (file) => {
 
 const majorOf = (v) => (v ? Number(String(v).split('.')[0]) : null);
 
+// The app's Babel config, or the workspace root's (monorepos keep babel.config.js at the root).
+// null when none is found: then nothing can be said about plugins.
 function babelConfig(root, pkgJson) {
   const files = ['babel.config.js', 'babel.config.cjs', 'babel.config.mjs', 'babel.config.json', '.babelrc', '.babelrc.js', '.babelrc.json'];
-  const texts = files.map((f) => readText(path.join(root, f))).filter(Boolean);
+  let dir = root;
+  let texts = [];
+  while (true) {
+    texts = files.map((f) => readText(path.join(dir, f))).filter(Boolean);
+    if (texts.length || fs.existsSync(path.join(dir, '.git'))) break;
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  root = dir;
   if (pkgJson.babel) texts.push(JSON.stringify(pkgJson.babel));
   // Shared config pulled in with require('./config/babel-shared') and the like.
   for (const t of [...texts]) {
@@ -46,7 +57,7 @@ export function stabilityChecks(project) {
     const rea = versionOf('react-native-reanimated');
     const babel = babelConfig(root, pkgJson);
     const expoPreset = babel ? /babel-preset-expo/.test(babel) : !!project.expoVersion;
-    const hasPlugin = babel && /react-native-reanimated\/plugin|react-native-worklets\/plugin/.test(babel);
+    const hasPlugin = !babel || /react-native-reanimated\/plugin|react-native-worklets\/plugin/.test(babel);
     // Reanimated 2 also runs the v1 API, which needs no plugin: only flag it when the app uses
     // worklet APIs. From 3 on the plugin is always required.
     const needsPlugin =
