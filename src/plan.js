@@ -542,6 +542,11 @@ export function buildPlan(result) {
     });
   }
 
+  // Store deadlines sit together, right after the target SDK.
+  const storeAt = phases.findIndex((p) => p.title === 'Meet App Store and Google Play requirements');
+  const targetAt = phases.findIndex((p) => p.title === 'Meet the Google Play target SDK');
+  if (storeAt > targetAt + 1 && targetAt >= 0) phases.splice(targetAt + 1, 0, ...phases.splice(storeAt, 1));
+
   // Only worth it when the plan changes code: secrets alone do not need UI tests.
   const leaksFirst = phases[0] && phases[0].title === 'Stop the leaks' ? 1 : 0;
   if (phases.length > leaksFirst) {
@@ -581,4 +586,19 @@ export function planToMarkdown(result, plan) {
   });
   lines.push('---', `No time to do it yourself? We do fixed-price upgrades on a branch of your repo: ${SITE_URL}/#services`);
   return `${lines.join('\n')}\n`;
+}
+
+// The first concrete step of the first few phases: what to do today. Shown at the top of the
+// HTML report and under the summary in the terminal.
+const URGENCY = ['Stop the leaks', 'Fix crash risks', 'Meet the Google Play target SDK', 'Meet App Store and Google Play requirements', 'Close security gaps', 'Avoid known traps'];
+
+export function startHere(result, count = 3) {
+  const skip = new Set(['Set up a safety net', 'Verify before you ship']);
+  const rank = (t) => (URGENCY.indexOf(t) >= 0 ? URGENCY.indexOf(t) : URGENCY.length);
+  return buildPlan(result)
+    .phases.filter((p) => !skip.has(p.title) && p.steps.length)
+    .map((p, i) => ({ p, i }))
+    .sort((a, b) => rank(a.p.title) - rank(b.p.title) || a.i - b.i)
+    .slice(0, count)
+    .map(({ p }) => ({ phase: p.title, step: p.steps[0].replace(/ The [^.]* phase below gets you there;.*$/, '') }));
 }

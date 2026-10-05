@@ -285,3 +285,9 @@ test('old Expo SDKs: legacy CLI before 46, local CLI after, long-jump advice, Re
   assert.match(md, /11 SDKs is a long way/);
   assert.match(md, /`react-native` 0\.61\.4 .*Expo pins it/);
 });
+
+test('reports open with "Start here": the first step of the first phases', () => {
+  const text = textReport(result, { color: false });
+  assert.match(text, /Start here\n {2}1\. Revoke the AWS access key ID/);
+  assert.match(htmlReport(result), /<section class="start"><h2>Start here<\/h2><ol><li>/);
+});

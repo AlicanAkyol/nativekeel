@@ -1,5 +1,6 @@
 import { SEVERITIES, countBySeverity } from './analyze.js';
 import { SITE_URL } from './config.js';
+import { startHere } from './plan.js';
 
 export function textReport(result, { color = true, verbose = false } = {}) {
   const paint = (code) => (s) => (color ? `\x1b[${code}m${s}\x1b[0m` : s);
@@ -64,7 +65,12 @@ export function textReport(result, { color = true, verbose = false } = {}) {
 
   if (n.critical + n.high > 0) {
     out.push('');
-    out.push(`Next: ${c.bold('npx nativekeel plan')} writes a step-by-step upgrade plan.`);
+    out.push(c.bold('Start here'));
+    const plain = (t) => t.replace(/\*\*/g, '').replace(/`/g, '');
+    const cut = (t) => (t.length > 150 ? `${t.slice(0, 147).replace(/\s+\S*$/, '')}…` : t);
+    startHere(result).forEach((s, i) => out.push(`  ${i + 1}. ${cut(plain(s.step))}`));
+    out.push('');
+    out.push(`Next: ${c.bold('npx nativekeel plan')} writes the full step-by-step plan.`);
     out.push(c.gray(`No time to do it yourself? Fixed-price upgrades: ${SITE_URL}/#services`));
   } else if (!result.findings.length) {
     out.push(c.green('Nothing to fix. This app is in good shape.'));

@@ -1,5 +1,6 @@
 import { SEVERITIES, countBySeverity } from './analyze.js';
 import { SITE_URL } from './config.js';
+import { startHere } from './plan.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
 // Turns `code` spans from finding text into <code>.
@@ -58,6 +59,7 @@ h1{font-size:26px;margin:0 0 4px}h2{font-size:19px;margin:32px 0 12px}h2 small{f
 .stat.critical b{color:var(--critical)}.stat.high b{color:var(--high)}
 .facts{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin-top:12px;display:flex;flex-wrap:wrap;gap:6px 24px;font-size:14px}
 ul.list{list-style:none;padding:0;margin:0;display:grid;gap:8px}
+.start{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;padding:6px 18px 10px;margin-top:20px}.start h2{margin:10px 0 6px}.start li{margin:6px 0}
 details.bumps{margin-top:8px;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--low);border-radius:8px;padding:10px 14px}details.bumps summary{cursor:pointer;font-weight:600}details.bumps table{width:100%;border-collapse:collapse;margin-top:10px;font-size:14px}details.bumps th,details.bumps td{text-align:left;padding:4px 8px;border-top:1px solid var(--line)}.muted{color:var(--muted);font-weight:400}
 .f{display:flex;gap:12px;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--low);border-radius:8px;padding:10px 14px}
 .f p{margin:2px 0 0;color:var(--muted);font-size:14px}.f strong{overflow-wrap:anywhere}
@@ -88,6 +90,7 @@ ${p.expo ? `<span>Expo SDK <b>${esc(p.expo.split('.')[0])}</b></span>` : ''}
 ${p.android && p.android.targetSdk ? `<span>targetSdk <b>${p.android.targetSdk}</b></span>` : ''}
 <span>${result.deps.length} dependencies (${result.deps.filter((d) => d.native).length} native)</span>
 </div>
+${n.critical + n.high > 0 ? `<section class="start"><h2>Start here</h2><ol>${startHere(result).map((x) => `<li>${rich(x.step)} <span class="muted">(${esc(x.phase)})</span></li>`).join('')}</ol><p class="muted">The full, ordered plan: <code>npx nativekeel plan</code>.</p></section>` : ''}
 <h2>Findings</h2>
 ${result.findings.length ? `${rows ? `<ul class="list">${rows}</ul>` : ''}${bumpTable}` : '<p>No issues found.</p>'}
 ${planHtml}
