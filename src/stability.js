@@ -158,6 +158,7 @@ export function stabilityChecks(project) {
     }
   }
 
+  for (const f of iosUsageDescriptions(project)) add(f);
   return findings;
 }
 
@@ -183,4 +184,65 @@ function listPackages(nm) {
     }
   }
   return out;
+}
+
+// iOS terminates an app that touches a protected resource without the matching usage
+// description in Info.plist, and App Review rejects it. Expo managed apps get these from config
+// plugins, so only projects with their own ios/ folder are checked.
+const USAGE_KEYS = [
+  { key: 'NSCameraUsageDescription', what: 'the camera', pkgs: ['react-native-vision-camera', 'react-native-camera', 'expo-camera', 'react-native-camera-kit', 'react-native-qrcode-scanner'] },
+  { key: 'NSPhotoLibraryUsageDescription', what: 'the photo library', pkgs: ['@react-native-camera-roll/camera-roll', '@react-native-community/cameraroll', 'expo-media-library', 'react-native-image-crop-picker'] },
+  { key: 'NSLocationWhenInUseUsageDescription', what: 'location', pkgs: ['@react-native-community/geolocation', 'react-native-geolocation-service', 'expo-location', 'react-native-background-geolocation', '@mauron85/react-native-background-geolocation'] },
+  { key: 'NSMicrophoneUsageDescription', what: 'the microphone', pkgs: ['@react-native-voice/voice', 'react-native-audio-recorder-player', 'expo-audio', 'react-native-audio-record'] },
+  { key: 'NSContactsUsageDescription', what: 'contacts', pkgs: ['react-native-contacts', 'expo-contacts'] },
+  { key: 'NSCalendarsUsageDescription', what: 'calendars', pkgs: ['react-native-calendar-events', 'expo-calendar'] },
+  { key: 'NSBluetoothAlwaysUsageDescription', what: 'Bluetooth', pkgs: ['react-native-ble-plx', 'react-native-ble-manager'] },
+  { key: 'NSFaceIDUsageDescription', what: 'Face ID', pkgs: ['react-native-biometrics', '@sbaiahmed1/react-native-biometrics', 'expo-local-authentication', 'react-native-touch-id'] },
+];
+
+export function iosUsageDescriptions(project) {
+  const iosDir = path.join(project.root, 'ios');
+  if (!fs.existsSync(iosDir) || project.managed) return [];
+  const plists = [];
+  const walk = (dir, depth) => {
+    let entries = [];
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const e of entries) {
+      if (e.isDirectory() && depth < 2 && !['Pods', 'build', 'DerivedData'].includes(e.name) && !/Tests?$|Extension$|Widget/.test(e.name)) walk(path.join(dir, e.name), depth + 1);
+      else if (e.name === 'Info.plist') plists.push(path.join(dir, e.name));
+    }
+  };
+  walk(iosDir, 0);
+  if (!plists.length) return [];
+  const text = plists.map(readText).join('\n');
+  // Expo projects can add the keys at prebuild from app.json/app.config (infoPlist or a config
+  // plugin of the same package): count those too.
+  const expoConfig = project.expoVersion ? ['app.json', 'app.config.js', 'app.config.ts'].map((f) => readText(path.join(project.root, f)) || '').join('\n') : '';
+  const deps = { ...project.deps };
+  const missing = [];
+  for (const u of USAGE_KEYS) {
+    // In Expo projects, prebuild applies the config plugins of installed expo-* packages on its
+    // own, and they add default usage strings.
+    const used = u.pkgs.filter((p) => deps[p] && !(project.expoVersion && p.startsWith('expo-')));
+    if (!used.length) continue;
+    const keys = u.key === 'NSPhotoLibraryUsageDescription' ? [u.key, 'NSPhotoLibraryAddUsageDescription'] : [u.key];
+    const inPlist = keys.some((k) => text.includes(`<key>${k}</key>`));
+    const inExpo = keys.some((k) => expoConfig.includes(k)) || used.some((p) => expoConfig.includes(`"${p}"`) || expoConfig.includes(`'${p}'`));
+    if (!inPlist && !inExpo) missing.push({ ...u, used });
+  }
+  if (!missing.length) return [];
+  return [
+    {
+      id: 'crash-ios-usage-description',
+      severity: 'high',
+      area: 'crash',
+      title: `Info.plist is missing ${missing.length === 1 ? 'a usage description' : `${missing.length} usage descriptions`} (${missing.map((m) => m.key).join(', ')})`,
+      detail: `${missing.map((m) => `${m.used[0]} uses ${m.what}`).join('; ')}. iOS terminates the app the moment it asks for access without the matching key, and App Review rejects the build. Add each key with a sentence that says why the app needs it.`,
+      fix: { kind: 'crash', step: `Add ${missing.map((m) => `\`${m.key}\``).join(', ')} to the app's Info.plist, each with a user-facing reason.` },
+    },
+  ];
 }

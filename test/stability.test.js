@@ -55,3 +55,13 @@ test('Babel config in a monorepo root counts; no config anywhere says nothing', 
   assert.ok(!stabilityChecks(loadProject(`${mono}/apps/mobile`)).some((f) => f.id === 'crash-reanimated-babel'));
   assert.ok(!ids(app({ 'react-native-reanimated': '3.19.1' })).includes('crash-reanimated-babel'), 'no Babel config found at all');
 });
+
+test('iOS usage descriptions: missing key flagged; add-only photo key and Expo plugins count', () => {
+  const plist = (keys) => `<plist><dict>${keys.map((k) => `<key>${k}</key><string>x</string>`).join('')}</dict></plist>`;
+  const withCam = (keys, extra = {}) => ({ ...app({ 'react-native-vision-camera': '4.0.0', '@react-native-camera-roll/camera-roll': '7.0.0' }), 'ios/App/Info.plist': plist(keys), ...extra });
+  const f = stabilityChecks(loadProject(makeProject(withCam([])))).find((x) => x.id === 'crash-ios-usage-description');
+  assert.match(f.title, /NSCameraUsageDescription, NSPhotoLibraryUsageDescription/);
+  assert.ok(!ids(withCam(['NSCameraUsageDescription', 'NSPhotoLibraryAddUsageDescription'])).includes('crash-ios-usage-description'));
+  const expo = { 'package.json': { name: 'e', dependencies: { expo: '52.0.0', 'react-native': '0.76.0', 'expo-camera': '16.0.0' } }, 'ios/App/Info.plist': plist([]), 'app.json': JSON.stringify({ expo: { plugins: ['expo-camera'] } }) };
+  assert.ok(!ids(expo).includes('crash-ios-usage-description'), 'the Expo config plugin adds it at prebuild');
+});
