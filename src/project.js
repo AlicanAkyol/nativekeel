@@ -99,6 +99,23 @@ function resolveCatalogRefs(deps, catalogs) {
   return out;
 }
 
+// Expo SDKs up to 44 installed React Native from Expo's fork, declared as a tarball URL such as
+// https://github.com/expo/react-native/archive/sdk-37.0.1.tar.gz. The number there is the SDK,
+// not React Native. React Native version per SDK, from Expo's SDK history.
+const EXPO_FORK_RN = { 31: '0.57.1', 32: '0.57.1', 33: '0.59.8', 34: '0.59.8', 35: '0.59.8', 36: '0.61.4', 37: '0.61.4', 38: '0.62.2', 39: '0.63.2', 40: '0.63.2', 41: '0.63.2', 42: '0.63.2', 43: '0.64.3', 44: '0.64.3' };
+
+// A version number from a dependency spec, or null when the spec is a URL or git reference
+// whose numbers are not the package version.
+export function versionFromSpec(name, spec) {
+  if (!spec) return null;
+  const s = String(spec);
+  if (/:\/\/|^(github|git|file|link|workspace):|#|\.tgz$|\.tar\.gz$/.test(s)) {
+    const sdk = name === 'react-native' && s.match(/expo\/react-native\/archive\/sdk-(\d+)/);
+    return sdk && EXPO_FORK_RN[Number(sdk[1])] ? EXPO_FORK_RN[Number(sdk[1])] : null;
+  }
+  return s;
+}
+
 export function loadProject(root) {
   const pkg = readJson(path.join(root, 'package.json'));
   if (!pkg) throw new Error(`No package.json found in ${root}`);
@@ -128,7 +145,7 @@ export function loadProject(root) {
     isLibrary,
     deps,
     devDeps,
-    rnVersion: cleanVersion(installedVersion(root, 'react-native') || declared('react-native') || ''),
+    rnVersion: cleanVersion(installedVersion(root, 'react-native') || versionFromSpec('react-native', declared('react-native')) || ''),
     expoVersion: declared('expo') ? cleanVersion(installedVersion(root, 'expo') || declared('expo')) : null,
     // Expo "managed" apps generate android/ and ios/ at build time (Continuous Native Generation).
     managed: !!declared('expo') && !hasAndroid && !hasIos,

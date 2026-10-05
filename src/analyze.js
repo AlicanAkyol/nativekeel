@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { cleanVersion, findPackageDir, installedVersion } from './project.js';
+import { cleanVersion, findPackageDir, installedVersion, versionFromSpec } from './project.js';
 import { createRegistry, fetchJson } from './registry.js';
 import { scanSecrets } from './secrets.js';
 import { nativeChecks } from './native.js';
@@ -226,7 +226,7 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
   const daysSince = (date) => (date ? Math.floor((now - new Date(`${date}T00:00:00Z`)) / 86400000) : null);
 
   const nativeOf = Object.fromEntries(names.map((n) => [n, isNativeModule(project.root, n, directory[n])]));
-  const versionOf = (n) => cleanVersion(installedVersion(project.root, n) || declaredRange(n));
+  const versionOf = (n) => cleanVersion(installedVersion(project.root, n) || versionFromSpec(n, declaredRange(n)) || '');
   const archSuspects = names.filter((n) => nativeOf[n] && directory[n] && directory[n].newArchitecture === false);
   const codegen = forcedOffline ? {} : await registry.codegenSupport(archSuspects.map((n) => ({ name: n, version: versionOf(n) })));
 

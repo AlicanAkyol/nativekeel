@@ -370,3 +370,10 @@ test('New Architecture not set on an old app means off', async () => {
   assert.ok(f, 'a 0.63 app has to migrate before 0.82');
   assert.match(f.detail, /before React Native 0\.76 the default is off/);
 });
+
+test('old Expo: React Native from Expo\'s fork URL maps to the real version; other URLs are unknown', () => {
+  const fork = makeProject({ 'package.json': { name: 'o', dependencies: { expo: '~37.0.3', 'react-native': 'https://github.com/expo/react-native/archive/sdk-37.0.1.tar.gz' } } });
+  assert.equal(loadProject(fork).rnVersion, '0.61.4');
+  const git = makeProject({ 'package.json': { name: 'g', dependencies: { 'react-native': 'github:someone/react-native#v0.70.1' } } });
+  assert.equal(loadProject(git).rnVersion, null);
+});

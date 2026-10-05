@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { cleanVersion, findPackageDir, installedVersion } from './project.js';
+import { cleanVersion, findPackageDir, installedVersion, versionFromSpec } from './project.js';
 import { filesImportingWith } from './usage.js';
 
 // Static checks for setups that build fine and then crash at runtime. Each one is a known,
@@ -48,7 +48,7 @@ export function stabilityChecks(project) {
   const root = project.root;
   const pkgJson = JSON.parse(readText(path.join(root, 'package.json')) || '{}');
   const deps = { ...project.devDeps, ...project.deps };
-  const versionOf = (name) => cleanVersion(installedVersion(root, name) || deps[name] || '');
+  const versionOf = (name) => cleanVersion(installedVersion(root, name) || versionFromSpec(name, deps[name]) || '');
 
   // Reanimated needs its Babel plugin: without it, worklets are not compiled and the first
   // animation throws ("Failed to create a worklet" / "Reanimated 2 failed to create a worklet").
