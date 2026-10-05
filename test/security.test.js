@@ -148,3 +148,20 @@ test('TLS bypasses: unconditional is critical, behind a setting is high; user CA
   assert.equal(nsc('<base-config><trust-anchors><certificates src="user"/></trust-anchors></base-config>').length, 1);
   assert.equal(nsc('<debug-overrides><trust-anchors><certificates src="user"/></trust-anchors></debug-overrides>').length, 0);
 });
+
+test('weak crypto: real uses, not comments or non-security randomness', async () => {
+  const { weakCrypto } = await import('../src/security.js');
+  const ids = (src) => weakCrypto(makeProject({ 'package.json': '{}', 'src/a.js': src })).map((f) => f.id);
+  assert.deepEqual(ids("const enc = CryptoJS.AES.encrypt(data, 'my-secret-key');"), ['crypto-hardcoded-key']);
+  assert.deepEqual(ids('const body = { password: md5(passWord) };'), ['crypto-weak-password-hash']);
+  assert.deepEqual(ids('// D1 = MD5( password || salt )\n/* sha1(password) */'), []);
+  assert.deepEqual(ids('const nonce = Math.random().toString(16);'), ['crypto-insecure-random']);
+  assert.deepEqual(ids('const token = Math.floor(Math.random() * 1e9); // cache bust'), []);
+});
+
+test('auth tokens in AsyncStorage are a low finding', async () => {
+  const { tokenStorage } = await import('../src/security.js');
+  const [f] = tokenStorage(makeProject({ 'src/a.js': "await AsyncStorage.setItem('accessToken', token);\nawait AsyncStorage.setItem('theme', 'dark');" }));
+  assert.equal(f.severity, 'low');
+  assert.match(f.detail, /accessToken/);
+});

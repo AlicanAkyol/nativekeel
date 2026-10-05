@@ -518,3 +518,58 @@ export function insecureTls(root) {
   }
   return findings;
 }
+
+// Cryptography that looks like protection but is not (MASVS-CRYPTO-1/2), and session tokens in
+// unencrypted storage (MASVS-STORAGE-1).
+const CRYPTO_RULES = [
+  { id: 'hardcoded-key', re: /\b(?:CryptoJS\.(?:AES|DES|TripleDES|Rabbit|RC4)\.(?:encrypt|decrypt)\s*\([^,()]+,\s*['"`][^'"`]{4,}['"`]|createCipheriv\s*\(\s*['"][^'"]+['"]\s*,\s*['"`][^'"`]{4,}['"`])/, severity: 'high', title: 'Encryption key hardcoded in the app', detail: 'The key is a string in the JavaScript bundle, so anyone can extract it and decrypt the data. Derive keys per user (e.g. from the Keychain/Keystore) or keep encryption on the server.' },
+  { id: 'weak-password-hash', re: /\b(?:md5|sha1|MD5|SHA1)\s*\(\s*[^)]*\bpass(?:word|wd)?\b/i, severity: 'high', title: 'Password hashed with MD5 or SHA-1', detail: 'MD5 and SHA-1 are fast and broken for passwords: anyone who captures the hash cracks it in minutes. To store or verify passwords, let the server use bcrypt, scrypt or Argon2; to derive an encryption key from a password, use PBKDF2, scrypt or Argon2; if a server protocol forces it, prefer that server\'s token or API-key login.' },
+  { id: 'ecb-mode', re: /CryptoJS\.mode\.ECB|['"]aes-\d+-ecb['"]/i, severity: 'medium', title: 'Encryption in ECB mode', detail: 'ECB encrypts equal blocks to equal output, so patterns in the data stay visible. Use an authenticated mode such as AES-GCM.' },
+  { id: 'insecure-random', re: /\b(?:nonce|secret|otp|salt|password|passcode|apikey|api_key|csrf|verifier|pkce)\w*\s*[=:]\s*[^;\n]*Math\.random\s*\(/i, severity: 'medium', title: 'Math.random used for a security value', detail: 'Math.random is predictable. Use crypto.getRandomValues (react-native-get-random-values or expo-crypto) for tokens, nonces, salts and codes.' },
+];
+
+export function weakCrypto(root) {
+  const byRule = new Map();
+  for (const file of jsFiles(root)) {
+    const text = read(file);
+    if (!text || !/CryptoJS|createCipheriv|md5|sha1|MD5|SHA1|Math\.random/.test(text)) continue;
+    // Comments describing an algorithm are not code.
+    const code = text.replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' ')).replace(/\/\/[^\n]*/g, '');
+    for (const rule of CRYPTO_RULES) {
+      const m = code.match(rule.re);
+      if (m && !byRule.has(rule.id)) byRule.set(rule.id, { rule, where: `${path.relative(root, file)}:${code.slice(0, m.index).split('\n').length}` });
+    }
+  }
+  return [...byRule.values()].map(({ rule, where }) => ({
+    id: `crypto-${rule.id}`,
+    severity: rule.severity,
+    area: 'security',
+    title: `${rule.title} (${where})`,
+    detail: `${rule.detail} (OWASP MASVS-CRYPTO)`,
+    fix: { kind: 'security', step: `${rule.title} at \`${where}\`: ${rule.detail.split('. ').slice(-1)[0]}` },
+  }));
+}
+
+// Auth tokens written to AsyncStorage: on a rooted/jailbroken device, or from a backup, they
+// can be read and reused to act as the user.
+export function tokenStorage(root) {
+  const hits = [];
+  for (const file of jsFiles(root)) {
+    const text = read(file);
+    if (!text || !/AsyncStorage|MMKV/.test(text)) continue;
+    for (const m of text.matchAll(/\b(?:AsyncStorage\.setItem|storage\.set|mmkv\.set)\s*\(\s*['"`@]?([\w@.\-:]*?(?:access_?token|refresh_?token|auth_?token|id_?token|jwt|session_?token|bearer)[\w.\-:]*)['"`]?\s*,/gi)) {
+      hits.push(`${m[1]} (${path.relative(root, file)}:${text.slice(0, m.index).split('\n').length})`);
+    }
+  }
+  if (!hits.length) return [];
+  return [
+    {
+      id: 'token-unencrypted-storage',
+      severity: 'low',
+      area: 'security',
+      title: `Auth token${hits.length === 1 ? '' : 's'} stored without encryption`,
+      detail: `${hits.slice(0, 3).join(', ')}${hits.length > 3 ? ', …' : ''}. AsyncStorage (and unencrypted MMKV) is plain files: backups and rooted devices expose them, and a copied token signs in as the user. Keep tokens in the Keychain/Keystore (react-native-keychain, expo-secure-store). (OWASP MASVS-STORAGE-1)`,
+      fix: { kind: 'security', step: 'Move auth tokens from AsyncStorage to the Keychain/Keystore (`react-native-keychain` or `expo-secure-store`).' },
+    },
+  ];
+}
