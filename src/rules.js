@@ -26,10 +26,11 @@ export const PLAY_TARGET_SDK = {
   visibility: { minimum: 35, since: '2026-08-31' },
 };
 
-// Google Play 16 KB memory page size requirement for apps targeting Android 15+.
-// https://android-developers.googleblog.com/2025/05/prepare-play-apps-for-devices-with-16kb-page-size.html
+// Google Play 16 KB memory page size requirement for apps targeting Android 15+: policy since
+// 2025-11-01; Play blocks updates without it from 2027-02-01 (checked 2026-10-06 on
+// https://developer.android.com/guide/practices/page-sizes, page updated 2026-09-16).
 // React Native supports 16 KB pages from 0.77.
-export const PAGE_SIZE_16K = { since: '2025-11-01', extensionUntil: '2026-05-31', firstRnMinor: 77 };
+export const PAGE_SIZE_16K = { since: '2025-11-01', blockedFrom: '2027-02-01', firstRnMinor: 77 };
 
 // Minimum OS versions of current React Native (since 0.76).
 // https://reactnative.dev/blog/2024/10/23/release-0.76-new-architecture

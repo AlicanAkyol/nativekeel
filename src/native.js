@@ -55,15 +55,19 @@ export function nativeChecks(project, { rnLatest = null, now = new Date() } = {}
   const hasAndroid = fs.existsSync(path.join(root, 'android'));
 
   // 16 KB page size: React Native itself before 0.77, then the actual built binaries.
+  const blocked16k = today >= PAGE_SIZE_16K.blockedFrom;
+  const policy16k = blocked16k
+    ? `Google Play blocks updates without 16 KB page support since ${PAGE_SIZE_16K.blockedFrom}.`
+    : `Google Play requires 16 KB page support for apps targeting Android 15+ (since ${PAGE_SIZE_16K.since}). Play Console warns now, and from ${PAGE_SIZE_16K.blockedFrom} it blocks updates without it.`;
   if (hasAndroid || project.managed) {
     if (rn !== null && rn < PAGE_SIZE_16K.firstRnMinor && today >= PAGE_SIZE_16K.since) {
       add({
         id: 'android-16kb-rn',
-        severity: 'critical',
+        severity: blocked16k ? 'critical' : 'high',
         area: 'store',
         title: `React Native ${project.rnVersion} does not support 16 KB memory pages`,
-        detail: `Google Play rejects updates without 16 KB page support since ${PAGE_SIZE_16K.since} (extensions ended ${PAGE_SIZE_16K.extensionUntil}). React Native supports it from 0.${PAGE_SIZE_16K.firstRnMinor}${project.expoVersion ? ', which in Expo means SDK 53 or later (SDK 52 ships React Native 0.76)' : ''}.`,
-        fix: { kind: 'upgrade-rn-min', to: `0.${PAGE_SIZE_16K.firstRnMinor}.0` },
+        detail: `${policy16k} React Native supports it from 0.${PAGE_SIZE_16K.firstRnMinor}${project.expoVersion ? ', which in Expo means SDK 53 or later (SDK 52 ships React Native 0.76)' : ''}.`,
+        fix: { kind: 'upgrade-rn-min', to: `0.${PAGE_SIZE_16K.firstRnMinor}.0`, blocked: blocked16k, blockedFrom: PAGE_SIZE_16K.blockedFrom },
       });
     }
     const artifact = findBuiltArtifact(root);
@@ -82,11 +86,11 @@ export function nativeChecks(project, { rnLatest = null, now = new Date() } = {}
         if (relevant.length) {
           add({
             id: 'android-16kb-libs',
-            severity: isRelease ? 'critical' : 'high',
+            severity: isRelease && blocked16k ? 'critical' : 'high',
             area: 'store',
             title: `${libs.length} native librar${libs.length === 1 ? 'y is' : 'ies are'} not 16 KB aligned (${rel})`,
-            detail: `${libs.slice(0, 6).join(', ')}${libs.length > 6 ? ', …' : ''}. Google Play rejects updates containing them. Update the package that ships each library, or rebuild it with NDK r28+.`,
-            fix: { kind: 'align-16kb', libs },
+            detail: `${libs.slice(0, 6).join(', ')}${libs.length > 6 ? ', …' : ''}. ${policy16k} Update the package that ships each library, or rebuild it with NDK r28+.`,
+            fix: { kind: 'align-16kb', libs, blocked: blocked16k, blockedFrom: PAGE_SIZE_16K.blockedFrom },
           });
         } else {
           const ignored = result.misaligned.length;

@@ -40,6 +40,11 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 450+ open-source React Native and Expo apps to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.21</h2><p class="date">6 October 2026</p>
+<ul>
+<li><span class="tag">Correction</span><b>16 KB pages: the right date.</b> NativeKeel said Google Play already rejects updates without 16 KB page support and rated it critical. Google's current page (updated September 2026) says the policy applies since November 2025, Play Console warns now, and Play <b>blocks updates from 1 February 2027</b>. Until then the finding is high, with that date; from 1 February 2027 it becomes critical on its own. Found by our upstream check, which now also watches this date.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.20</h2><p class="date">6 October 2026</p>
 <ul>
 <li><span class="tag">Upgrade</span><b>APIs React Native has announced it will remove.</b> React Native 0.87 deprecated <code>ImageBackground</code>, <code>DrawerLayoutAndroid</code> and <code>UTFSequence</code> (and 0.81 <code>SafeAreaView</code>): they still work and log a warning, and once removed, every screen that imports them crashes. NativeKeel now lists where you use them and what to use instead. In our test set, 143 of 470 apps import at least one, most often <code>SafeAreaView</code> or <code>ImageBackground</code>.</li>

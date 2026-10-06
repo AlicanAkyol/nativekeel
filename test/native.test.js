@@ -91,7 +91,7 @@ test('APK check finds misaligned 64-bit libraries, stored or deflated, and ignor
   assert.deepEqual(r.misaligned.map((l) => l.path), ['lib/arm64-v8a/libbad.so']);
 });
 
-test('built release artifact with a misaligned library is critical; debug-only libs are ignored in debug builds', () => {
+test('built release artifact with a misaligned library: high until Play blocks updates (2027-02-01), then critical; debug-only libs are ignored in debug builds', () => {
   const release = check(rnApp('0.80.0', {
     'android/app/build/outputs/bundle/release/app-release.aab': '',
   }));
@@ -102,7 +102,10 @@ test('built release artifact with a misaligned library is critical; debug-only l
   fs.mkdirSync(out, { recursive: true });
   fs.writeFileSync(path.join(out, 'app-release.apk'), fakeZip([{ name: 'lib/arm64-v8a/libvendor.so', data: fakeElf([4096]) }]));
   const f = nativeChecks(loadProject(root), { now: NOW }).find((x) => x.id === 'android-16kb-libs');
-  assert.equal(f.severity, 'critical');
+  assert.equal(f.severity, 'high');
+  assert.match(f.detail, /from 2027-02-01 it blocks updates/);
+  const later = nativeChecks(loadProject(root), { now: new Date('2027-02-02') }).find((x) => x.id === 'android-16kb-libs');
+  assert.equal(later.severity, 'critical');
   assert.match(f.title, /1 native library is not 16 KB aligned/);
 
   const dbgRoot = makeProject(rnApp('0.80.0'));

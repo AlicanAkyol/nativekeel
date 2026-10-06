@@ -258,10 +258,13 @@ export function buildPlan(result) {
   } else if (privacy) {
     storeSteps.push('Add `PrivacyInfo.xcprivacy` to the iOS app target. Start from the file in the React Native template and declare the required-reason APIs your app and SDKs use (UserDefaults, file timestamps, system boot time, disk space).');
   }
-  if (byKind('upgrade-rn-min').length) {
+  const min16k = byKind('upgrade-rn-min')[0];
+  const when16k = min16k && min16k.blocked ? 'Google Play rejects updates until' : `From ${min16k ? min16k.blockedFrom : ''} Google Play rejects updates until`;
+  const by16k = min16k && min16k.blocked ? 'before your next Play release' : `before ${min16k ? min16k.blockedFrom : ''}`;
+  if (min16k) {
     storeSteps.push(isExpo
-      ? '**16 KB memory pages:** Google Play rejects updates until the app is on Expo SDK 53 (React Native 0.79) or later. The Expo SDK phase below gets you there; reach SDK 53 before your next Play release.'
-      : '**16 KB memory pages:** Google Play rejects updates until the app is on React Native 0.77 or later. The React Native phase below gets you there; reach 0.77 before your next Play release.');
+      ? `**16 KB memory pages:** ${when16k} the app is on Expo SDK 53 (React Native 0.79) or later. The Expo SDK phase below gets you there; reach SDK 53 ${by16k}.`
+      : `**16 KB memory pages:** ${when16k} the app is on React Native 0.77 or later. The React Native phase below gets you there; reach 0.77 ${by16k}.`);
   }
   const align = byKind('align-16kb')[0];
   if (align) {
