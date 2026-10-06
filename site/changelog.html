@@ -40,9 +40,16 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 450+ open-source React Native and Expo apps to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.17</h2><p class="date">6 October 2026</p>
+<ul>
+<li><span class="tag">Security</span><b>Every vulnerable package now says which version fixes it.</b> Advisories written as "up to and including 1.13.4" were not read, so a package with 35 advisories showed "check the advisories" instead of "fixed in 1.20.0". It is now in the title and in the plan step. 378 of 381 vulnerable packages in our test set get a fixed version.</li>
+<li><span class="tag">Accuracy</span>More advisories that cannot reach a mobile app are counted as low: axios' HTTP/2 adapter, proxy and <code>NO_PROXY</code> handling, server-side request forgery and cloud metadata leaks. They stay visible in the details.</li>
+<li><span class="tag">Experience</span><b>Less noise in Expo apps.</b> Packages whose version the Expo SDK decides (<code>expo-*</code>, Reanimated, Screens, AsyncStorage, …) no longer appear one by one as "a major version behind". They are one line: "19 packages move with the Expo SDK upgrade", since <code>npx expo install --fix</code> moves them. Across our test set, 3,700 low findings became that one line.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.16</h2><p class="date">6 October 2026</p>
 <ul>
-<li><span class="tag">Security</span><b>Deep links.</b> Web links (<code>https://your.domain/...</code>) that are not verified with <code>autoVerify</code>: Android 12+ opens them in the browser instead of your app, and older Android lets any app that registers the same links receive them, including login, reset and invite links. And the template URL scheme <code>myapp://</code>, which 50 of the 450+ apps we scan still ship: another app with the same scheme can open your links, and catch your sign-in redirect when you use expo-auth-session, Clerk or AppAuth. Both under MASVS-PLATFORM.</li>
+<li><span class="tag">Security</span><b>Deep links.</b> Web links (<code>https://your.domain/...</code>) that are not verified with <code>autoVerify</code>: Android 12+ opens them in the browser instead of your app, and older Android lets any app that registers the same links receive them, including login, reset and invite links. And the template URL scheme <code>myapp://</code>, which 72 of the 470 apps we scan still ship: another app with the same scheme can open your links, and catch your sign-in redirect when you use expo-auth-session, Clerk or AppAuth. Both under MASVS-PLATFORM.</li>
 <li><span class="tag">Accuracy</span>Tested on 180 more open-source apps (450+ in total, zero tool failures). Fixed what they showed: <code>.DS_Store</code> files caught in a patch are no longer reported as "build output that will not apply", and keystores inside test fixtures are not release keys.</li>
 <li><span class="tag">Experience</span>The HTML report wraps long file paths and code on phone screens.</li>
 </ul></div>
