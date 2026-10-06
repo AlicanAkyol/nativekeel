@@ -3,6 +3,7 @@ import path from 'node:path';
 import { UPGRADE_HELPER_URL, NEW_ARCH_ONLY_MINOR } from './rules.js';
 import { SITE_URL } from './config.js';
 import { COMPAT, bestRange } from './compat.js';
+import { expoPinnedNames, movesWithExpoSdk } from './expo-pins.js';
 
 // Turns a scan result into an ordered upgrade plan. The order matters more than the steps:
 // stop leaks first, then remove blockers, switch architecture on the current version,
@@ -145,40 +146,13 @@ function safetyNetPhase(tool) {
   };
 }
 
-// Libraries whose version an Expo SDK decides (from Expo's bundledNativeModules.json). When the
-// app's own copy of that file is installed it is used instead; this list covers scans without
-// node_modules.
-const EXPO_PINNED = new Set([
-  'react-native-reanimated', 'react-native-worklets', 'react-native-gesture-handler', 'react-native-screens',
-  'react-native-safe-area-context', 'react-native-webview', 'react-native-svg', 'react-native-pager-view',
-  'react-native-maps', 'react-native-view-shot', 'react-native-get-random-values', 'react-native-keyboard-controller',
-  '@react-native-async-storage/async-storage', '@react-native-community/datetimepicker', '@react-native-community/slider',
-  '@react-native-community/netinfo', '@react-native-picker/picker', '@react-native-masked-view/masked-view',
-  'lottie-react-native', '@shopify/flash-list', '@shopify/react-native-skia', '@stripe/stripe-react-native',
-]);
-
-function expoPinnedNames(root) {
-  try {
-    let dir = root;
-    while (true) {
-      const file = path.join(dir, 'node_modules', 'expo', 'bundledNativeModules.json');
-      if (fs.existsSync(file)) return new Set(Object.keys(JSON.parse(fs.readFileSync(file, 'utf8'))));
-      const parent = path.dirname(dir);
-      if (parent === dir) return EXPO_PINNED;
-      dir = parent;
-    }
-  } catch {
-    return EXPO_PINNED;
-  }
-}
-
 export function buildPlan(result) {
   const isExpo = !!result.project.expo;
   const basePm = commands[packageManager(result.project.root)];
   // In Expo projects `npx expo install` picks the version that matches the SDK.
   const pm = isExpo ? { ...basePm, add: 'npx expo install' } : basePm;
   const pinned = isExpo ? expoPinnedNames(result.project.root) : new Set();
-  const movesWithExpo = (name) => isExpo && (/^(expo-|@expo\/)/.test(name) || ['expo', 'jest-expo', 'react-native', 'react', 'react-dom'].includes(name) || pinned.has(name));
+  const movesWithExpo = (name) => isExpo && movesWithExpoSdk(name, pinned);
   const installed = new Set(result.deps.map((d) => d.name));
   const byKind = (kind) => result.findings.filter((f) => f.fix && f.fix.kind === kind).map((f) => f.fix);
   const phases = [];
@@ -289,7 +263,7 @@ export function buildPlan(result) {
       sec.push({ sev, step: f.fix.step });
     } else if (f.fix.kind === 'vuln-dep' && (f.fix.severity === 'critical' || f.fix.severity === 'high')) {
       const v = f.fix;
-      sec.push({ sev, step: `Update \`${v.name}\` ${v.from}${v.to ? ` to ${v.to} or later` : ''}: it has ${v.severity} known vulnerabilities. ${movesWithExpo(v.name) ? 'Expo pins it: the SDK upgrade below moves it.' : 'Check its changelog for breaking changes.'}` });
+      sec.push({ sev, step: `Update \`${v.name}\` ${v.from}${v.to ? ` to ${v.to}${v.to.startsWith('a release') ? '' : ' or later'}` : ''}: it has ${v.severity} known vulnerabilities. ${movesWithExpo(v.name) ? 'Expo pins it: the SDK upgrade below moves it.' : 'Check its changelog for breaking changes.'}` });
     }
   }
   const securitySteps = sec.sort((a, b) => a.sev - b.sev).map((x) => x.step);

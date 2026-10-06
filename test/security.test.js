@@ -61,7 +61,7 @@ test('vulnerable dependencies: exact versions, highest severity, fixed version',
     assert.deepEqual(JSON.parse(body), { axios: ['0.21.0'] });
     return {
       axios: [
-        { title: 'SSRF', severity: 'high', vulnerable_versions: '<0.30.0', url: 'https://github.com/advisories/1' },
+        { title: 'Prototype pollution', severity: 'high', vulnerable_versions: '<0.30.0', url: 'https://github.com/advisories/1' },
         { title: 'ReDoS', severity: 'moderate', vulnerable_versions: '<0.21.2', url: 'https://github.com/advisories/2' },
         { title: 'Old', severity: 'critical', vulnerable_versions: '<0.10.0', url: 'https://github.com/advisories/3' },
       ],
@@ -93,6 +93,23 @@ test('Node.js-only advisories do not raise the severity of a mobile dependency',
   const [f] = await vulnerableDependencies(registry, { axios: '1.6.0' });
   assert.equal(f.severity, 'low');
   assert.match(f.detail, /Node\.js\/server use only/);
+  const proxies = createRegistry(async () => ({ axios: [
+    { title: 'Axios: NO_PROXY hostname normalization bypass leads to SSRF', severity: 'high', vulnerable_versions: '>=1.0.0 <1.15.0' },
+    { title: 'Axios: HTTP/2 adapter bypasses configured DNS lookup', severity: 'high', vulnerable_versions: '>=1.13.0 <1.20.0' },
+  ] }));
+  assert.equal((await vulnerableDependencies(proxies, { axios: '1.13.2' }))[0].severity, 'low');
+});
+
+test('fixed version: the highest bound wins, and "<=" ranges count (seen with axios 1.13.2)', async () => {
+  const registry = createRegistry(async () => ({ axios: [
+    { title: 'DoS via __proto__ key', severity: 'high', vulnerable_versions: '>=1.0.0 <=1.13.4' },
+    { title: 'Header injection', severity: 'moderate', vulnerable_versions: '>=1.0.0 <1.20.0' },
+  ] }));
+  const [f] = await vulnerableDependencies(registry, { axios: '1.13.2' });
+  assert.equal(f.fix.to, '1.20.0');
+  assert.match(f.title, /\(fixed in 1\.20\.0\)/);
+  const only = createRegistry(async () => ({ axios: [{ title: 'DoS via __proto__ key', severity: 'high', vulnerable_versions: '>=1.0.0 <=1.13.4' }] }));
+  assert.equal((await vulnerableDependencies(only, { axios: '1.13.2' }))[0].fix.to, 'a release after 1.13.4');
 });
 
 test('exported components: widgets and system-broadcast receivers are fine, an open service is not', async () => {

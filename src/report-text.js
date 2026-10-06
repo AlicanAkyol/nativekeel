@@ -50,9 +50,16 @@ export function textReport(result, { color = true, verbose = false } = {}) {
       out.push('');
       continue;
     }
-    for (const f of group) {
+    // Packages the Expo SDK upgrade moves: one line, they are not separate work.
+    const expoMoves = group.filter((f) => f.fix && f.fix.expoManaged);
+    for (const f of group.filter((x) => !(x.fix && x.fix.expoManaged))) {
       out.push(`${label[sev]} ${c.bold(f.title)}`);
       out.push(c.gray(indent + f.detail));
+    }
+    if (expoMoves.length) {
+      const names = expoMoves.map((f) => f.fix.name);
+      out.push(`${label[sev]} ${c.bold(`${expoMoves.length} package${expoMoves.length === 1 ? '' : 's'} move with the Expo SDK upgrade`)}`);
+      out.push(c.gray(`${indent}${(verbose ? names : names.slice(0, 6)).join(', ')}${!verbose && names.length > 6 ? `, … (${names.length - 6} more with --verbose)` : ''}. \`npx expo install --fix\` sets the versions the new SDK expects.`));
     }
     out.push('');
   }

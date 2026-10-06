@@ -8,6 +8,7 @@ import { stabilityChecks } from './stability.js';
 import { performanceChecks } from './performance.js';
 import { vulnerableDependencies, passwordLeaks, webViewRisks, androidBackup, exportedComponents, plainHttpCalls, cloudRules, insecureTls, weakCrypto, tokenStorage, reverseEngineering, expoConfigSecrets, deepLinks, masvsOf, MASVS_GROUPS } from './security.js';
 import { lockedVersions } from './lockfile.js';
+import { expoPinnedNames, movesWithExpoSdk } from './expo-pins.js';
 import { findUnused, filesImportingWith } from './usage.js';
 import { matchKnownIssues, compareVersions } from './known-issues.js';
 import { COMPAT, bestRange, checkCompat } from './compat.js';
@@ -232,6 +233,8 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
   const codegen = forcedOffline ? {} : await registry.codegenSupport(archSuspects.map((n) => ({ name: n, version: versionOf(n) })));
 
   const deps = [];
+  let pinnedCache = null;
+  const expoPinned = () => (pinnedCache ||= expoPinnedNames(project.root));
   for (const name of names) {
     const dir = directory[name];
     const version = versionOf(name);
@@ -296,13 +299,15 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
       });
     }
     if (!noNewArch && !dep.unmaintained && !stale && version && dep.latest && lineOf(version) !== lineOf(dep.latest)) {
+      // In Expo apps the SDK decides these versions: the SDK upgrade moves them, no separate work.
+      const expoManaged = !!project.expoVersion && movesWithExpoSdk(name, expoPinned());
       add({
         id: `dep-major:${name}`,
-        severity: 'low',
+        severity: expoManaged ? 'info' : 'low',
         area: 'dependency',
         title: `${name} ${version} → ${dep.latest}`,
-        detail: 'Major version behind.',
-        fix: { kind: 'bump-dep', name, from: version, to: dep.latest, native },
+        detail: expoManaged ? 'Major version behind; the Expo SDK upgrade moves it.' : 'Major version behind.',
+        fix: { kind: 'bump-dep', name, from: version, to: dep.latest, native, expoManaged },
       });
     }
   }

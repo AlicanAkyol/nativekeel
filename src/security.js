@@ -33,7 +33,7 @@ const read = (file) => {
   }
 };
 
-const SERVER_ONLY = /node\.?js|server[- ]side|\bhttp adapter\b|\bssr\b/i;
+const SERVER_ONLY = /node\.?js|server[- ]side|\bhttp adapter\b|\bhttp\/2\b|\bssr\b|\bssrf\b|no_proxy|proxy-authorization|cloud metadata/i;
 const SEVERITY = { critical: 'critical', high: 'high', moderate: 'medium', low: 'low', info: 'low' };
 const RANK = ['low', 'medium', 'high', 'critical'];
 
@@ -65,8 +65,8 @@ export async function vulnerableDependencies(registry, versions) {
       id: `vuln:${name}`,
       severity,
       area: 'security',
-      title: `${name} ${version}: ${relevant.length} known vulnerabilit${relevant.length === 1 ? 'y' : 'ies'}`,
-      detail: `${top.join('; ')}${relevant.length > 3 ? `; and ${relevant.length - 3} more` : ''}. ${fixedIn ? `Fixed in ${fixedIn} or later.` : 'Check the advisories for a fixed version.'}${serverOnly ? ` ${serverOnly} of them concern Node.js/server use only and are counted as low.` : ''} Source: GitHub Advisory Database (via npm).`,
+      title: `${name} ${version}: ${relevant.length} known vulnerabilit${relevant.length === 1 ? 'y' : 'ies'}${fixedIn ? ` (fixed in ${fixedIn})` : ''}`,
+      detail: `${top.join('; ')}${relevant.length > 3 ? `; and ${relevant.length - 3} more` : ''}. ${fixedIn ? `Fixed in ${fixedIn}${fixedIn.startsWith('a release') ? '' : ' or later'}.` : 'Check the advisories for a fixed version.'}${serverOnly ? ` ${serverOnly} of them concern Node.js/server use only and are counted as low.` : ''} Source: GitHub Advisory Database (via npm).`,
       fix: { kind: 'vuln-dep', name, from: version, to: fixedIn, severity },
     });
   }
@@ -87,15 +87,17 @@ function applies(version, range) {
   });
 }
 
+// The lowest version outside every advisory's range. "<1.2.3" is fixed in 1.2.3; "<=1.2.2" only
+// says "after 1.2.2", which counts when it is the highest bound.
 function minimumFixed(advisories) {
   let fixed = null;
   for (const a of advisories) {
-    const bounds = [...String(a.vulnerable_versions || '').matchAll(/<\s*(\d+\.\d+\.\d+)/g)].map((m) => m[1]);
+    const bounds = [...String(a.vulnerable_versions || '').matchAll(/<(=?)\s*(\d+\.\d+\.\d+)/g)].map((m) => ({ v: m[2], after: m[1] === '=' }));
     if (!bounds.length) return null; // an advisory without a fixed version
-    const hi = bounds.sort(compareVersions).at(-1);
-    if (!fixed || compareVersions(hi, fixed) > 0) fixed = hi;
+    const hi = bounds.sort((x, y) => compareVersions(x.v, y.v) || (x.after ? 1 : -1)).at(-1);
+    if (!fixed || compareVersions(hi.v, fixed.v) > 0 || (compareVersions(hi.v, fixed.v) === 0 && hi.after)) fixed = hi;
   }
-  return fixed;
+  return fixed && (fixed.after ? `a release after ${fixed.v}` : fixed.v);
 }
 
 // A password (or the variables built from it) passed to a log, crash report, analytics event,

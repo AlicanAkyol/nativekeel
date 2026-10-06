@@ -26,8 +26,8 @@ export function htmlReport(result, { brand = null, plan = null } = {}) {
   ).join('\n');
   const bumps = result.findings.filter(isBump);
   const bumpTable = bumps.length
-    ? `<details class="bumps"><summary>${bumps.length} package${bumps.length === 1 ? ' is' : 's are'} a major version behind <span class="muted">(low)</span></summary><table><thead><tr><th>Package</th><th>Installed</th><th>Latest</th><th></th></tr></thead><tbody>${bumps
-        .map((f) => `<tr><td>${esc(f.fix.name)}</td><td>${esc(f.fix.from || '')}</td><td>${esc(f.fix.to || '')}</td><td class="muted">${f.fix.native ? 'native' : ''}</td></tr>`)
+    ? `<details class="bumps"><summary>${bumps.length} package${bumps.length === 1 ? ' is' : 's are'} a major version behind${bumps.some((f) => f.fix.expoManaged) ? ` <span class="muted">(${bumps.filter((f) => f.fix.expoManaged).length} move with the Expo SDK upgrade)</span>` : ' <span class="muted">(low)</span>'}</summary><table><thead><tr><th>Package</th><th>Installed</th><th>Latest</th><th></th></tr></thead><tbody>${bumps
+        .map((f) => `<tr><td>${esc(f.fix.name)}</td><td>${esc(f.fix.from || '')}</td><td>${esc(f.fix.to || '')}</td><td class="muted">${[f.fix.native && 'native', f.fix.expoManaged && 'moves with Expo SDK'].filter(Boolean).join(', ')}</td></tr>`)
         .join('')}</tbody></table></details>`
     : '';
 
