@@ -40,6 +40,12 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 450+ open-source React Native and Expo apps to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.19</h2><p class="date">6 October 2026</p>
+<ul>
+<li><span class="tag">Plan</span><b>Better plans for apps that are far behind.</b> On an old React Native (0.62, say), the step before the upgrade no longer suggests the newest release of each library, which usually needs a much newer React Native. It asks for the newest release that supports your version and shows the latest for reference. Reanimated, Gesture Handler and Screens are left to the React Native steps, which pick tested versions for each hop.</li>
+<li><span class="tag">Plan</span>Security steps for packages that the React Native upgrade moves anyway (React Native itself, Reanimated) say so, and when to update them early: if you ship before reaching those steps.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.18</h2><p class="date">6 October 2026</p>
 <ul>
 <li><span class="tag">Security</span><b>"No fixed release" is said plainly.</b> When the vulnerable range includes the newest published version (expr-eval 2.0.2, for example), the plan no longer says "update". It says no fix exists: replace the package, or make sure it never handles untrusted input. When the advisory only says "up to 4.17.23", the version to install is now the actual next release (lodash 4.18.1).</li>
