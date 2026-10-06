@@ -6,7 +6,7 @@ Health check for React Native and Expo apps. One command, no install, no account
 npx nativekeel
 ```
 
-**What's new in 0.1.14:** secrets in Expo config (`extra`, `EXPO_PUBLIC_`, `eas.json`) and imports of APIs removed from React Native core. Recent releases added a *Start here* list in every report, hacking risks mapped to OWASP MASVS, crash and performance checks. Every check is tuned on 280+ open-source React Native and Expo apps to keep false alarms out. [All releases →](https://nativekeel.com/changelog)
+**What's new in 0.1.15:** run it at a monorepo root and it lists the app folders to scan. **0.1.14:** secrets in Expo config (`extra`, `EXPO_PUBLIC_`, `eas.json`) and imports of APIs removed from React Native core. Recent releases added a *Start here* list in every report, hacking risks mapped to OWASP MASVS, crash and performance checks. Every check is tuned on 280+ open-source React Native and Expo apps to keep false alarms out. [All releases →](https://nativekeel.com/changelog)
 
 ```
 Summary  4 critical · 5 high · 4 medium · 6 low
