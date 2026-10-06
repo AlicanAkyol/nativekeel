@@ -126,6 +126,10 @@ export function loadProject(root) {
   const devDeps = resolveCatalogRefs({ ...(pkg.devDependencies || {}) }, catalogs);
   const declared = (name) => deps[name] || devDeps[name];
   if (!declared('react-native') && !declared('expo')) {
+    const apps = findAppFolders(root);
+    if (apps.length) {
+      throw new Error(`This folder is not a React Native app, but it contains ${apps.length === 1 ? 'one' : apps.length}:\n${apps.slice(0, 8).map((a) => `  npx nativekeel ${a}`).join('\n')}${apps.length > 8 ? '\n  …' : ''}`);
+    }
     throw new Error('This does not look like a React Native app (no react-native or expo dependency). Run it inside your app folder.');
   }
 
@@ -192,4 +196,32 @@ function detectAndroid(root) {
     return m ? Number(m[1]) : null;
   };
   return { targetSdk: num('targetSdk'), compileSdk: num('compileSdk'), minSdk: num('minSdk') };
+}
+
+// React Native / Expo app folders below `root` (monorepos: apps/mobile, packages/app, …), as
+// relative paths. Libraries (react-native as a peer) are left out.
+export function findAppFolders(root, maxDepth = 3) {
+  const out = [];
+  const skip = new Set(['node_modules', '.git', 'Pods', 'build', 'dist', '.expo', 'android', 'ios', 'vendor', 'example', 'examples', 'docs', 'website', 'e2e', 'test', 'tests']);
+  const visit = (dir, depth) => {
+    if (depth > maxDepth) return;
+    let entries = [];
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const e of entries) {
+      if (!e.isDirectory() || skip.has(e.name) || e.name.startsWith('.')) continue;
+      const sub = path.join(dir, e.name);
+      const pkg = readJson(path.join(sub, 'package.json'));
+      const deps = pkg ? { ...pkg.dependencies, ...pkg.devDependencies } : {};
+      const isApp = pkg && (deps['react-native'] || deps.expo) && !(pkg.peerDependencies && pkg.peerDependencies['react-native']) &&
+        ['android', 'ios', 'app.json', 'app.config.js', 'app.config.ts'].some((f) => fs.existsSync(path.join(sub, f)));
+      if (isApp) out.push(path.relative(root, sub));
+      else visit(sub, depth + 1);
+    }
+  };
+  visit(root, 1);
+  return out.sort();
 }

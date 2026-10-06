@@ -81,3 +81,17 @@ test('large JSON through a pipe is complete, and the exit code survives', () => 
   assert.doesNotThrow(() => JSON.parse(r.stdout));
   assert.equal(r.status, 1);
 });
+
+test('at a monorepo root it points to the app folders', () => {
+  const root = makeProject({
+    'package.json': { name: 'mono', private: true, workspaces: ['apps/*', 'packages/*'] },
+    'apps/mobile/package.json': { name: 'mobile', dependencies: { 'react-native': '0.80.0' } },
+    'apps/mobile/app.json': '{}',
+    'packages/ui/package.json': { name: 'ui', peerDependencies: { 'react-native': '*' }, devDependencies: { 'react-native': '0.80.0' } },
+    'packages/ui/android/build.gradle': '',
+  });
+  const r = run([root, '--offline']);
+  assert.equal(r.status, 2);
+  assert.match(r.stderr, /npx nativekeel apps\/mobile/);
+  assert.ok(!r.stderr.includes('packages/ui'), 'libraries are not suggested');
+});
