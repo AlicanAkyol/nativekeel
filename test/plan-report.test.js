@@ -331,3 +331,23 @@ test('HTML report renders **bold** from plan steps instead of showing asterisks'
   assert.ok(!/\*\*Revoke/.test(html));
   assert.match(html, /<strong>Revoke the AWS access key ID<\/strong>/);
 });
+
+test('far behind: no latest-version targets on the old React Native, compat packages left to the hops', () => {
+  const bump = (name, from, to) => ({ id: `dep-major:${name}`, severity: 'low', area: 'dependency', title: 'x', detail: 'x', fix: { kind: 'bump-dep', name, from, to, native: true } });
+  const r = {
+    ...result,
+    project: { ...result.project, reactNative: '0.62.2', expo: null },
+    deps: [{ name: 'react-native-reanimated', version: '1.8.0', native: true }],
+    findings: [
+      { id: 'rn-unsupported', severity: 'critical', area: 'react-native', title: 'x', detail: 'x', fix: { kind: 'upgrade-rn', from: '0.62.2', to: '0.87.1' } },
+      bump('react-native-reanimated', '1.8.0', '4.7.1'),
+      bump('react-native-svg', '12.1.0', '15.15.5'),
+      { id: 'vuln:react-native-reanimated', severity: 'high', area: 'security', title: 'x', detail: 'x', fix: { kind: 'vuln-dep', name: 'react-native-reanimated', from: '1.8.0', to: '2.10.0', severity: 'high' } },
+    ],
+  };
+  const plan = buildPlan(r);
+  const steps = plan.phases.find((p) => p.title.startsWith('Update native modules')).steps;
+  assert.deepEqual(steps, ['`react-native-svg` 12.1.0 → the newest release that supports React Native 0.62 (latest is 15.15.5)']);
+  const sec = plan.phases.find((p) => p.title.startsWith('Close security')).steps.join('\n');
+  assert.match(sec, /react-native-reanimated.*The React Native steps below move it/);
+});
