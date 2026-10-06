@@ -6,7 +6,7 @@ Health check for React Native and Expo apps. One command, no install, no account
 npx nativekeel
 ```
 
-**What's new in 0.1.21:** corrected 16 KB page dates: Google Play blocks updates without them from 1 February 2027 (high until then). **0.1.20:** warns about `ImageBackground`, `SafeAreaView`, `DrawerLayoutAndroid` and `UTFSequence`, which React Native has deprecated and will remove (143 of 470 apps we test import one). Recent releases added a *Start here* list in every report, hacking risks mapped to OWASP MASVS, crash and performance checks. Every check is tuned on 470 open-source React Native and Expo apps to keep false alarms out ([what we found in them](https://dev.to/keel_alican_akyol/we-scanned-470-open-source-react-native-apps-here-is-what-breaks-them-5072)). [All releases →](https://nativekeel.com/changelog)
+**What's new in 0.1.22:** auth tokens in AsyncStorage/MMKV are found by what is stored, not only by the key name. **0.1.21:** corrected 16 KB page dates: Google Play blocks updates without them from 1 February 2027 (high until then). Recent releases added a *Start here* list in every report, hacking risks mapped to OWASP MASVS, crash and performance checks. Every check is tuned on 470 open-source React Native and Expo apps to keep false alarms out ([what we found in them](https://dev.to/keel_alican_akyol/we-scanned-470-open-source-react-native-apps-here-is-what-breaks-them-5072)). [All releases →](https://nativekeel.com/changelog)
 
 ```
 Summary  4 critical · 5 high · 4 medium · 6 low

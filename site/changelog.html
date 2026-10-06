@@ -40,6 +40,12 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 450+ open-source React Native and Expo apps to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.22</h2><p class="date">6 October 2026</p>
+<ul>
+<li><span class="tag">Security</span><b>Auth tokens in plain storage, found by what is stored.</b> The check used to look only at the storage key (<code>setItem('access_token', …)</code>). It now also catches tokens saved under a constant (<code>setItem(TOKEN_KEY, token)</code>) or inside an object (<code>JSON.stringify({ token })</code>). Push notification and device tokens are left alone, and web-only files (<code>*.web.ts</code>) are skipped since the web has no Keychain. In our test set this finds 13 apps instead of 4.</li>
+<li><span class="tag">Docs</span>The homepage and npm page link to <a href="https://dev.to/keel_alican_akyol/we-scanned-470-open-source-react-native-apps-here-is-what-breaks-them-5072">what we found in 470 open-source apps</a>.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.21</h2><p class="date">6 October 2026</p>
 <ul>
 <li><span class="tag">Correction</span><b>16 KB pages: the right date.</b> NativeKeel said Google Play already rejects updates without 16 KB page support and rated it critical. Google's current page (updated September 2026) says the policy applies since November 2025, Play Console warns now, and Play <b>blocks updates from 1 February 2027</b>. Until then the finding is high, with that date; from 1 February 2027 it becomes critical on its own. Found by our upstream check, which now also watches this date.</li>
