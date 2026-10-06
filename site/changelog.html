@@ -23,6 +23,12 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 280+ open-source React Native and Expo apps to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.14</h2><p class="date">6 October 2026</p>
+<ul>
+<li><span class="tag">Security</span><b>Secrets in Expo config.</b> Secret-looking values in <code>app.json</code>/<code>app.config</code> <code>extra</code> and in <code>EXPO_PUBLIC_</code> variables ship inside the app; secrets in <code>eas.json</code> build env are committed to the repo (found a Sentry auth token this way in two open-source apps). Public SDK keys such as RevenueCat's are left alone.</li>
+<li><span class="tag">Stability</span><b>APIs removed from React Native core.</b> <code>AsyncStorage</code>, <code>Picker</code>, <code>Slider</code>, <code>WebView</code>, <code>ViewPropTypes</code> and 23 others imported from <code>'react-native'</code> throw or are undefined on current versions. Reported as a crash now when the installed version already removed them, or as a step before the upgrade, with the replacement package for each. The list comes from React Native's own source.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.13</h2><p class="date">6 October 2026</p>
 <ul>
 <li><span class="tag">Performance</span><b>Speed up the app.</b> A new plan phase for the static signs of jank and weight: a FlatList inside a ScrollView that renders every row, animations driven from the JavaScript thread, console logs left in release builds, whole-library imports of lodash and moment, and oversized images the app actually requires (repo screenshots are not counted).</li>
