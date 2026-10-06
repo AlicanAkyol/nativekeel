@@ -159,6 +159,7 @@ export function stabilityChecks(project) {
   }
 
   for (const f of iosUsageDescriptions(project)) add(f);
+  for (const f of removedCoreImports(project)) add(f);
   return findings;
 }
 
@@ -243,6 +244,88 @@ export function iosUsageDescriptions(project) {
       title: `Info.plist is missing ${missing.length === 1 ? 'a usage description' : `${missing.length} usage descriptions`} (${missing.map((m) => m.key).join(', ')})`,
       detail: `${missing.map((m) => `${m.used[0]} uses ${m.what}`).join('; ')}. iOS terminates the app the moment it asks for access without the matching key, and App Review rejects the build. Add each key with a sentence that says why the app needs it.`,
       fix: { kind: 'crash', step: `Add ${missing.map((m) => `\`${m.key}\``).join(', ')} to the app's Info.plist, each with a user-facing reason.` },
+    },
+  ];
+}
+
+// Components and APIs that left React Native core. Importing them from 'react-native' throws
+// ("X has been removed from react-native core", checked in RN's index.js for 0.72-0.76) or, from
+// 0.74 for the PropTypes and later for the rest, is simply undefined: a crash on first use.
+const REMOVED_FROM_CORE = {
+  AsyncStorage: '@react-native-async-storage/async-storage',
+  NetInfo: '@react-native-community/netinfo',
+  WebView: 'react-native-webview',
+  Slider: '@react-native-community/slider',
+  ListView: 'FlatList or SectionList (core)',
+  SwipeableListView: 'FlatList with a swipeable row library',
+  CameraRoll: '@react-native-camera-roll/camera-roll',
+  ImageEditor: '@react-native-community/image-editor',
+  ImageStore: 'expo-file-system or react-native-blob-util',
+  TimePickerAndroid: '@react-native-community/datetimepicker',
+  DatePickerAndroid: '@react-native-community/datetimepicker',
+  DatePickerIOS: '@react-native-community/datetimepicker',
+  ToolbarAndroid: '@react-native-community/toolbar-android',
+  ViewPagerAndroid: 'react-native-pager-view',
+  CheckBox: '@react-native-community/checkbox',
+  SegmentedControlIOS: '@react-native-segmented-control/segmented-control',
+  StatusBarIOS: 'StatusBar (core)',
+  Picker: '@react-native-picker/picker',
+  PickerIOS: '@react-native-picker/picker',
+  MaskedViewIOS: '@react-native-masked-view/masked-view',
+  ImagePickerIOS: 'react-native-image-picker',
+  ProgressViewIOS: '@react-native-community/progress-view',
+  ART: 'react-native-svg',
+};
+const REMOVED_PROP_TYPES = ['ViewPropTypes', 'ColorPropType', 'EdgeInsetsPropType', 'PointPropType'];
+
+export function removedCoreImports(project) {
+  const root = project.root;
+  const used = new Map(); // name -> first file:line
+  const files = [];
+  const walk = (dir) => {
+    let entries = [];
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const e of entries) {
+      if (e.isDirectory()) {
+        if (!['node_modules', '.git', 'android', 'ios', 'build', 'dist', '.expo', 'coverage', '__tests__', '__mocks__'].includes(e.name) && !e.name.startsWith('.')) walk(path.join(dir, e.name));
+      } else if (/\.[cm]?[jt]sx?$/.test(e.name) && !/\.(test|spec)\./.test(e.name)) {
+        files.push(path.join(dir, e.name));
+      }
+    }
+  };
+  walk(root);
+  for (const file of files) {
+    const text = readText(file) || '';
+    if (!text.includes("'react-native'") && !text.includes('"react-native"')) continue;
+    const blocks = [
+      ...[...text.matchAll(/import\s*(?:[\w$]+\s*,\s*)?\{([^}]*)\}\s*from\s*['"]react-native['"]/g)].map((m) => ({ names: m[1], index: m.index })),
+      ...[...text.matchAll(/(?:const|let|var)\s*\{([^}]*)\}\s*=\s*require\(\s*['"]react-native['"]\s*\)/g)].map((m) => ({ names: m[1], index: m.index })),
+    ];
+    for (const b of blocks) {
+      for (const raw of b.names.split(',')) {
+        const name = raw.trim().replace(/^type\s+/, '').split(/\s+as\s+/)[0].trim();
+        if ((REMOVED_FROM_CORE[name] || REMOVED_PROP_TYPES.includes(name)) && !used.has(name)) {
+          used.set(name, `${path.relative(root, file)}:${text.slice(0, b.index).split('\n').length}`);
+        }
+      }
+    }
+  }
+  if (!used.size) return [];
+  const minor = project.rnVersion ? Number(project.rnVersion.split('.')[1]) : null;
+  const crashesNow = [...used.keys()].some((n) => (REMOVED_PROP_TYPES.includes(n) ? minor >= 74 : minor >= 72));
+  const list = [...used].map(([n, at]) => `${n} (${at}) → ${REMOVED_FROM_CORE[n] || 'deprecated-react-native-prop-types'}`);
+  return [
+    {
+      id: 'crash-removed-core-imports',
+      severity: crashesNow ? 'high' : 'medium',
+      area: 'crash',
+      title: `${used.size} import${used.size === 1 ? '' : 's'} of APIs removed from React Native core${crashesNow ? '' : ' (they break when you upgrade)'}`,
+      detail: `${list.slice(0, 6).join('; ')}${list.length > 6 ? '; …' : ''}. Importing these from 'react-native' throws "has been removed from react-native core" or returns undefined on current versions, which crashes the screen that uses them. Install the replacement and change the import.`,
+      fix: { kind: 'crash', step: `Move ${[...used.keys()].map((n) => `\`${n}\``).join(', ')} off 'react-native' to their community packages (${[...new Set([...used.keys()].map((n) => REMOVED_FROM_CORE[n] || 'deprecated-react-native-prop-types'))].slice(0, 4).join(', ')}).` },
     },
   ];
 }

@@ -65,3 +65,14 @@ test('iOS usage descriptions: missing key flagged; add-only photo key and Expo p
   const expo = { 'package.json': { name: 'e', dependencies: { expo: '52.0.0', 'react-native': '0.76.0', 'expo-camera': '16.0.0' } }, 'ios/App/Info.plist': plist([]), 'app.json': JSON.stringify({ expo: { plugins: ['expo-camera'] } }) };
   assert.ok(!ids(expo).includes('crash-ios-usage-description'), 'the Expo config plugin adds it at prebuild');
 });
+
+test('APIs removed from React Native core: crash now or after the upgrade', () => {
+  const src = (rn, code) => stabilityChecks(loadProject(makeProject({ 'package.json': { name: 'r', dependencies: { 'react-native': rn } }, 'src/A.js': code }))).find((f) => f.id === 'crash-removed-core-imports');
+  const asyncNow = src('0.80.0', "import { View, AsyncStorage } from 'react-native';");
+  assert.equal(asyncNow.severity, 'high');
+  assert.match(asyncNow.detail, /@react-native-async-storage\/async-storage/);
+  assert.equal(src('0.65.0', "import { Picker } from 'react-native';").severity, 'medium');
+  assert.equal(src('0.73.0', "const { ViewPropTypes } = require('react-native');").severity, 'medium', 'PropTypes still exist on 0.73');
+  assert.equal(src('0.74.0', "import { ViewPropTypes } from 'react-native';").severity, 'high');
+  assert.equal(src('0.80.0', "import { View, Text } from 'react-native';\nimport AsyncStorage from '@react-native-async-storage/async-storage';"), undefined);
+});
