@@ -6,35 +6,45 @@ Health check for React Native and Expo apps. One command, no install, no account
 npx nativekeel
 ```
 
-**What's new in 0.1.14:** secrets in Expo config (`extra`, `EXPO_PUBLIC_`, `eas.json`) and imports of APIs removed from React Native core. **0.1.13:** performance traps (nested lists, JS-thread animations, release console logs, heavy imports, oversized images) and reverse-engineering exposure (source maps in the app, Hermes/R8 off). **0.1.12:** hacking risks mapped to OWASP MASVS: open Firebase rules, TLS certificate checks turned off, hardcoded keys and weak crypto, tokens in plain storage, with a security overview in every report. **0.1.10:** every report opens with *Start here*, the three most urgent first steps; missing iOS permission texts (a crash and an App Review rejection) are caught. Recent releases added known vulnerabilities in the exact versions you ship, password leaks into logs and databases, unsafe WebViews, open Android components, plain-HTTP API calls and runtime crash risks. Tuned on 280+ open-source React Native and Expo apps to keep false alarms out. [All releases →](https://nativekeel.com/changelog)
-
-It answers the questions that decide whether your app can still ship:
-
-- **Is your React Native / Expo version still supported?** React Native supports the latest minor and the two before it.
-- **Can you upgrade at all?** The legacy architecture was removed in 0.82. If the New Architecture is off, you are stuck at 0.81.
-- **Which packages block the upgrade?** Native modules without New Architecture support, unmaintained or with no release in years, with known alternatives. Outdated "unmaintained" flags are cross-checked against the latest npm release.
-- **What can you simply delete?** Packages that are installed but never imported, referenced natively or required by another package. Every one you remove is one you never upgrade.
-- **Will the stores accept your next build?** Google Play `targetSdk` and 16 KB page size (it opens your built APK/AAB and checks the alignment of every native library), and the iOS privacy manifest.
-- **Are secrets shipped inside your app?** AWS, Stripe, OpenAI, Anthropic, GitHub, Slack, SendGrid, Twilio, Shopify, Google OAuth keys, private keys and Supabase `service_role` keys (anon keys are fine), plus `.env` values that `react-native-config` or `EXPO_PUBLIC_` compile into the bundle, and secrets in Expo `extra` or `eas.json`. Server-side folders are reported separately.
-- **Is transport security off?** Cleartext HTTP or `debuggable` in the release Android manifest, `NSAllowsArbitraryLoads` on iOS.
-- **Do you ship known vulnerabilities?** Advisories from the GitHub Advisory Database for the exact versions in your lockfile or `node_modules`. Advisories that only affect Node.js servers are kept, at low severity.
-- **Can someone break in?** Grouped by OWASP MASVS: Firebase Realtime Database/Firestore/Storage rules open to anyone (or in test mode), TLS certificate checks turned off in native code, hardcoded encryption keys, MD5/SHA-1 on passwords, ECB mode, `Math.random` for nonces and salts. These are static checks: they catch the common, detectable mistakes, not everything a penetration test of the running app would.
-- **Can someone read your users' data?** Passwords that flow into crash reports, analytics, remote databases or plain AsyncStorage (followed through intermediate variables), WebViews that let page scripts read local files or load HTTP into HTTPS, Android backups that copy tokens, Android components any app can start, API calls over plain HTTP, auth tokens in unencrypted storage.
-- **Is it slow or heavy?** A FlatList inside a ScrollView (no virtualization), animations with `useNativeDriver: false`, `console.log` left in release builds, whole-library `lodash`/`moment` imports, images over 500 KB that the app requires. Static signs to measure on a device, not a profiler.
-- **Can it be taken apart?** Source maps packaged into the app, Hermes or R8 off in release (OWASP MASVS-RESILIENCE). Obfuscation only slows an attacker down; keep secrets and checks on the server.
-- **Will it crash at runtime?** Reanimated without its Babel plugin or `react-native-worklets`, mixed `@react-native-firebase/*` or `@react-navigation/*` majors, a second copy of React or React Native inside a dependency, Kotlin modules that cannot load through the New Architecture interop layer, AppDelegate setups that crash in Release, camera/photos/location access without the Info.plist description iOS requires, imports of APIs removed from React Native core (`AsyncStorage`, `Picker`, `ViewPropTypes`, …).
-- **Leftovers from old templates?** Flipper, JavaScriptCore instead of Hermes.
+**What's new in 0.1.14:** secrets in Expo config (`extra`, `EXPO_PUBLIC_`, `eas.json`) and imports of APIs removed from React Native core. Recent releases added a *Start here* list in every report, hacking risks mapped to OWASP MASVS, crash and performance checks. Every check is tuned on 280+ open-source React Native and Expo apps to keep false alarms out. [All releases →](https://nativekeel.com/changelog)
 
 ```
-✖ CRITICAL React Native 0.77.1 is no longer supported
-           Latest is 0.87.1. You are 10 minor versions behind; only the latest 3 minors receive fixes.
-✖ CRITICAL New Architecture is disabled (android + ios)
-           The legacy architecture was removed in 0.82. This app cannot upgrade past 0.81 until it migrates.
-✖ CRITICAL AWS secret access key shipped inside the app (src/aws.js:4)
-           Value wJal…EY. Anyone who downloads the app can extract it. Revoke it now, then move the call to a server.
-▲ HIGH     react-native-fast-image: no New Architecture support, unmaintained
-           Likely upgrade blocker. Alternatives: expo-image.
+Summary  4 critical · 5 high · 4 medium · 6 low
+Security (OWASP MASVS)  crypto 1 · network 1  ·  7 groups checked
+
+Start here
+  1. Revoke the AWS access key ID in src/App.js:6 at the provider today.
+  2. Set targetSdkVersion = 36 and compileSdkVersion = 36 in android/build.gradle.
+  3. Run pod install, commit the generated PrivacyInfo.xcprivacy, and add your data types.
 ```
+
+## What it checks
+
+**Upgrade**
+- **Is your React Native / Expo version still supported?** React Native supports the latest three minors; in Expo projects React Native moves with the SDK.
+- **Can you upgrade at all?** The legacy architecture was removed in 0.82. If the New Architecture is off (it is off by default before 0.76), you are stuck at 0.81.
+- **Which packages block the upgrade?** Native modules without New Architecture support (cross-checked with the package's own codegen spec), unmaintained or with no release in years, with verified alternatives and renamed packages. Library versions for each step come from the libraries' own compatibility tables.
+- **What can you simply delete?** Installed packages that nothing imports, references natively, requires or patches.
+
+**Store**
+- **Will Google Play and the App Store accept your next build?** `targetSdk`, 16 KB memory pages (it also opens your built APK/AAB and checks every native library), the iOS privacy manifest, and missing Info.plist usage descriptions.
+
+**Crashes**
+- **Will it crash at runtime?** Reanimated without its Babel plugin or `react-native-worklets`, mixed `@react-native-firebase/*` or `@react-navigation/*` majors, a second copy of React or React Native inside a dependency, Kotlin modules that cannot load through the New Architecture interop layer, AppDelegate setups that crash in Release, camera/photos/location access without the Info.plist text iOS requires, imports of APIs removed from React Native core (`AsyncStorage`, `Picker`, `ViewPropTypes`, …), and traps learned from real upgrades.
+
+**Security, grouped by OWASP MASVS**
+- **Secrets in the app or the repo:** AWS, Stripe, OpenAI, Anthropic, GitHub, Slack, SendGrid, Twilio, Shopify, Google OAuth and Supabase `service_role` keys, private keys, `.env` values compiled into the bundle, Expo `extra`/`EXPO_PUBLIC_`/`eas.json` secrets, signing keys and passwords.
+- **Data on the device:** passwords that flow into crash reports, analytics, databases or plain AsyncStorage (followed through variables), auth tokens in unencrypted storage, Android backups that copy them.
+- **Network:** TLS certificate checks turned off in native code, cleartext HTTP, `NSAllowsArbitraryLoads`, plain-HTTP API calls, user-installed CAs in release.
+- **Backend rules:** Firebase Realtime Database, Firestore and Storage rules open to anyone or in test mode.
+- **Cryptography:** hardcoded encryption keys, MD5/SHA-1 on passwords, ECB mode, `Math.random` for nonces and salts.
+- **Platform:** WebViews that read local files or load HTTP into HTTPS, Android components any app can start.
+- **Dependencies and reverse engineering:** known vulnerabilities in the exact versions you ship (GitHub Advisory Database), source maps in the app, Hermes or R8 off.
+
+These are static checks: they catch the common, detectable mistakes, not everything a penetration test of the running app and backend would.
+
+**Performance**
+- **Is it slow or heavy?** A FlatList inside a ScrollView (no virtualization), animations with `useNativeDriver: false`, `console.log` left in release builds, whole-library `lodash`/`moment` imports, images over 500 KB that the app requires.
 
 ## Usage
 
@@ -54,7 +64,7 @@ Everything is free. The scan exits with code `1` when it finds a critical issue,
 
 ### Upgrade plan
 
-`nativekeel plan` turns the report into ordered work: stop leaks first, replace blocking packages, switch on the New Architecture on your current version, then upgrade React Native in small, reviewable hops with links to the Upgrade Helper diffs.
+`nativekeel plan` turns the report into ordered work: stop leaks, set up a safety net of UI flows, fix crash risks, meet store deadlines, close security gaps, replace blocking packages, switch on the New Architecture at the right point, then upgrade React Native (or the Expo SDK) in small, reviewable hops with links to the Upgrade Helper diffs and the library versions each hop needs. Performance fixes and routine updates come last.
 
 ### GitHub Action
 
