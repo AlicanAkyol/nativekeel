@@ -5,7 +5,7 @@ import { MASVS_GROUPS } from './security.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
 // Turns `code` spans from finding text into <code>.
-const rich = (s) => esc(s).replace(/`([^`]+)`/g, '<code>$1</code>');
+const rich = (s) => esc(s).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
 
 // A single self-contained file that can be emailed or attached to a ticket.
 // `brand` replaces NativeKeel branding with an agency's name.

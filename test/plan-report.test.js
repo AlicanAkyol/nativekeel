@@ -324,3 +324,10 @@ test('package families move together in one step', () => {
   assert.equal(steps.length, 2);
   assert.match(steps[0], /^React Navigation, all together.*`@react-navigation\/native` 6\.1\.6 → 7\.5\.0, `@react-navigation\/stack` 6\.3\.16 → 7\.12\.0/);
 });
+
+test('HTML report renders **bold** from plan steps instead of showing asterisks', () => {
+  const r = { ...result, findings: [{ id: 'secret:aws:src/App.js', severity: 'critical', area: 'security', title: 'x', detail: 'x', fix: { kind: 'secret', label: 'AWS access key ID', file: 'src/App.js', line: 6, bundled: true } }] };
+  const html = htmlReport(r, { plan: buildPlan(r) });
+  assert.ok(!/\*\*Revoke/.test(html));
+  assert.match(html, /<strong>Revoke the AWS access key ID<\/strong>/);
+});

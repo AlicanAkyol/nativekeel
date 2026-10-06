@@ -40,6 +40,15 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 450+ open-source React Native and Expo apps to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.18</h2><p class="date">6 October 2026</p>
+<ul>
+<li><span class="tag">Security</span><b>"No fixed release" is said plainly.</b> When the vulnerable range includes the newest published version (expr-eval 2.0.2, for example), the plan no longer says "update". It says no fix exists: replace the package, or make sure it never handles untrusted input. When the advisory only says "up to 4.17.23", the version to install is now the actual next release (lodash 4.18.1).</li>
+<li><span class="tag">Plan</span><b>Library updates that fit your current React Native.</b> Before the React Native steps, the plan used to suggest the newest Reanimated or Gesture Handler even when it needs a newer React Native. It now stops at the newest version your current React Native supports, and the React Native steps move them further.</li>
+<li><span class="tag">Plan</span><b>Families move together.</b> All <code>@react-navigation/*</code> packages (and all <code>@react-native-firebase/*</code>) are one step, since mixed major versions crash at runtime. React Navigation is no longer mistaken for a native module, and renamed community packages (such as <code>@react-native-community/masked-view</code>) are recognised as native even without <code>node_modules</code>, so the plan says "swap it" instead of "replace it some day".</li>
+<li><span class="tag">Plan</span>Hermes appears in one step, not two, and version ranges read "2.32+ (2.x line)" instead of "2.32–2.99.x".</li>
+<li><span class="tag">Fix</span>The HTML report showed bold plan steps as <code>**text**</code>. It now renders them in bold.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.17</h2><p class="date">6 October 2026</p>
 <ul>
 <li><span class="tag">Security</span><b>Every vulnerable package now says which version fixes it.</b> Advisories written as "up to and including 1.13.4" were not read, so a package with 35 advisories showed "check the advisories" instead of "fixed in 1.20.0". It is now in the title and in the plan step. 378 of 381 vulnerable packages in our test set get a fixed version.</li>
