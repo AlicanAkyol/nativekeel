@@ -32,7 +32,7 @@ export function htmlReport(result, { brand = null, plan = null } = {}) {
     : '';
 
   const planHtml = plan
-    ? `<section><h2>Upgrade plan <small>scope: ${esc(plan.complexity.size)}</small></h2>${plan.phases
+    ? `<section><h2>${plan.phases.some((ph) => /^Upgrade (React Native|Expo SDK)/.test(ph.title)) ? 'Upgrade plan' : 'Action plan'} <small>scope: ${esc(plan.complexity.size)}</small></h2>${plan.phases
         .map((ph, i) => `<h3>${i + 1}. ${esc(ph.title)}</h3><p class="why">${esc(ph.why)}</p><ul>${ph.steps.map((s) => `<li>${rich(s)}</li>`).join('')}</ul>`)
         .join('')}</section>`
     : '';

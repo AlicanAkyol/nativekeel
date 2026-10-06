@@ -46,7 +46,7 @@ test('plan, baseline and compare commands', () => {
   const root = app();
   const plan = run(['plan', root, '--offline']);
   assert.equal(plan.status, 0);
-  assert.match(plan.stdout, /# Upgrade plan: cli-app/);
+  assert.match(plan.stdout, /# Action plan: cli-app/, "offline: no version upgrade, so an action plan");
   assert.match(plan.stdout, /Stop the leaks/);
 
   const baseline = path.join(root, 'baseline.json');
