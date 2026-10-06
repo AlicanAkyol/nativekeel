@@ -316,3 +316,11 @@ test('native updates on the current React Native stop at what it supports', () =
   assert.ok(!/4\.7\.1/.test(re), 'Reanimated 4.7 does not run on React Native 0.77');
   assert.match(re, /the newest for React Native 0\.77/);
 });
+
+test('package families move together in one step', () => {
+  const bump = (name, from, to) => ({ id: `dep-major:${name}`, severity: 'low', area: 'dependency', title: 'x', detail: 'x', fix: { kind: 'bump-dep', name, from, to, native: false } });
+  const r = { ...result, project: { ...result.project, expo: null }, findings: [bump('@react-navigation/native', '6.1.6', '7.5.0'), bump('lodash', '3.0.0', '4.17.21'), bump('@react-navigation/stack', '6.3.16', '7.12.0')] };
+  const steps = buildPlan(r).phases.find((p) => p.title === 'Update JavaScript-only packages').steps;
+  assert.equal(steps.length, 2);
+  assert.match(steps[0], /^React Navigation, all together.*`@react-navigation\/native` 6\.1\.6 → 7\.5\.0, `@react-navigation\/stack` 6\.3\.16 → 7\.12\.0/);
+});

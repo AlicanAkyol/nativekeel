@@ -55,6 +55,11 @@ function isNativeModule(root, name, dir) {
       return false;
     }
   }
+  // Known without looking: React Navigation is JavaScript only (the directory reports its
+  // monorepo as native), and the renamed community packages all contain native code (some
+  // were removed from the directory).
+  if (/^@react-navigation\//.test(name)) return false;
+  if (RENAMED[name]) return true;
   // Without node_modules, ask React Native Directory. Its ios/android flags mean "works on",
   // not "has native code" (pure JS packages set them too), so prefer its hasNativeCode.
   if (dir && dir.github && typeof dir.github.hasNativeCode === 'boolean') return dir.github.hasNativeCode;

@@ -147,6 +147,29 @@ function safetyNetPhase(tool) {
   };
 }
 
+// Package families that must share a major version: updating one alone crashes at runtime.
+const FAMILIES = [
+  { re: /^@react-navigation\//, label: 'React Navigation' },
+  { re: /^@react-native-firebase\//, label: 'React Native Firebase' },
+];
+function bumpSteps(list, extra = () => '') {
+  const steps = [];
+  const done = new Set();
+  for (const d of list) {
+    if (done.has(d.name)) continue;
+    const fam = FAMILIES.find((f) => f.re.test(d.name));
+    const members = fam ? list.filter((x) => fam.re.test(x.name)) : [];
+    if (members.length > 1) {
+      for (const m of members) done.add(m.name);
+      steps.push(`${fam.label}, all together in one change (mixed majors crash at runtime): ${members.map((m) => `\`${m.name}\` ${m.from} → ${m.to}${extra(m)}`).join(', ')}.`);
+    } else {
+      done.add(d.name);
+      steps.push(`\`${d.name}\` ${d.from} → ${d.to}${extra(d)}`);
+    }
+  }
+  return steps;
+}
+
 export function buildPlan(result) {
   const isExpo = !!result.project.expo;
   const basePm = commands[packageManager(result.project.root)];
@@ -361,7 +384,7 @@ export function buildPlan(result) {
     phases.push({
       title: 'Update native modules on the current React Native version',
       why: 'Newer releases of native modules usually add New Architecture support. Pick the newest release that still supports your current React Native version; check each changelog for its minimum.',
-      steps: nativeBumps.map((d) => `\`${d.name}\` ${d.from} → ${d.to}${d.capped ? ` (the newest for React Native ${d.capped}; later versions come with the React Native steps below)` : ''}`),
+      steps: bumpSteps(nativeBumps, (d) => (d.capped ? ` (the newest for React Native ${d.capped}; later versions come with the React Native steps below)` : '')),
     });
   }
 
@@ -533,7 +556,7 @@ export function buildPlan(result) {
     phases.push({
       title: 'Update JavaScript-only packages',
       why: 'These do not block the upgrade. Do them last, one major at a time, following each migration guide.',
-      steps: jsBumps.map((d) => `\`${d.name}\` ${d.from} → ${d.to}`),
+      steps: bumpSteps(jsBumps),
     });
   }
 
