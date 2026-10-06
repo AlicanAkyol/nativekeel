@@ -207,6 +207,7 @@ test('signing material committed to git', () => {
     'android/app/build.gradle': "signingConfigs { debug { storePassword 'android'\n keyPassword 'android' } }",
     'android/app/debug.keystore': 'x',
     'android/app/release.keystore': 'x',
+    'test/fixtures/sampler/android/fakekeys.jks': 'x',
     'ios/AuthKey_ABC123XYZ9.p8': ['-----BEGIN ', 'PRIVATE KEY-----\nMIGT\n'].join(''),
     'ios/dist.p12': 'x',
     'ios/App/PrivacyInfo.xcprivacy': '',
@@ -218,6 +219,7 @@ test('signing material committed to git', () => {
   const byId = Object.fromEntries(found.map((f) => [f.id, f]));
   assert.equal(byId['signing-keystore:android/app/release.keystore'].severity, 'high');
   assert.ok(!byId['signing-keystore:android/app/debug.keystore'], 'debug keystore is fine');
+  assert.ok(!byId['signing-keystore:test/fixtures/sampler/android/fakekeys.jks'], 'test fixtures are not release keys');
   assert.equal(byId['signing-asc-key:ios/AuthKey_ABC123XYZ9.p8'].severity, 'critical');
   assert.ok(byId['signing-p12:ios/dist.p12']);
   assert.match(byId['signing-password:android/gradle.properties'].detail, /MYAPP_RELEASE_STORE_PASSWORD, MYAPP_RELEASE_KEY_PASSWORD\./);
@@ -267,7 +269,7 @@ test('patch-package patches: build output, version mismatch, review reminder', (
     'node_modules/some-lib/package.json': { version: '3.2.0' },
     'node_modules/@scope/other/package.json': { version: '1.0.1' },
     'patches/some-lib+3.2.0.patch': 'diff --git a/node_modules/some-lib/android/src/X.kt b/node_modules/some-lib/android/src/X.kt\ndiff --git a/node_modules/some-lib/android/build/intermediates/R.txt b/node_modules/some-lib/android/build/intermediates/R.txt\n',
-    'patches/@scope+other+1.0.0.patch': 'diff --git a/node_modules/@scope/other/index.js b/node_modules/@scope/other/index.js\n',
+    'patches/@scope+other+1.0.0.patch': 'diff --git a/node_modules/@scope/other/index.js b/node_modules/@scope/other/index.js\ndiff --git a/node_modules/@scope/other/.DS_Store b/node_modules/@scope/other/.DS_Store\nnew file mode 100644\nBinary files /dev/null and b/node_modules/@scope/other/.DS_Store differ\n',
   }));
   const byId = Object.fromEntries(nativeChecks(loadProject(root), { now: NOW }).map((f) => [f.id, f]));
   assert.match(byId['patch-artifacts:some-lib+3.2.0.patch'].detail, /1 file\(s\) under android\/ios build folders/);

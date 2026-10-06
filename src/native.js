@@ -200,7 +200,8 @@ export function nativeChecks(project, { rnLatest = null, now = new Date() } = {}
     patched.push({ file: f, pkg, version });
     const text = read(path.join(patchDir, f)) || '';
     const buildPaths = (text.match(/^diff --git a\/node_modules\/\S+?\/(?:android|ios)\/(?:build|\.cxx|\.gradle)\//gm) || []).length;
-    const binary = /^GIT binary patch|^Binary files /m.test(text);
+    // Finder/Explorer junk (.DS_Store, Thumbs.db) caught in a patch is harmless noise.
+    const binary = text.split(/^diff --git /m).some((part) => /^GIT binary patch|^Binary files /m.test(part) && !/^\S*?(?:\.DS_Store|Thumbs\.db)\b/.test(part));
     if (buildPaths || binary) {
       add({
         id: `patch-artifacts:${f}`,
@@ -400,7 +401,7 @@ export function nativeChecks(project, { rnLatest = null, now = new Date() } = {}
         return false;
       }
     };
-    const signing = tracked.filter((f) => /\.(jks|keystore)$/i.test(f) && !/debug/i.test(path.basename(f)) && nonEmpty(f));
+    const signing = tracked.filter((f) => /\.(jks|keystore)$/i.test(f) && !/debug|fake|dummy/i.test(path.basename(f)) && !/(?:^|\/)(?:__tests__|tests?|e2e|fixtures?)\//.test(f) && nonEmpty(f));
     for (const f of signing) {
       add({
         id: `signing-keystore:${f}`,
