@@ -23,6 +23,12 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 280+ open-source React Native and Expo apps to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.13</h2><p class="date">6 October 2026</p>
+<ul>
+<li><span class="tag">Performance</span><b>Speed up the app.</b> A new plan phase for the static signs of jank and weight: a FlatList inside a ScrollView that renders every row, animations driven from the JavaScript thread, console logs left in release builds, whole-library imports of lodash and moment, and oversized images the app actually requires (repo screenshots are not counted).</li>
+<li><span class="tag">Security</span><b>Reverse engineering.</b> Source maps packaged into the app (they give back your original code), and release builds with Hermes or R8 off. Reported honestly: obfuscation only slows an attacker down, so secrets and trust decisions belong on the server. A new MASVS-RESILIENCE group in the security overview.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.12</h2><p class="date">5 October 2026</p>
 <ul>
 <li><span class="tag">Security</span><b>Hacking risks, mapped to OWASP MASVS.</b> Every security finding now names its MASVS group, and reports show a security overview: which groups were checked and how many issues each has.</li>
