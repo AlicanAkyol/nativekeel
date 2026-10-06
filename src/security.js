@@ -588,7 +588,7 @@ export const MASVS_GROUPS = {
 };
 
 export function masvsOf(id) {
-  if (/^(secret:|env-bundled|crypto-)/.test(id)) return 'CRYPTO';
+  if (/^(secret:|env-bundled|crypto-|expo-secret)/.test(id)) return 'CRYPTO';
   if (/^(password-leak|token-unencrypted|android-allow-backup)/.test(id)) return 'STORAGE';
   if (/^(insecure-tls|user-certificates|plain-http|ios-ats|android-cleartext)/.test(id)) return 'NETWORK';
   if (/^(webview-|android-exported)/.test(id)) return 'PLATFORM';
@@ -643,6 +643,70 @@ export function reverseEngineering(root, project) {
       title: 'The release build is easy to read back',
       detail: `${factors.join('; ')}. Any React Native app can be unpacked, and obfuscation only slows that down, so never rely on it: keep secrets and checks that matter (prices, entitlements, admin flags) on the server. Turning these on is still cheap. (OWASP MASVS-RESILIENCE)`,
       fix: { kind: 'security', step: `${hermesOff ? 'Turn on Hermes. ' : ''}${r8Off ? 'Set `enableProguardInReleaseBuilds = true` in `android/app/build.gradle` and test a release build (add keep rules for libraries that need them). ' : ''}Keep secrets and trust decisions on the server.` },
+    });
+  }
+  return findings;
+}
+
+// Secrets in Expo config: app.json/app.config `extra` ships inside the app (Constants.expoConfig),
+// EXPO_PUBLIC_ variables are compiled into the bundle, and eas.json build env is committed.
+// Names alone decide; many SDK "API keys" are public by design, so those are left alone.
+const SECRET_NAME = /(?:secret|private|password|passwd|auth[_-]?token|access[_-]?token|refresh[_-]?token|access[_-]?key|service[_-]?role|admin[_-]?key|token$)/i;
+const maskValue = (v) => (v.length <= 8 ? '****' : `${v.slice(0, 4)}…${v.slice(-2)}`);
+
+export function expoConfigSecrets(root) {
+  const findings = [];
+  const shipped = [];
+  const committed = [];
+  const looksReal = (v) => typeof v === 'string' && v.length >= 12 && !/^\$\{|^process\.env|example|placeholder|your[_-]|xxx|changeme|<.*>/i.test(v);
+
+  let app = null;
+  try {
+    app = JSON.parse(read(path.join(root, 'app.json')) || 'null');
+  } catch {
+    // not JSON
+  }
+  const extra = (app && (app.expo || app).extra) || {};
+  for (const [k, v] of Object.entries(extra)) if (SECRET_NAME.test(k) && looksReal(v)) shipped.push({ where: `app.json extra.${k}`, value: v });
+  for (const f of ['app.config.js', 'app.config.ts']) {
+    const text = read(path.join(root, f));
+    const block = text && text.match(/\bextra\s*:\s*\{([\s\S]*?)\n\s*\}/);
+    if (!block) continue;
+    for (const m of block[1].matchAll(/([A-Za-z_][\w]*)\s*:\s*['"`]([^'"`\n]{12,})['"`]/g)) {
+      if (SECRET_NAME.test(m[1]) && looksReal(m[2])) shipped.push({ where: `${f} extra.${m[1]}`, value: m[2] });
+    }
+  }
+  let eas = null;
+  try {
+    eas = JSON.parse(read(path.join(root, 'eas.json')) || 'null');
+  } catch {
+    // not JSON
+  }
+  for (const [profile, cfg] of Object.entries((eas && eas.build) || {})) {
+    for (const [k, v] of Object.entries((cfg && cfg.env) || {})) {
+      if (!SECRET_NAME.test(k) || !looksReal(v)) continue;
+      if (k.startsWith('EXPO_PUBLIC_')) shipped.push({ where: `eas.json build.${profile}.env.${k}`, value: v });
+      else committed.push({ where: `eas.json build.${profile}.env.${k}`, value: v });
+    }
+  }
+  if (shipped.length) {
+    findings.push({
+      id: 'expo-secret-shipped',
+      severity: 'high',
+      area: 'security',
+      title: `Secret-looking value${shipped.length === 1 ? '' : 's'} shipped inside the app via Expo config (${shipped[0].where})`,
+      detail: `${shipped.map((s) => `${s.where} = ${maskValue(s.value)}`).slice(0, 3).join('; ')}. Expo \`extra\` is readable from the app manifest and EXPO_PUBLIC_ variables are compiled into the bundle, so anyone with the app can read them. Revoke them and move the calls that need them to a server. (OWASP MASVS-CRYPTO)`,
+      fix: { kind: 'secret', label: 'Secret in Expo config', file: shipped[0].where.split(' ')[0], line: 1, bundled: true },
+    });
+  }
+  if (committed.length) {
+    findings.push({
+      id: 'expo-secret-committed',
+      severity: 'high',
+      area: 'security',
+      title: `Secret committed in eas.json (${committed[0].where})`,
+      detail: `${committed.map((s) => `${s.where} = ${maskValue(s.value)}`).slice(0, 3).join('; ')}. Everyone with repository access can use it (a Sentry auth token, for example, can read and change your Sentry organisation). Rotate it and store it as an EAS secret (\`eas env:create\`) instead. (OWASP MASVS-CRYPTO)`,
+      fix: { kind: 'secret', label: 'Secret in eas.json', file: 'eas.json', line: 1, bundled: false },
     });
   }
   return findings;

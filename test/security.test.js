@@ -191,3 +191,16 @@ test('reverse engineering: source maps in the app, and an easy-to-read release b
   assert.match(easy[0].detail, /Hermes is off.*R8\/ProGuard is off/);
   assert.equal(reverseEngineering(makeProject({ 'android/app/build.gradle': 'def enableProguardInReleaseBuilds = true' }), project).length, 0);
 });
+
+test('Expo config secrets: extra and EXPO_PUBLIC_ ship, eas.json env is committed, public SDK keys are fine', async () => {
+  const { expoConfigSecrets } = await import('../src/security.js');
+  const tok = ['sntrys', '_eyJpYXQiOjE3', 'MDAwMDAwMDB9'].join('');
+  const root = makeProject({
+    'app.json': JSON.stringify({ expo: { extra: { stripeSecretKey: 'sk_test_abcdefghijklmnop', apiUrl: 'https://api.example-shop.com' } } }),
+    'eas.json': JSON.stringify({ build: { production: { env: { SENTRY_AUTH_TOKEN: tok, EXPO_PUBLIC_RC_ANDROID_API_KEY: 'goog_abcdefghijklmnop' } } } }),
+  });
+  const found = expoConfigSecrets(root);
+  assert.deepEqual(found.map((f) => f.id).sort(), ['expo-secret-committed', 'expo-secret-shipped']);
+  assert.ok(!JSON.stringify(found).includes(tok), 'values are masked');
+  assert.ok(!JSON.stringify(found).includes('RC_ANDROID_API_KEY'), 'public SDK keys are not reported');
+});
