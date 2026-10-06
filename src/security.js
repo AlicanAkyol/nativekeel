@@ -584,6 +584,7 @@ export const MASVS_GROUPS = {
   NETWORK: 'Network traffic',
   PLATFORM: 'WebViews and platform interaction',
   CODE: 'Dependencies and build',
+  RESILIENCE: 'Reverse engineering',
 };
 
 export function masvsOf(id) {
@@ -593,5 +594,56 @@ export function masvsOf(id) {
   if (/^(webview-|android-exported)/.test(id)) return 'PLATFORM';
   if (/^firebase-/.test(id)) return 'AUTH';
   if (/^(vuln:|signing-|android-debuggable)/.test(id)) return 'CODE';
+  if (/^(sourcemap-in-app|easy-reverse-engineering)/.test(id)) return 'RESILIENCE';
   return null;
+}
+
+// How easily the shipped app reads back as source (MASVS-RESILIENCE). React Native JavaScript is
+// recoverable from any APK/IPA; Hermes bytecode and R8 only slow that down. The real defence is
+// keeping secrets and trust decisions off the device, so this is advice, not an alarm.
+export function reverseEngineering(root, project) {
+  const findings = [];
+  // Source maps packaged into the app give back the original code, names and comments.
+  const mapDirs = [path.join(root, 'android', 'app', 'src', 'main', 'assets'), path.join(root, 'ios')];
+  const maps = [];
+  const scan = (dir, depth) => {
+    let entries = [];
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const e of entries) {
+      if (e.isDirectory() && depth < 3 && !['Pods', 'build', 'DerivedData'].includes(e.name)) scan(path.join(dir, e.name), depth + 1);
+      else if (/\.(?:bundle|jsbundle|hbc)\.map$|^index\.android\.bundle\.map$|^main\.jsbundle\.map$/.test(e.name)) maps.push(path.relative(root, path.join(dir, e.name)));
+    }
+  };
+  for (const d of mapDirs) scan(d, 0);
+  if (maps.length) {
+    findings.push({
+      id: 'sourcemap-in-app',
+      severity: 'high',
+      area: 'security',
+      title: `A source map is packaged into the app (${maps[0]})`,
+      detail: 'Anyone who unzips the APK/IPA gets your original JavaScript with names and comments. Upload source maps to your crash reporter instead, and keep them out of the app folders. (OWASP MASVS-RESILIENCE)',
+      fix: { kind: 'security', step: `Remove \`${maps[0]}\` from the app sources (and from git), and upload source maps to the crash reporter instead.` },
+    });
+  }
+
+  const gradle = read(path.join(root, 'android', 'app', 'build.gradle')) || read(path.join(root, 'android', 'app', 'build.gradle.kts')) || '';
+  const props = read(path.join(root, 'android', 'gradle.properties')) || '';
+  const r8Off = gradle && (/enableProguardInReleaseBuilds\s*=\s*false/.test(gradle) || /release\s*\{[^}]*minifyEnabled\s*\(?\s*false/.test(gradle));
+  const hermesOff = /^\s*hermesEnabled\s*=\s*false/m.test(props) || /hermes_enabled\s*=>\s*false/.test(read(path.join(root, 'ios', 'Podfile')) || '');
+  const factors = [hermesOff && 'Hermes is off, so the JavaScript ships as readable text', r8Off && 'R8/ProGuard is off, so Java/Kotlin class and method names stay readable'].filter(Boolean);
+  if (factors.length && !project.managed) {
+    findings.push({
+      id: 'easy-reverse-engineering',
+      severity: 'low',
+      area: 'security',
+      title: 'The release build is easy to read back',
+      detail: `${factors.join('; ')}. Any React Native app can be unpacked, and obfuscation only slows that down, so never rely on it: keep secrets and checks that matter (prices, entitlements, admin flags) on the server. Turning these on is still cheap. (OWASP MASVS-RESILIENCE)`,
+      fix: { kind: 'security', step: `${hermesOff ? 'Turn on Hermes. ' : ''}${r8Off ? 'Set `enableProguardInReleaseBuilds = true` in `android/app/build.gradle` and test a release build (add keep rules for libraries that need them). ' : ''}Keep secrets and trust decisions on the server.` },
+    });
+  }
+  return findings;
 }

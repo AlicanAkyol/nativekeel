@@ -66,6 +66,7 @@ const WEIGHTS = {
   'folly-flags': () => 0.25,
   'default-react-host': () => 0.25,
   crash: () => 1,
+  performance: () => 0.5,
   security: () => 1,
   'vuln-dep': (f) => (f.severity === 'critical' || f.severity === 'high' ? 1 : 0.25),
 };
@@ -523,6 +524,15 @@ export function buildPlan(result) {
         if (owned) return `\`${d.name}\`: you already use \`${owned}\`; move the remaining usage there, then \`${pm.remove} ${d.name}\`.`;
         return `\`${d.name}\`${d.alternatives.length ? `: options ${d.alternatives.map((a) => `\`${a}\``).join(', ')}` : ': look for a maintained alternative, or keep it if it does what you need'}.`;
       }),
+    });
+  }
+
+  const perf = byKind('performance');
+  if (perf.length) {
+    phases.push({
+      title: 'Speed up the app',
+      why: 'Static signs of jank and weight. Measure on a low-end Android device before and after: these are the usual suspects, not proof.',
+      steps: perf.map((p) => p.step),
     });
   }
 

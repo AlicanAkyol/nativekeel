@@ -5,7 +5,8 @@ import { createRegistry, fetchJson } from './registry.js';
 import { scanSecrets } from './secrets.js';
 import { nativeChecks } from './native.js';
 import { stabilityChecks } from './stability.js';
-import { vulnerableDependencies, passwordLeaks, webViewRisks, androidBackup, exportedComponents, plainHttpCalls, cloudRules, insecureTls, weakCrypto, tokenStorage, masvsOf, MASVS_GROUPS } from './security.js';
+import { performanceChecks } from './performance.js';
+import { vulnerableDependencies, passwordLeaks, webViewRisks, androidBackup, exportedComponents, plainHttpCalls, cloudRules, insecureTls, weakCrypto, tokenStorage, reverseEngineering, masvsOf, MASVS_GROUPS } from './security.js';
 import { lockedVersions } from './lockfile.js';
 import { findUnused, filesImportingWith } from './usage.js';
 import { matchKnownIssues, compareVersions } from './known-issues.js';
@@ -403,9 +404,11 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
   // 7. Secrets
   // Setups that build and then crash at runtime.
   for (const f of stabilityChecks(project)) add(f);
+  // Static signs of performance problems.
+  for (const f of performanceChecks(project)) add(f);
 
   // Security beyond leaked keys.
-  for (const f of [...passwordLeaks(project.root), ...webViewRisks(project.root), ...androidBackup(project.root), ...exportedComponents(project.root), ...plainHttpCalls(project.root), ...cloudRules(project.root, project.deps, now), ...insecureTls(project.root), ...weakCrypto(project.root), ...tokenStorage(project.root)]) add(f);
+  for (const f of [...passwordLeaks(project.root), ...webViewRisks(project.root), ...androidBackup(project.root), ...exportedComponents(project.root), ...plainHttpCalls(project.root), ...cloudRules(project.root, project.deps, now), ...insecureTls(project.root), ...weakCrypto(project.root), ...tokenStorage(project.root), ...reverseEngineering(project.root, project)]) add(f);
   if (!forcedOffline) {
     // Exact versions only (installed, else the lockfile): a range would be a guess.
     const locked = lockedVersions(project.root, project.deps);

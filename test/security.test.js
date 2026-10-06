@@ -179,3 +179,15 @@ test('dependencies from git are never matched against npm advisories', async () 
   const result = await analyze(loadProject(root), { get, now: new Date('2026-10-05') });
   assert.ok(!result.findings.some((f) => f.id === 'vuln:react-native-blue-crypto'));
 });
+
+test('reverse engineering: source maps in the app, and an easy-to-read release build', async () => {
+  const { reverseEngineering } = await import('../src/security.js');
+  const project = { managed: false };
+  const map = reverseEngineering(makeProject({ 'android/app/src/main/assets/index.android.bundle.map': '{}' }), project);
+  assert.equal(map[0].id, 'sourcemap-in-app');
+  assert.equal(map[0].severity, 'high');
+  const easy = reverseEngineering(makeProject({ 'android/app/build.gradle': 'def enableProguardInReleaseBuilds = false', 'android/gradle.properties': 'hermesEnabled=false' }), project);
+  assert.equal(easy[0].id, 'easy-reverse-engineering');
+  assert.match(easy[0].detail, /Hermes is off.*R8\/ProGuard is off/);
+  assert.equal(reverseEngineering(makeProject({ 'android/app/build.gradle': 'def enableProguardInReleaseBuilds = true' }), project).length, 0);
+});
