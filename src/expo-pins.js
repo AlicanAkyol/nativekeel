@@ -11,6 +11,7 @@ const EXPO_PINNED = new Set([
   '@react-native-async-storage/async-storage', '@react-native-community/datetimepicker', '@react-native-community/slider',
   '@react-native-community/netinfo', '@react-native-picker/picker', '@react-native-masked-view/masked-view',
   'lottie-react-native', '@shopify/flash-list', '@shopify/react-native-skia', '@stripe/stripe-react-native',
+  '@react-native-segmented-control/segmented-control', '@sentry/react-native', 'react-native-bootsplash',
 ]);
 
 export function expoPinnedNames(root) {

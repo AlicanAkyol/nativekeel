@@ -6,7 +6,7 @@ Health check for React Native and Expo apps. One command, no install, no account
 npx nativekeel
 ```
 
-**What's new in 0.1.19:** better plans for apps that are far behind: library targets that fit the React Native you have, not the latest. **0.1.18:** the upgrade plan only suggests library versions your current React Native supports, moves React Navigation and RN Firebase packages together, and says plainly when a vulnerable package has no fixed release. Recent releases added a *Start here* list in every report, hacking risks mapped to OWASP MASVS, crash and performance checks. Every check is tuned on 450+ open-source React Native and Expo apps to keep false alarms out. [All releases →](https://nativekeel.com/changelog)
+**What's new in 0.1.20:** warns about `ImageBackground`, `SafeAreaView`, `DrawerLayoutAndroid` and `UTFSequence`, which React Native has deprecated and will remove (143 of 470 apps we test import one). **0.1.19:** better plans for apps that are far behind: library targets that fit the React Native you have, not the latest. Recent releases added a *Start here* list in every report, hacking risks mapped to OWASP MASVS, crash and performance checks. Every check is tuned on 450+ open-source React Native and Expo apps to keep false alarms out. [All releases →](https://nativekeel.com/changelog)
 
 ```
 Summary  4 critical · 5 high · 4 medium · 6 low
@@ -30,7 +30,7 @@ Start here
 - **Will Google Play and the App Store accept your next build?** `targetSdk`, 16 KB memory pages (it also opens your built APK/AAB and checks every native library), the iOS privacy manifest, and missing Info.plist usage descriptions.
 
 **Crashes**
-- **Will it crash at runtime?** Reanimated without its Babel plugin or `react-native-worklets`, mixed `@react-native-firebase/*` or `@react-navigation/*` majors, a second copy of React or React Native inside a dependency, Kotlin modules that cannot load through the New Architecture interop layer, AppDelegate setups that crash in Release, camera/photos/location access without the Info.plist text iOS requires, imports of APIs removed from React Native core (`AsyncStorage`, `Picker`, `ViewPropTypes`, …), and traps learned from real upgrades.
+- **Will it crash at runtime?** Reanimated without its Babel plugin or `react-native-worklets`, mixed `@react-native-firebase/*` or `@react-navigation/*` majors, a second copy of React or React Native inside a dependency, Kotlin modules that cannot load through the New Architecture interop layer, AppDelegate setups that crash in Release, camera/photos/location access without the Info.plist text iOS requires, imports of APIs removed from React Native core (`AsyncStorage`, `Picker`, `ViewPropTypes`, …) or deprecated for removal (`ImageBackground`, `SafeAreaView`), and traps learned from real upgrades.
 
 **Security, grouped by OWASP MASVS**
 - **Secrets in the app or the repo:** AWS, Stripe, OpenAI, Anthropic, GitHub, Slack, SendGrid, Twilio, Shopify, Google OAuth and Supabase `service_role` keys, private keys, `.env` values compiled into the bundle, Expo `extra`/`EXPO_PUBLIC_`/`eas.json` secrets, signing keys and passwords.

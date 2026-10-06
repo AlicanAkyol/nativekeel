@@ -277,10 +277,19 @@ const REMOVED_FROM_CORE = {
   ART: 'react-native-svg',
 };
 const REMOVED_PROP_TYPES = ['ViewPropTypes', 'ColorPropType', 'EdgeInsetsPropType', 'PointPropType'];
+// Deprecated in core and announced for removal (RN index.js warnOnce, checked 0.78-0.87).
+// They still work; moving now avoids a crash when they are removed.
+const DEPRECATED_IN_CORE = {
+  SafeAreaView: { since: 81, use: 'react-native-safe-area-context' },
+  ImageBackground: { since: 87, use: 'a View with an absolutely positioned Image' },
+  DrawerLayoutAndroid: { since: 87, use: 'react-native-drawer-layout' },
+  UTFSequence: { since: 87, use: "Unicode escapes written directly (e.g. '\\ufeff')" },
+};
 
 export function removedCoreImports(project) {
   const root = project.root;
   const used = new Map(); // name -> first file:line
+  const deprecated = new Map();
   const files = [];
   const walk = (dir) => {
     let entries = [];
@@ -308,17 +317,31 @@ export function removedCoreImports(project) {
     for (const b of blocks) {
       for (const raw of b.names.split(',')) {
         const name = raw.trim().replace(/^type\s+/, '').split(/\s+as\s+/)[0].trim();
-        if ((REMOVED_FROM_CORE[name] || REMOVED_PROP_TYPES.includes(name)) && !used.has(name)) {
-          used.set(name, `${path.relative(root, file)}:${text.slice(0, b.index).split('\n').length}`);
-        }
+        const at = () => `${path.relative(root, file)}:${text.slice(0, b.index).split('\n').length}`;
+        if ((REMOVED_FROM_CORE[name] || REMOVED_PROP_TYPES.includes(name)) && !used.has(name)) used.set(name, at());
+        if (DEPRECATED_IN_CORE[name] && !deprecated.has(name)) deprecated.set(name, at());
       }
     }
   }
-  if (!used.size) return [];
   const minor = project.rnVersion ? Number(project.rnVersion.split('.')[1]) : null;
+  const findings = [];
+  if (deprecated.size) {
+    const names = [...deprecated.keys()];
+    const warnsNow = minor !== null && names.some((n) => minor >= DEPRECATED_IN_CORE[n].since);
+    findings.push({
+      id: 'deprecated-core-imports',
+      severity: 'low',
+      area: 'react-native',
+      title: `${names.join(', ')} ${names.length === 1 ? 'is' : 'are'} deprecated in React Native core and will be removed`,
+      detail: `${[...deprecated].map(([n, at]) => `${n} (${at}, deprecated in 0.${DEPRECATED_IN_CORE[n].since}) → ${DEPRECATED_IN_CORE[n].use}`).join('; ')}. ${warnsNow ? 'They already log a deprecation warning.' : 'They start logging a warning when you upgrade.'} Once removed, the import returns undefined and the screen crashes, so move off them while it is a small change.`,
+      fix: { kind: 'deprecated-core', step: `Replace ${names.map((n) => `\`${n}\` (→ ${DEPRECATED_IN_CORE[n].use})`).join(', ')} before React Native removes ${names.length === 1 ? 'it' : 'them'}.` },
+    });
+  }
+  if (!used.size) return findings;
   const crashesNow = [...used.keys()].some((n) => (REMOVED_PROP_TYPES.includes(n) ? minor >= 74 : minor >= 72));
   const list = [...used].map(([n, at]) => `${n} (${at}) → ${REMOVED_FROM_CORE[n] || 'deprecated-react-native-prop-types'}`);
   return [
+    ...findings,
     {
       id: 'crash-removed-core-imports',
       severity: crashesNow ? 'high' : 'medium',

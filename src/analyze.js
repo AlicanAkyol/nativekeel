@@ -218,7 +218,7 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
         severity: 'critical',
         area: 'store',
         title: `targetSdk ${target}: Google Play will reject your next update`,
-        detail: `Since ${updates.since} new apps and updates must target API ${updates.minimum}+ (extension possible until ${updates.extensionUntil}).`,
+        detail: `Since ${updates.since} new apps and updates must target API ${updates.minimum}+${today <= updates.extensionUntil ? ` (an extension you request in Play Console runs until ${updates.extensionUntil} at the latest)` : '; the extension period has ended'}.`,
         fix: { kind: 'target-sdk', from: target, to: updates.minimum },
       });
     }

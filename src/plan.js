@@ -315,6 +315,7 @@ export function buildPlan(result) {
   for (const p of byKind('patch-version')) {
     cleanup.push(`\`patches/${p.file}\` targets ${p.pkg} ${p.version} but ${p.installed} is installed: check whether the fix is still needed, then recreate or delete it.`);
   }
+  for (const d of byKind('deprecated-core')) cleanup.push(d.step);
   if (byKind('podfile-cli-require').length) {
     cleanup.push("Delete `require_relative '../node_modules/@react-native-community/cli-platform-ios/native_modules'` from `ios/Podfile`; `use_native_modules!` comes from React Native.");
   }

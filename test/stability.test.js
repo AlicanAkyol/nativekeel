@@ -76,3 +76,14 @@ test('APIs removed from React Native core: crash now or after the upgrade', () =
   assert.equal(src('0.74.0', "import { ViewPropTypes } from 'react-native';").severity, 'high');
   assert.equal(src('0.80.0', "import { View, Text } from 'react-native';\nimport AsyncStorage from '@react-native-async-storage/async-storage';"), undefined);
 });
+
+test('APIs deprecated in React Native core (removal announced): low, with the replacement', () => {
+  const find = (rn, code) => stabilityChecks(loadProject(makeProject({ 'package.json': { name: 'r', dependencies: { 'react-native': rn } }, 'src/A.js': code }))).find((f) => f.id === 'deprecated-core-imports');
+  const f = find('0.81.0', "import { View, ImageBackground, SafeAreaView } from 'react-native';");
+  assert.equal(f.severity, 'low');
+  assert.match(f.title, /ImageBackground, SafeAreaView are deprecated/);
+  assert.match(f.detail, /SafeAreaView \(src\/A\.js:1, deprecated in 0\.81\) → react-native-safe-area-context/);
+  assert.match(f.detail, /already log a deprecation warning/, 'SafeAreaView warns on 0.81');
+  assert.match(find('0.80.0', "import { ImageBackground } from 'react-native';").detail, /start logging a warning when you upgrade/);
+  assert.equal(find('0.81.0', "import { SafeAreaView } from 'react-native-safe-area-context';"), undefined);
+});
