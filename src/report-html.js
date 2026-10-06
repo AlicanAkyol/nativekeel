@@ -60,6 +60,7 @@ h1{font-size:26px;margin:0 0 4px}h2{font-size:19px;margin:32px 0 12px}h2 small{f
 .stat.critical b{color:var(--critical)}.stat.high b{color:var(--high)}
 .facts{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin-top:12px;display:flex;flex-wrap:wrap;gap:6px 24px;font-size:14px}
 ul.list{list-style:none;padding:0;margin:0;display:grid;gap:8px}
+main{overflow-wrap:anywhere}code{overflow-wrap:anywhere;word-break:break-word}.f>div,.sg,.stats>*{min-width:0}.facts{display:flex;flex-wrap:wrap;gap:6px 16px}
 .start{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;padding:6px 18px 10px;margin-top:20px}.start h2{margin:10px 0 6px}.start li{margin:6px 0}
 .secgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.sg{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column}.sg b{font-size:20px}.sg.ok b{color:var(--accent)}.sg.bad b{color:var(--critical)}.sg small{color:var(--muted)}@media (max-width:560px){.secgrid{grid-template-columns:1fr 1fr}}
 details.bumps{margin-top:8px;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--low);border-radius:8px;padding:10px 14px}details.bumps summary{cursor:pointer;font-weight:600}details.bumps table{width:100%;border-collapse:collapse;margin-top:10px;font-size:14px}details.bumps th,details.bumps td{text-align:left;padding:4px 8px;border-top:1px solid var(--line)}.muted{color:var(--muted);font-weight:400}
