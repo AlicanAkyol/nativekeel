@@ -6,7 +6,7 @@ Health check for React Native and Expo apps. One command, no install, no account
 npx nativekeel
 ```
 
-**What's new in 0.1.15:** run it at a monorepo root and it lists the app folders to scan. **0.1.14:** secrets in Expo config (`extra`, `EXPO_PUBLIC_`, `eas.json`) and imports of APIs removed from React Native core. Recent releases added a *Start here* list in every report, hacking risks mapped to OWASP MASVS, crash and performance checks. Every check is tuned on 280+ open-source React Native and Expo apps to keep false alarms out. [All releases →](https://nativekeel.com/changelog)
+**What's new in 0.1.16:** deep-link checks: unverified Android App Links, and the template `myapp://` scheme that other apps can claim (MASVS-PLATFORM). **0.1.15:** run it at a monorepo root and it lists the app folders to scan. **0.1.14:** secrets in Expo config (`extra`, `EXPO_PUBLIC_`, `eas.json`) and imports of APIs removed from React Native core. Recent releases added a *Start here* list in every report, hacking risks mapped to OWASP MASVS, crash and performance checks. Every check is tuned on 450+ open-source React Native and Expo apps to keep false alarms out. [All releases →](https://nativekeel.com/changelog)
 
 ```
 Summary  4 critical · 5 high · 4 medium · 6 low
@@ -38,7 +38,7 @@ Start here
 - **Network:** TLS certificate checks turned off in native code, cleartext HTTP, `NSAllowsArbitraryLoads`, plain-HTTP API calls, user-installed CAs in release.
 - **Backend rules:** Firebase Realtime Database, Firestore and Storage rules open to anyone or in test mode.
 - **Cryptography:** hardcoded encryption keys, MD5/SHA-1 on passwords, ECB mode, `Math.random` for nonces and salts.
-- **Platform:** WebViews that read local files or load HTTP into HTTPS, Android components any app can start.
+- **Platform:** WebViews that read local files or load HTTP into HTTPS, Android components any app can start, unverified deep links and the template `myapp://` URL scheme.
 - **Dependencies and reverse engineering:** known vulnerabilities in the exact versions you ship (GitHub Advisory Database), source maps in the app, Hermes or R8 off.
 
 These are static checks: they catch the common, detectable mistakes, not everything a penetration test of the running app and backend would.
