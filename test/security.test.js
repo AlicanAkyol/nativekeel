@@ -204,3 +204,22 @@ test('Expo config secrets: extra and EXPO_PUBLIC_ ship, eas.json env is committe
   assert.ok(!JSON.stringify(found).includes(tok), 'values are masked');
   assert.ok(!JSON.stringify(found).includes('RC_ANDROID_API_KEY'), 'public SDK keys are not reported');
 });
+
+test('deep links: unverified web links, autoVerify anywhere verifies all hosts, template scheme', async () => {
+  const { deepLinks } = await import('../src/security.js');
+  const filter = (attrs, data) => `<intent-filter ${attrs}><action android:name="android.intent.action.VIEW" /><category android:name="android.intent.category.DEFAULT" /><category android:name="android.intent.category.BROWSABLE" />${data}</intent-filter>`;
+  const manifest = (...filters) => ({ 'android/app/src/main/AndroidManifest.xml': `<manifest><application><activity android:name=".MainActivity">${filters.join('')}</activity></application></manifest>` });
+
+  const invite = deepLinks(makeProject(manifest(filter('', '<data android:scheme="https" android:host="invite.example.org" />'))));
+  assert.deepEqual(invite.map((f) => [f.id, f.severity]), [['deeplink-unverified', 'medium']]);
+  const plain = deepLinks(makeProject(manifest(filter('', '<data android:scheme="https" android:host="www.example.org" />'))));
+  assert.equal(plain[0].severity, 'low');
+  const verifiedElsewhere = manifest(filter('android:autoVerify="true"', '<data android:scheme="https" android:host="a.example.org" />'), filter('', '<data android:scheme="https" android:host="b.example.org" />'));
+  assert.equal(deepLinks(makeProject(verifiedElsewhere)).length, 0);
+  assert.equal(deepLinks(makeProject(manifest(filter('', '<data android:scheme="https" />')))).length, 0, 'catch-all browser filters have no host to verify');
+
+  const expo = (scheme) => makeProject({ 'app.json': JSON.stringify({ expo: { scheme } }) });
+  assert.deepEqual(deepLinks(expo('myapp')).map((f) => [f.id, f.severity]), [['deeplink-template-scheme', 'low']]);
+  assert.equal(deepLinks(expo('myapp'), { 'expo-auth-session': '~6.0.0' })[0].severity, 'medium');
+  assert.equal(deepLinks(expo('com.acme.shop')).length, 0);
+});

@@ -591,7 +591,7 @@ export function masvsOf(id) {
   if (/^(secret:|env-bundled|crypto-|expo-secret)/.test(id)) return 'CRYPTO';
   if (/^(password-leak|token-unencrypted|android-allow-backup)/.test(id)) return 'STORAGE';
   if (/^(insecure-tls|user-certificates|plain-http|ios-ats|android-cleartext)/.test(id)) return 'NETWORK';
-  if (/^(webview-|android-exported)/.test(id)) return 'PLATFORM';
+  if (/^(webview-|android-exported|deeplink-)/.test(id)) return 'PLATFORM';
   if (/^firebase-/.test(id)) return 'AUTH';
   if (/^(vuln:|signing-|android-debuggable)/.test(id)) return 'CODE';
   if (/^(sourcemap-in-app|easy-reverse-engineering)/.test(id)) return 'RESILIENCE';
@@ -707,6 +707,97 @@ export function expoConfigSecrets(root) {
       title: `Secret committed in eas.json (${committed[0].where})`,
       detail: `${committed.map((s) => `${s.where} = ${maskValue(s.value)}`).slice(0, 3).join('; ')}. Everyone with repository access can use it (a Sentry auth token, for example, can read and change your Sentry organisation). Rotate it and store it as an EAS secret (\`eas env:create\`) instead. (OWASP MASVS-CRYPTO)`,
       fix: { kind: 'secret', label: 'Secret in eas.json', file: 'eas.json', line: 1, bundled: false },
+    });
+  }
+  return findings;
+}
+
+// Deep links (MASVS-PLATFORM). A web link (https://your.domain/...) opens the app only when the
+// domain is verified (autoVerify + assetlinks.json); without it Android 12+ opens the browser,
+// and older Android lets any app that registers the same link receive it. Custom URL schemes can
+// be registered by any app, so the template scheme "myapp" is shared with every other app that
+// kept it, and an OAuth redirect to it can land in the wrong app.
+const TEMPLATE_SCHEMES = new Set(['myapp', 'my-app', 'myscheme', 'your-app-scheme', 'yourappscheme']);
+const SENSITIVE_LINK = /auth|login|signin|sign-in|reset|verify|magic|invite|oauth|callback|token/i;
+const OAUTH_DEPS = ['expo-auth-session', '@clerk/clerk-expo', 'react-native-app-auth', '@react-native-community/oauth', 'react-native-auth0'];
+
+export function deepLinks(root, deps = {}) {
+  const findings = [];
+  const unverified = new Map(); // host -> sensitive?
+  const schemes = new Set();
+  const realHost = (h) => h && !/[*$@{]/.test(h) && h.includes('.') && !/^(?:localhost|127\.|10\.|192\.168\.)/.test(h);
+
+  // autoVerify on any one filter makes Android verify every web host in the manifest.
+  const manifest = read(path.join(root, 'android', 'app', 'src', 'main', 'AndroidManifest.xml')) || '';
+  const anyVerified = /<intent-filter\b[^>]*android:autoVerify\s*=\s*"true"/.test(manifest);
+  for (const m of manifest.matchAll(/<intent-filter\b([^>]*)>([\s\S]*?)<\/intent-filter>/g)) {
+    const body = m[2];
+    if (!/android\.intent\.category\.BROWSABLE/.test(body)) continue;
+    const found = [...body.matchAll(/android:scheme\s*=\s*"([^"]+)"/g)].map((x) => x[1]);
+    for (const s of found) if (!/^https?$/.test(s)) schemes.add(s.toLowerCase());
+    if (anyVerified || !found.some((s) => /^https?$/.test(s))) continue;
+    const paths = [...body.matchAll(/android:path(?:Prefix|Pattern)?\s*=\s*"([^"]+)"/g)].map((x) => x[1]).join(' ');
+    for (const h of body.matchAll(/android:host\s*=\s*"([^"]+)"/g)) {
+      if (realHost(h[1])) unverified.set(h[1], unverified.get(h[1]) || SENSITIVE_LINK.test(`${h[1]} ${paths}`));
+    }
+  }
+
+  let app = null;
+  try {
+    app = JSON.parse(read(path.join(root, 'app.json')) || 'null');
+  } catch {
+    // not JSON
+  }
+  const expo = (app && (app.expo || app)) || {};
+  for (const s of [].concat(expo.scheme || [])) if (typeof s === 'string') schemes.add(s.toLowerCase());
+  for (const f of ['app.config.js', 'app.config.ts']) {
+    const text = read(path.join(root, f)) || '';
+    for (const m of text.matchAll(/\bscheme\s*:\s*['"`]([\w.+-]+)['"`]/g)) schemes.add(m[1].toLowerCase());
+  }
+  const expoFilters = (expo.android && expo.android.intentFilters) || [];
+  for (const filter of expoFilters.some((f) => f && f.autoVerify) ? [] : expoFilters) {
+    if (!filter || ![].concat(filter.category || []).includes('BROWSABLE')) continue;
+    for (const d of [].concat(filter.data || [])) {
+      if (d && /^https?$/.test(d.scheme || '') && realHost(d.host)) {
+        unverified.set(d.host, unverified.get(d.host) || SENSITIVE_LINK.test(`${d.host} ${d.pathPrefix || ''} ${d.path || ''} ${d.pathPattern || ''}`));
+      }
+    }
+  }
+  let iosDirs = [];
+  try {
+    iosDirs = fs.readdirSync(path.join(root, 'ios'), { withFileTypes: true }).filter((e) => e.isDirectory() && !/^(?:Pods|build)$|Tests$|\.xc/.test(e.name));
+  } catch {
+    // no ios folder
+  }
+  for (const d of iosDirs) {
+    const plist = read(path.join(root, 'ios', d.name, 'Info.plist')) || '';
+    for (const block of plist.match(/<key>CFBundleURLSchemes<\/key>\s*<array>[\s\S]*?<\/array>/g) || []) {
+      for (const s of block.matchAll(/<string>([^<$]+)<\/string>/g)) schemes.add(s[1].toLowerCase());
+    }
+  }
+
+  if (unverified.size) {
+    const hosts = [...unverified.keys()];
+    const sensitive = hosts.filter((h) => unverified.get(h));
+    findings.push({
+      id: 'deeplink-unverified',
+      severity: sensitive.length ? 'medium' : 'low',
+      area: 'security',
+      title: `Web links to ${hosts.slice(0, 2).join(', ')}${hosts.length > 2 ? ` and ${hosts.length - 2} more` : ''} are not verified (no autoVerify)`,
+      detail: `On Android 12+ these links open in the browser instead of the app, and on older Android any installed app that registers the same links can receive them${sensitive.length ? ', including the login/reset/invite links that carry tokens' : ''}. For domains you own, add android:autoVerify="true" to the intent filter and publish /.well-known/assetlinks.json with your signing certificate. (OWASP MASVS-PLATFORM)`,
+      fix: { kind: 'security', step: `Add \`android:autoVerify="true"\` to the https intent filters for ${hosts.slice(0, 3).map((h) => `\`${h}\``).join(', ')} and serve \`https://${hosts[0]}/.well-known/assetlinks.json\`.` },
+    });
+  }
+  const template = [...schemes].filter((s) => TEMPLATE_SCHEMES.has(s));
+  if (template.length) {
+    const oauth = OAUTH_DEPS.filter((d) => deps[d]);
+    findings.push({
+      id: 'deeplink-template-scheme',
+      severity: oauth.length ? 'medium' : 'low',
+      area: 'security',
+      title: `The app still uses the template URL scheme "${template[0]}://"`,
+      detail: `Many other apps kept the same scheme, so ${template[0]}:// links can open a different app${oauth.length ? `, and the sign-in redirect of ${oauth.join(', ')} can be delivered to it` : ''}. Pick a scheme unique to your app (for example your bundle identifier). (OWASP MASVS-PLATFORM)`,
+      fix: { kind: 'security', step: `Replace the "${template[0]}" scheme with one unique to the app (app.json \`scheme\`, AndroidManifest and Info.plist), and update redirect URIs registered with your sign-in providers.` },
     });
   }
   return findings;
