@@ -250,3 +250,18 @@ test('no fixed release: "<=" up to the latest published version (expr-eval 2.0.2
   assert.match(byName['expr-eval'].detail, /the latest is 2\.0\.2/);
   assert.equal(byName.lodash.fix.to, '4.18.1');
 });
+
+test('token storage by value: constant keys and objects with a token; push tokens are fine', async () => {
+  const { tokenStorage } = await import('../src/security.js');
+  const hits = (code) => { const [f] = tokenStorage(makeProject({ 'src/a.js': code })); return f ? f.detail : ''; };
+  assert.match(hits('await AsyncStorage.setItem(TOKEN_KEY, token);'), /TOKEN_KEY \(src\/a\.js:1\)/);
+  assert.match(hits("await AsyncStorage.setItem('authState', JSON.stringify({ token, expiresIn }));"), /'authState'/);
+  assert.equal(hits("await AsyncStorage.setItem('pushToken', expoPushToken);"), '');
+  assert.equal(hits("await AsyncStorage.setItem('fcm', token);"), '');
+  assert.equal(hits("await AsyncStorage.setItem('theme', 'dark');"), '');
+});
+
+test('token storage: web-only files are skipped', async () => {
+  const { tokenStorage } = await import('../src/security.js');
+  assert.equal(tokenStorage(makeProject({ 'src/keychain.web.ts': 'await AsyncStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);' })).length, 0);
+});

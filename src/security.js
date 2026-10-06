@@ -569,10 +569,24 @@ export function weakCrypto(root) {
 export function tokenStorage(root) {
   const hits = [];
   for (const file of jsFiles(root)) {
+    // Web-only files (keychain.web.ts) have no Keychain to use; the mobile file decides.
+    if (/\.web\.[cm]?[jt]sx?$/.test(file)) continue;
     const text = read(file);
     if (!text || !/AsyncStorage|MMKV/.test(text)) continue;
+    const at = (i) => `${path.relative(root, file)}:${text.slice(0, i).split('\n').length}`;
+    const seen = new Set();
+    // By key name: setItem('access_token', …)
     for (const m of text.matchAll(/\b(?:AsyncStorage\.setItem|storage\.set|mmkv\.set)\s*\(\s*['"`@]?([\w@.\-:]*?(?:access_?token|refresh_?token|auth_?token|id_?token|jwt|session_?token|bearer)[\w.\-:]*)['"`]?\s*,/gi)) {
-      hits.push(`${m[1]} (${path.relative(root, file)}:${text.slice(0, m.index).split('\n').length})`);
+      seen.add(m.index);
+      hits.push(`${m[1]} (${at(m.index)})`);
+    }
+    // By value: setItem(TOKEN_KEY, token), setItem('user', JSON.stringify({ token })). Push
+    // notification and device tokens are not secrets.
+    for (const m of text.matchAll(/\b(?:AsyncStorage\.setItem|(?:storage|mmkv)\.set(?:String)?)\s*\(\s*([^,()]{1,60}),\s*([^;\n]{0,120})/g)) {
+      if (seen.has(m.index)) continue;
+      if (!/\b(?:access_?token|refresh_?token|auth_?token|id_?token|session_?token|login_?token|accessToken|refreshToken|authToken|idToken|sessionToken|loginToken|jwt|token)\b/i.test(m[2])) continue;
+      if (/push|fcm|apns|expo_?push|notif|device|firebase|messaging/i.test(m[1] + m[2])) continue;
+      hits.push(`${m[1].trim()} (${at(m.index)})`);
     }
   }
   if (!hits.length) return [];
