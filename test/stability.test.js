@@ -87,3 +87,11 @@ test('APIs deprecated in React Native core (removal announced): low, with the re
   assert.match(find('0.80.0', "import { ImageBackground } from 'react-native';").detail, /start logging a warning when you upgrade/);
   assert.equal(find('0.81.0', "import { SafeAreaView } from 'react-native-safe-area-context';"), undefined);
 });
+
+test('core SafeAreaView with target SDK 35+: medium, Android edge-to-edge explained', () => {
+  const find = (files) => stabilityChecks(loadProject(makeProject({ 'package.json': { name: 'r', dependencies: { 'react-native': '0.79.0' } }, 'src/A.js': "import { SafeAreaView } from 'react-native';", ...files }))).find((f) => f.id === 'deprecated-core-imports');
+  const f = find({ 'android/build.gradle': 'buildscript { ext { targetSdkVersion = 35 } }', 'android/app/build.gradle': '' });
+  assert.equal(f.severity, 'medium');
+  assert.match(f.detail, /edge-to-edge/);
+  assert.equal(find({ 'android/build.gradle': 'buildscript { ext { targetSdkVersion = 34 } }', 'android/app/build.gradle': '' }).severity, 'low');
+});

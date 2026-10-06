@@ -328,12 +328,17 @@ export function removedCoreImports(project) {
   if (deprecated.size) {
     const names = [...deprecated.keys()];
     const warnsNow = minor !== null && names.some((n) => minor >= DEPRECATED_IN_CORE[n].since);
+    // Core SafeAreaView only ever applied to iOS. Targeting API 35+ (Expo SDK 52+ does), Android 15
+    // draws edge-to-edge, so those screens slide under the status bar today.
+    const target = project.android && project.android.targetSdk;
+    const expoMajor = project.expoVersion ? Number(String(project.expoVersion).split('.')[0]) : null;
+    const edgeToEdge = deprecated.has('SafeAreaView') && ((target && target >= 35) || (!target && expoMajor !== null && expoMajor >= 52));
     findings.push({
       id: 'deprecated-core-imports',
-      severity: 'low',
+      severity: edgeToEdge ? 'medium' : 'low',
       area: 'react-native',
       title: `${names.join(', ')} ${names.length === 1 ? 'is' : 'are'} deprecated in React Native core and will be removed`,
-      detail: `${[...deprecated].map(([n, at]) => `${n} (${at}, deprecated in 0.${DEPRECATED_IN_CORE[n].since}) → ${DEPRECATED_IN_CORE[n].use}`).join('; ')}. ${warnsNow ? 'They already log a deprecation warning.' : 'They start logging a warning when you upgrade.'} Once removed, the import returns undefined and the screen crashes, so move off them while it is a small change.`,
+      detail: `${[...deprecated].map(([n, at]) => `${n} (${at}, deprecated in 0.${DEPRECATED_IN_CORE[n].since}) → ${DEPRECATED_IN_CORE[n].use}`).join('; ')}. ${warnsNow ? 'They already log a deprecation warning.' : 'They start logging a warning when you upgrade.'} Once removed, the import returns undefined and the screen crashes, so move off them while it is a small change.${edgeToEdge ? ' SafeAreaView also does nothing on Android: with your target SDK, Android 15 and newer draw the app edge-to-edge, so those screens already sit under the status bar there. react-native-safe-area-context handles both platforms.' : ''}`,
       fix: { kind: 'deprecated-core', step: `Replace ${names.map((n) => `\`${n}\` (→ ${DEPRECATED_IN_CORE[n].use})`).join(', ')} before React Native removes ${names.length === 1 ? 'it' : 'them'}.` },
     });
   }

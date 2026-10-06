@@ -40,6 +40,11 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 450+ open-source React Native and Expo apps to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.23</h2><p class="date">6 October 2026</p>
+<ul>
+<li><span class="tag">Stability</span><b>SafeAreaView on Android 15.</b> The <code>SafeAreaView</code> from <code>'react-native'</code> only ever applied to iOS. Apps that target API level 35 or higher (Expo SDK 52+ do) are drawn edge-to-edge on Android 15 and newer, so screens wrapped in it already sit under the status bar there. When your target SDK is 35+, NativeKeel now says so and rates it medium; <code>react-native-safe-area-context</code> fixes both platforms. 29 apps in our test set are in this situation.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.22</h2><p class="date">6 October 2026</p>
 <ul>
 <li><span class="tag">Security</span><b>Auth tokens in plain storage, found by what is stored.</b> The check used to look only at the storage key (<code>setItem('access_token', …)</code>). It now also catches tokens saved under a constant (<code>setItem(TOKEN_KEY, token)</code>) or inside an object (<code>JSON.stringify({ token })</code>). Push notification and device tokens are left alone, and web-only files (<code>*.web.ts</code>) are skipped since the web has no Keychain. In our test set this finds 13 apps instead of 4.</li>
