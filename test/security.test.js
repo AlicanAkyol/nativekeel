@@ -240,3 +240,13 @@ test('deep links: unverified web links, autoVerify anywhere verifies all hosts, 
   assert.equal(deepLinks(expo('myapp'), { 'expo-auth-session': '~6.0.0' })[0].severity, 'medium');
   assert.equal(deepLinks(expo('com.acme.shop')).length, 0);
 });
+
+test('no fixed release: "<=" up to the latest published version (expr-eval 2.0.2)', async () => {
+  const registry = createRegistry(async () => ({ 'expr-eval': [{ title: 'Code execution', severity: 'critical', vulnerable_versions: '<=2.0.2' }], lodash: [{ title: 'Code injection via _.template', severity: 'high', vulnerable_versions: '>=4.0.0 <=4.17.23' }] }));
+  const found = await vulnerableDependencies(registry, { 'expr-eval': '2.0.2', lodash: '4.17.21' }, { 'expr-eval': '2.0.2', lodash: '4.18.1' });
+  const byName = Object.fromEntries(found.map((f) => [f.fix.name, f]));
+  assert.ok(byName['expr-eval'].fix.noFix);
+  assert.match(byName['expr-eval'].title, /no fixed release/);
+  assert.match(byName['expr-eval'].detail, /the latest is 2\.0\.2/);
+  assert.equal(byName.lodash.fix.to, '4.18.1');
+});

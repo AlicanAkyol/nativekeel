@@ -38,7 +38,7 @@ const SEVERITY = { critical: 'critical', high: 'high', moderate: 'medium', low: 
 const RANK = ['low', 'medium', 'high', 'critical'];
 
 // Advisories for the exact versions of runtime dependencies (devDependencies never ship).
-export async function vulnerableDependencies(registry, versions) {
+export async function vulnerableDependencies(registry, versions, latestOf = {}) {
   const names = Object.keys(versions);
   if (!names.length) return [];
   const advisories = await registry.advisories(versions);
@@ -55,7 +55,18 @@ export async function vulnerableDependencies(registry, versions) {
     const sevOf = (a) => (SERVER_ONLY.test(a.title || '') ? 'low' : SEVERITY[a.severity] || 'low');
     const severity = relevant.map(sevOf).sort((a, b) => RANK.indexOf(b) - RANK.indexOf(a))[0];
     const serverOnly = relevant.filter((a) => SERVER_ONLY.test(a.title || '')).length;
-    const fixedIn = minimumFixed(relevant);
+    let fixedIn = minimumFixed(relevant);
+    // Compare with what is published: "<=2.0.2" when 2.0.2 is the latest release means no fix exists.
+    const newest = latestOf[name];
+    let noFix = false;
+    if (fixedIn && newest) {
+      const after = fixedIn.startsWith('a release after ') ? fixedIn.slice('a release after '.length) : null;
+      if (after) {
+        if (compareVersions(newest, after) > 0) fixedIn = newest;
+        else noFix = true;
+      } else if (compareVersions(newest, fixedIn) < 0) noFix = true;
+      if (noFix) fixedIn = null;
+    }
     const top = relevant
       .slice()
       .sort((a, b) => RANK.indexOf(sevOf(b)) - RANK.indexOf(sevOf(a)))
@@ -65,9 +76,9 @@ export async function vulnerableDependencies(registry, versions) {
       id: `vuln:${name}`,
       severity,
       area: 'security',
-      title: `${name} ${version}: ${relevant.length} known vulnerabilit${relevant.length === 1 ? 'y' : 'ies'}${fixedIn ? ` (fixed in ${fixedIn})` : ''}`,
-      detail: `${top.join('; ')}${relevant.length > 3 ? `; and ${relevant.length - 3} more` : ''}. ${fixedIn ? `Fixed in ${fixedIn}${fixedIn.startsWith('a release') ? '' : ' or later'}.` : 'Check the advisories for a fixed version.'}${serverOnly ? ` ${serverOnly} of them concern Node.js/server use only and are counted as low.` : ''} Source: GitHub Advisory Database (via npm).`,
-      fix: { kind: 'vuln-dep', name, from: version, to: fixedIn, severity },
+      title: `${name} ${version}: ${relevant.length} known vulnerabilit${relevant.length === 1 ? 'y' : 'ies'}${fixedIn ? ` (fixed in ${fixedIn})` : noFix ? ' (no fixed release)' : ''}`,
+      detail: `${top.join('; ')}${relevant.length > 3 ? `; and ${relevant.length - 3} more` : ''}. ${fixedIn ? `Fixed in ${fixedIn}${fixedIn.startsWith('a release') ? '' : ' or later'}.` : noFix ? `No fixed release exists yet (the latest is ${newest}): replace it, or make sure it never handles untrusted input.` : 'Check the advisories for a fixed version.'}${serverOnly ? ` ${serverOnly} of them concern Node.js/server use only and are counted as low.` : ''} Source: GitHub Advisory Database (via npm).`,
+      fix: { kind: 'vuln-dep', name, from: version, to: fixedIn, noFix, latest: newest || null, severity },
     });
   }
   return findings;

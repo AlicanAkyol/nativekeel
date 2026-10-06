@@ -33,5 +33,5 @@ test('Gesture Handler: 2.x minimums and 3.x needs RN 0.82', () => {
   assert.equal(bestRange('react-native-gesture-handler', 80, true, { major: 2 }).range, '2.28–2.31.x');
   assert.match(checkCompat('react-native-gesture-handler', '2.33.0', 80, true), /0.84\+, not 0.80/);
   assert.equal(bestRange('react-native-gesture-handler', 84, true).range, '3.0+');
-  assert.equal(bestRange('react-native-gesture-handler', 84, true, { major: 2 }).range, '2.32–2.99.x');
+  assert.equal(bestRange('react-native-gesture-handler', 84, true, { major: 2 }).range, '2.32+ (2.x line)');
 });

@@ -259,7 +259,7 @@ test('hops before a deferred New Architecture switch use legacy-compatible versi
   const at78 = steps.find((s) => s.includes('→ 0.78.0'));
   assert.match(at78, /react-native-reanimated` 3\.19\.x/, 'Reanimated 4 needs the New Architecture, which is not on yet');
   const at84 = steps.find((s) => s.includes('→ 0.84.0'));
-  assert.match(at84, /react-native-gesture-handler` 2\.32–2\.99\.x \(or 3\.0\+/, 'continue on the 2.x line recommended before');
+  assert.match(at84, /react-native-gesture-handler` 2\.32\+ \(2\.x line\) \(or 3\.0\+/, 'continue on the 2.x line recommended before');
   assert.match(at84, /react-native-reanimated` 4\.6\.x \(a major migration/);
 });
 
@@ -298,4 +298,21 @@ test('security summary by OWASP MASVS group, in text and HTML', () => {
   const html = htmlReport(r);
   assert.match(html, /<h2>Security <small>OWASP MASVS<\/small><\/h2>/);
   assert.match(html, /do not replace a penetration test/);
+});
+
+test('native updates on the current React Native stop at what it supports', () => {
+  const r = {
+    ...result,
+    project: { ...result.project, reactNative: '0.77.3', expo: null },
+    deps: [{ name: 'react-native-reanimated', version: '3.16.0', native: true }, { name: 'react-native-blob-util', version: '0.21.3', native: true }],
+    findings: [
+      { id: 'dep-major:react-native-reanimated', severity: 'low', area: 'dependency', title: 'x', detail: 'x', fix: { kind: 'bump-dep', name: 'react-native-reanimated', from: '3.16.0', to: '4.7.1', native: true } },
+      { id: 'dep-major:react-native-blob-util', severity: 'low', area: 'dependency', title: 'x', detail: 'x', fix: { kind: 'bump-dep', name: 'react-native-blob-util', from: '0.21.3', to: '0.25.1', native: true } },
+    ],
+  };
+  const steps = buildPlan(r).phases.find((p) => p.title.startsWith('Update native modules')).steps;
+  assert.ok(steps.some((s) => s.startsWith('`react-native-blob-util` 0.21.3 → 0.25.1')));
+  const re = steps.find((s) => s.includes('react-native-reanimated'));
+  assert.ok(!/4\.7\.1/.test(re), 'Reanimated 4.7 does not run on React Native 0.77');
+  assert.match(re, /the newest for React Native 0\.77/);
 });

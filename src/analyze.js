@@ -426,7 +426,7 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
       const v = installedVersion(project.root, name) || locked[name];
       if (v && /^\d+\.\d+\.\d+/.test(v)) exact[name] = v;
     }
-    const vulns = await vulnerableDependencies(registry, exact);
+    const vulns = await vulnerableDependencies(registry, exact, latest);
     if (vulns === null) net.failed++;
     for (const f of vulns || []) add(f);
   }

@@ -108,6 +108,8 @@ const rnLabel = (row) => (row.rnMax ? `0.${row.rnMin}–0.${row.rnMax}` : `0.${r
 function versionLabel(row) {
   const from = row.from.replace(/\.0$/, '');
   if (!row.to) return `${from}+`;
+  // "2.99.99" means the rest of that major line.
+  if (/^\d+\.99\.99$/.test(row.to)) return `${from}+ (${row.to.split('.')[0]}.x line)`;
   const to = row.to.replace(/\.99$/, '');
   return from === to ? `${from}.x` : `${from}–${to}.x`;
 }

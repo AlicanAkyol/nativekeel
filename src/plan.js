@@ -3,6 +3,7 @@ import path from 'node:path';
 import { UPGRADE_HELPER_URL, NEW_ARCH_ONLY_MINOR } from './rules.js';
 import { SITE_URL } from './config.js';
 import { COMPAT, bestRange } from './compat.js';
+import { compareVersions } from './known-issues.js';
 import { expoPinnedNames, movesWithExpoSdk } from './expo-pins.js';
 
 // Turns a scan result into an ordered upgrade plan. The order matters more than the steps:
@@ -260,10 +261,13 @@ export function buildPlan(result) {
     } else if (f.fix.kind === 'ats') {
       sec.push({ sev, step: `In \`${f.fix.file}\`, set \`NSAllowsArbitraryLoads\` to false and list only the hosts that need HTTP under \`NSExceptionDomains\`.` });
     } else if (f.fix.kind === 'security') {
-      sec.push({ sev, step: f.fix.step });
+      // Hermes gets its own, more detailed step under legacy tooling.
+      const step = byKind('enable-hermes').length ? f.fix.step.replace('Turn on Hermes. ', '') : f.fix.step;
+      sec.push({ sev, step });
     } else if (f.fix.kind === 'vuln-dep' && (f.fix.severity === 'critical' || f.fix.severity === 'high')) {
       const v = f.fix;
-      sec.push({ sev, step: `Update \`${v.name}\` ${v.from}${v.to ? ` to ${v.to}${v.to.startsWith('a release') ? '' : ' or later'}` : ''}: it has ${v.severity} known vulnerabilities. ${movesWithExpo(v.name) ? 'Expo pins it: the SDK upgrade below moves it.' : 'Check its changelog for breaking changes.'}` });
+      if (v.noFix) sec.push({ sev, step: `\`${v.name}\` ${v.from} has ${v.severity} known vulnerabilities and no fixed release (the latest is ${v.latest}): replace it, or make sure it never handles untrusted input.` });
+      else sec.push({ sev, step: `Update \`${v.name}\` ${v.from}${v.to ? ` to ${v.to}${v.to.startsWith('a release') ? '' : ' or later'}` : ''}: it has ${v.severity} known vulnerabilities. ${movesWithExpo(v.name) ? 'Expo pins it: the SDK upgrade below moves it.' : 'Check its changelog for breaking changes.'}` });
     }
   }
   const securitySteps = sec.sort((a, b) => a.sev - b.sev).map((x) => x.step);
@@ -338,12 +342,26 @@ export function buildPlan(result) {
   }
 
   const expoMoves = byKind('bump-dep').filter((d) => movesWithExpo(d.name));
-  const nativeBumps = byKind('bump-dep').filter((d) => d.native && !movesWithExpo(d.name));
+  // Libraries with a compatibility table: only as far as the current React Native supports.
+  // The React Native steps move them further.
+  const curMinor = result.project.reactNative ? Number(result.project.reactNative.split('.')[1]) : null;
+  const archNow = !byKind('enable-new-arch').length;
+  const nativeBumps = byKind('bump-dep')
+    .filter((d) => d.native && !movesWithExpo(d.name))
+    .map((d) => {
+      if (!COMPAT[d.name] || curMinor === null) return d;
+      const best = bestRange(d.name, curMinor, archNow);
+      if (!best) return d;
+      if (compareVersions(d.from, best.from) >= 0 && (!best.to || compareVersions(d.from, best.to) <= 0)) return null;
+      if (compareVersions(d.from, best.from) > 0) return null;
+      return { ...d, to: best.range, capped: `0.${curMinor}` };
+    })
+    .filter(Boolean);
   if (nativeBumps.length) {
     phases.push({
       title: 'Update native modules on the current React Native version',
       why: 'Newer releases of native modules usually add New Architecture support. Pick the newest release that still supports your current React Native version; check each changelog for its minimum.',
-      steps: nativeBumps.map((d) => `\`${d.name}\` ${d.from} → ${d.to}`),
+      steps: nativeBumps.map((d) => `\`${d.name}\` ${d.from} → ${d.to}${d.capped ? ` (the newest for React Native ${d.capped}; later versions come with the React Native steps below)` : ''}`),
     });
   }
 
