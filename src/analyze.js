@@ -88,7 +88,7 @@ export function satisfiesExpoRange(version, range) {
 // `offline: true` means the user asked for no network access (get returns nothing).
 export async function analyze(project, { get, now = new Date(), offline: forcedOffline = false } = {}) {
   // Requests that failed even after retries (rate limits, network): reported, never hidden.
-  const net = { failed: 0 };
+  const net = { failed: 0, deadline: Date.now() + (Number(process.env.NATIVEKEEL_NETWORK_BUDGET_MS) || 90000) };
   const registry = createRegistry(get || ((url, headers, body) => fetchJson(url, headers, net, { body })));
   const findings = [];
   const add = (f) => findings.push(f);
@@ -118,7 +118,7 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
     warnings.push('This looks like a React Native library, not an app (react-native is a peer dependency, or android/ builds a library). App Store and Google Play checks were skipped; scan the app that uses it for those.');
   }
   const reportIncomplete = () => {
-    if (net.failed && !offline) warnings.push(`${net.failed} request${net.failed === 1 ? '' : 's'} to npm or React Native Directory failed (rate limit or network), so some dependency checks may be missing. Run again in a few minutes.`);
+    if (net.failed && !offline) warnings.push(`${net.failed} request${net.failed === 1 ? '' : 's'} to npm or React Native Directory failed (rate limit or network), so some dependency checks may be missing. Run again in a few minutes (a slow network stops after 90 seconds rather than hanging).`);
   };
   if (!offline && project.rnVersion && !rn) warnings.push('Could not fetch React Native releases from npm; version and New Architecture checks were skipped. Run again.');
   if (!offline && project.expoVersion && !expo) warnings.push('Could not fetch Expo releases from npm; the SDK check was skipped. Run again.');

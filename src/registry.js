@@ -7,8 +7,15 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // request still fails, `stats.failed` is incremented so the report can say it is incomplete.
 export async function fetchJson(url, headers = {}, stats = null, { retries = 3, wait = sleep, body = null } = {}) {
   for (let attempt = 0; ; attempt++) {
+    // A total network budget per scan (stats.deadline): on a slow network the report arrives with
+    // a warning instead of hanging for minutes.
+    const left = stats && stats.deadline ? stats.deadline - Date.now() : Infinity;
+    if (left <= 0) {
+      stats.failed++;
+      return null;
+    }
     try {
-      const init = { headers: { ...UA, ...headers }, signal: AbortSignal.timeout(30000) };
+      const init = { headers: { ...UA, ...headers }, signal: AbortSignal.timeout(Math.min(15000, left)) };
       if (body) Object.assign(init, { method: 'POST', body });
       const res = await fetch(url, init);
       if (res.ok) return await res.json();

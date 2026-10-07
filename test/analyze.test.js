@@ -377,3 +377,23 @@ test('old Expo: React Native from Expo\'s fork URL maps to the real version; oth
   const git = makeProject({ 'package.json': { name: 'g', dependencies: { 'react-native': 'github:someone/react-native#v0.70.1' } } });
   assert.equal(loadProject(git).rnVersion, null);
 });
+
+test('network budget: once the deadline has passed, requests are skipped and counted as failed', async () => {
+  const { fetchJson } = await import('../src/registry.js');
+  const realFetch = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = async () => {
+    calls++;
+    return new Response('{}');
+  };
+  try {
+    const stats = { failed: 0, deadline: Date.now() - 1 };
+    assert.equal(await fetchJson('https://registry.npmjs.org/x', {}, stats), null);
+    assert.equal(calls, 0, 'no request after the deadline');
+    assert.equal(stats.failed, 1);
+    const ok = { failed: 0, deadline: Date.now() + 60000 };
+    assert.deepEqual(await fetchJson('https://registry.npmjs.org/x', {}, ok), {});
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
