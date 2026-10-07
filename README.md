@@ -6,7 +6,7 @@ Health check for React Native and Expo apps. One command, no install, no account
 npx nativekeel
 ```
 
-**What's new in 0.1.24:** fewer false alarms from 200 apps pushed to GitHub last month (key placeholders, peer-installed worklets, test keystores), and a 90-second network budget so a slow registry never hangs a scan. **0.1.23:** the core `SafeAreaView` does nothing on Android, and with target SDK 35+ Android 15 draws your app under the status bar: now reported as medium. Recent releases added a *Start here* list in every report, hacking risks mapped to OWASP MASVS, crash and performance checks. Every check is tuned on 650+ open-source React Native and Expo apps, with recently updated ones added every week, to keep false alarms out ([what we found in them](https://dev.to/keel_alican_akyol/we-scanned-470-open-source-react-native-apps-here-is-what-breaks-them-5072)). [All releases →](https://nativekeel.com/changelog)
+**What's new in 0.1.25:** two new critical checks: Supabase tables without row level security (anyone with the app can read them), and permissions Google Play rejects or removes apps for. **0.1.24:** fewer false alarms from 200 apps pushed to GitHub last month (key placeholders, peer-installed worklets, test keystores), and a 90-second network budget so a slow registry never hangs a scan. Recent releases added a *Start here* list in every report, hacking risks mapped to OWASP MASVS, crash and performance checks. Every check is tuned on 650+ open-source React Native and Expo apps, with recently updated ones added every week, to keep false alarms out ([what we found in them](https://dev.to/keel_alican_akyol/we-scanned-470-open-source-react-native-apps-here-is-what-breaks-them-5072)). [All releases →](https://nativekeel.com/changelog)
 
 ```
 Summary  4 critical · 5 high · 4 medium · 6 low
@@ -27,7 +27,7 @@ Start here
 - **What can you simply delete?** Installed packages that nothing imports, references natively, requires or patches.
 
 **Store**
-- **Will Google Play and the App Store accept your next build?** `targetSdk`, 16 KB memory pages (it also opens your built APK/AAB and checks every native library), the iOS privacy manifest, and missing Info.plist usage descriptions.
+- **Will Google Play and the App Store accept your next build?** `targetSdk`, permissions Google Play restricts (photo/video, all files, background location, app installs, SMS), 16 KB memory pages (it also opens your built APK/AAB and checks every native library), the iOS privacy manifest, and missing Info.plist usage descriptions.
 
 **Crashes**
 - **Will it crash at runtime?** Reanimated without its Babel plugin or `react-native-worklets`, mixed `@react-native-firebase/*` or `@react-navigation/*` majors, a second copy of React or React Native inside a dependency, Kotlin modules that cannot load through the New Architecture interop layer, AppDelegate setups that crash in Release, camera/photos/location access without the Info.plist text iOS requires, imports of APIs removed from React Native core (`AsyncStorage`, `Picker`, `ViewPropTypes`, …) or deprecated for removal (`ImageBackground`, `SafeAreaView`), and traps learned from real upgrades.
@@ -36,7 +36,7 @@ Start here
 - **Secrets in the app or the repo:** AWS, Stripe, OpenAI, Anthropic, GitHub, Slack, SendGrid, Twilio, Shopify, Google OAuth and Supabase `service_role` keys, private keys, `.env` values compiled into the bundle, Expo `extra`/`EXPO_PUBLIC_`/`eas.json` secrets, signing keys and passwords.
 - **Data on the device:** passwords that flow into crash reports, analytics, databases or plain AsyncStorage (followed through variables), auth tokens in unencrypted storage, Android backups that copy them.
 - **Network:** TLS certificate checks turned off in native code, cleartext HTTP, `NSAllowsArbitraryLoads`, plain-HTTP API calls, user-installed CAs in release.
-- **Backend rules:** Firebase Realtime Database, Firestore and Storage rules open to anyone or in test mode.
+- **Backend rules:** Firebase Realtime Database, Firestore and Storage rules open to anyone or in test mode; Supabase tables created without row level security.
 - **Cryptography:** hardcoded encryption keys, MD5/SHA-1 on passwords, ECB mode, `Math.random` for nonces and salts.
 - **Platform:** WebViews that read local files or load HTTP into HTTPS, Android components any app can start, unverified deep links and the template `myapp://` URL scheme.
 - **Dependencies and reverse engineering:** known vulnerabilities in the exact versions you ship (GitHub Advisory Database), source maps in the app, Hermes or R8 off.

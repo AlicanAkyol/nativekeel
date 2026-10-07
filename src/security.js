@@ -626,7 +626,7 @@ export function masvsOf(id) {
   if (/^(password-leak|token-unencrypted|android-allow-backup)/.test(id)) return 'STORAGE';
   if (/^(insecure-tls|user-certificates|plain-http|ios-ats|android-cleartext)/.test(id)) return 'NETWORK';
   if (/^(webview-|android-exported|deeplink-)/.test(id)) return 'PLATFORM';
-  if (/^firebase-/.test(id)) return 'AUTH';
+  if (/^(firebase-|supabase-)/.test(id)) return 'AUTH';
   if (/^(vuln:|signing-|android-debuggable)/.test(id)) return 'CODE';
   if (/^(sourcemap-in-app|easy-reverse-engineering)/.test(id)) return 'RESILIENCE';
   return null;
@@ -835,4 +835,111 @@ export function deepLinks(root, deps = {}) {
     });
   }
   return findings;
+}
+
+// Supabase (MASVS-AUTH). The anon key ships in every copy of the app, so a table in the public
+// schema without row level security can be read and written by anyone through the REST API.
+// Only migrations under a supabase/ folder count: other SQL may target another database.
+export function supabaseRls(root) {
+  const repo = (() => {
+    let d = root;
+    for (let i = 0; i < 4 && !fs.existsSync(path.join(d, '.git')); i++) d = path.dirname(d);
+    return fs.existsSync(path.join(d, '.git')) ? d : root;
+  })();
+  const sqlFiles = [];
+  const walkSql = (dir, depth, inSupabase) => {
+    let entries = [];
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const e of entries) {
+      const p = path.join(dir, e.name);
+      if (e.isDirectory()) {
+        if (depth < 6 && !['node_modules', '.git', 'Pods', 'build', 'dist'].includes(e.name)) walkSql(p, depth + 1, inSupabase || e.name === 'supabase');
+      } else if (inSupabase && e.name.endsWith('.sql') && !/seed/i.test(e.name)) sqlFiles.push(p);
+    }
+  };
+  walkSql(repo, 0, false);
+  if (!sqlFiles.length) return [];
+  const sql = sqlFiles.map((f) => read(f) || '').join('\n').replace(/--[^\n]*/g, '');
+  // RLS switched on for every table in a loop (format('alter table %I.%I enable …')): trust it.
+  if (/enable row level security/i.test(sql) && /%I/.test(sql)) return [];
+  const name = (q) => q.replace(/"/g, '').toLowerCase();
+  const tables = new Map();
+  for (const m of sql.matchAll(/create table\s+(?:if not exists\s+)?((?:"?public"?\.)?"?\w+"?)\s*\(/gi)) {
+    const t = name(m[1]).replace(/^public\./, '');
+    if (!tables.has(t)) tables.set(t, path.relative(repo, sqlFiles.find((f) => (read(f) || '').includes(m[1])) || sqlFiles[0]));
+  }
+  const rls = new Set([...sql.matchAll(/alter table\s+(?:if exists\s+)?(?:only\s+)?((?:"?public"?\.)?"?\w+"?)\s+enable row level security/gi)].map((m) => name(m[1]).replace(/^public\./, '')));
+  for (const m of sql.matchAll(/alter table\s+(?:if exists\s+)?(?:only\s+)?((?:"?public"?\.)?"?\w+"?)\s+disable row level security/gi)) rls.delete(name(m[1]).replace(/^public\./, ''));
+  const open = [...tables].filter(([t]) => !rls.has(t));
+  if (!open.length) return [];
+  return [
+    {
+      id: 'supabase-rls-off',
+      severity: 'high',
+      area: 'security',
+      title: `${open.length} Supabase table${open.length === 1 ? '' : 's'} without row level security (${open.slice(0, 3).map(([t]) => t).join(', ')}${open.length > 3 ? ', …' : ''})`,
+      detail: `Created in ${[...new Set(open.map(([, f]) => f))].slice(0, 2).join(', ')} without \`enable row level security\`. The anon key ships inside every copy of the app, so unless RLS was switched on in the Supabase dashboard, anyone can read and change these tables through the REST API. Enable RLS and add policies for the access each table needs. (OWASP MASVS-AUTH)`,
+      fix: { kind: 'security', step: `Add \`alter table public.<name> enable row level security;\` and policies for ${open.slice(0, 4).map(([t]) => `\`${t}\``).join(', ')} in a new migration, then check the Supabase dashboard (Table Editor → RLS) for tables created there.` },
+    },
+  ];
+}
+
+// Google Play restricts some permissions to apps whose core function needs them, behind a
+// Play Console declaration (checked on the policy pages, October 2026). Declaring one without
+// that leads to rejection or removal. Permissions removed with tools:node="remove" (to drop one a
+// library adds) do not count.
+const PLAY_RESTRICTED = {
+  READ_MEDIA_IMAGES: { severity: 'high', why: 'Photo and video permissions: only apps whose core function needs broad access (galleries, editors). Others must use the system photo picker (expo-image-picker and react-native-image-picker use it without this permission). Enforced since 28 May 2025; apps can be removed.' },
+  READ_MEDIA_VIDEO: { severity: 'high', why: 'Photo and video permissions: as READ_MEDIA_IMAGES.' },
+  MANAGE_EXTERNAL_STORAGE: { severity: 'high', why: 'All files access: only file managers, backup, antivirus and document management apps, with an approved declaration.' },
+  REQUEST_INSTALL_PACKAGES: { severity: 'high', why: 'Only for browsers, file managers, messaging with attachments, backup and enterprise apps, with a declaration.' },
+  ACCESS_BACKGROUND_LOCATION: { severity: 'high', why: 'Needs a core feature that requires it, a Play Console declaration with a short video, and an in-app disclosure before the permission prompt; without approval updates can be blocked.' },
+  READ_SMS: { severity: 'high', why: 'SMS and Call Log permissions are for default SMS/phone handler apps only.' },
+  SEND_SMS: { severity: 'high', why: 'SMS and Call Log permissions are for default SMS/phone handler apps only.' },
+  RECEIVE_SMS: { severity: 'high', why: 'SMS and Call Log permissions are for default SMS/phone handler apps only.' },
+  READ_CALL_LOG: { severity: 'high', why: 'SMS and Call Log permissions are for default SMS/phone handler apps only.' },
+  USE_FULL_SCREEN_INTENT: { severity: 'medium', why: 'Granted by default only to calling and alarm apps (since 22 January 2025 on Android 14+); others need a declaration and user consent.' },
+  USE_EXACT_ALARM: { severity: 'medium', why: 'Only for alarm, timer and calendar apps; others should use SCHEDULE_EXACT_ALARM.' },
+};
+
+export function playRestrictedPermissions(root, deps = {}) {
+  const declared = new Map();
+  const manifest = read(path.join(root, 'android', 'app', 'src', 'main', 'AndroidManifest.xml')) || '';
+  for (const m of manifest.matchAll(/<uses-permission(?:-sdk-23)?\b([^>]*)>/g)) {
+    const perm = (m[1].match(/android:name\s*=\s*"android\.permission\.(\w+)"/) || [])[1];
+    if (perm && PLAY_RESTRICTED[perm] && !/tools:node\s*=\s*"remove"/.test(m[1])) declared.set(perm, 'AndroidManifest.xml');
+  }
+  let app = null;
+  try {
+    app = JSON.parse(read(path.join(root, 'app.json')) || 'null');
+  } catch {
+    // not JSON
+  }
+  const android = (app && (app.expo || app).android) || {};
+  const blocked = new Set((android.blockedPermissions || []).map((p) => String(p).replace(/^android\.permission\./, '')));
+  for (const p of android.permissions || []) {
+    const perm = String(p).replace(/^android\.permission\./, '');
+    if (PLAY_RESTRICTED[perm] && !blocked.has(perm) && !declared.has(perm)) declared.set(perm, 'app.json');
+  }
+  for (const b of blocked) declared.delete(b);
+  if (!declared.size) return [];
+  const perms = [...declared.keys()];
+  // Apps that need these usually filed the declaration already: medium, the developer decides.
+  // Photo/video access next to a photo picker library is likely unneeded and risks removal: high.
+  const picker = ['expo-image-picker', 'react-native-image-picker'].find((d) => deps[d]);
+  const severity = picker && perms.some((p) => /^READ_MEDIA_/.test(p)) ? 'high' : 'medium';
+  return [
+    {
+      id: 'play-restricted-permissions',
+      severity,
+      area: 'store',
+      title: `Google Play restricts ${perms.length === 1 ? 'a permission' : `${perms.length} permissions`} this app declares (${perms.join(', ')})`,
+      detail: `${perms.map((p) => `${p} (${declared.get(p)}): ${PLAY_RESTRICTED[p].why}`).join(' ')}${severity === 'high' ? ` The app already uses ${picker}, which works without photo/video permissions.` : ''} If the app does not need it, remove it (add it to \`blockedPermissions\` in Expo, or \`tools:node="remove"\` when a library adds it); if it does, complete the Permissions Declaration in Play Console before the next release.`,
+      fix: { kind: 'play-permissions', step: `Remove ${perms.map((p) => `\`${p}\``).join(', ')} unless a core feature needs it, or file the Play Console permissions declaration.` },
+    },
+  ];
 }

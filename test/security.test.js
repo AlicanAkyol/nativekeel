@@ -281,3 +281,26 @@ test('false alarms from the October corpus: key placeholders, Subsonic tokens', 
   const plain = weakCrypto(makeProject({ 'src/auth.ts': 'const h = md5(password);' }));
   assert.equal(plain[0].severity, 'high');
 });
+
+test('Supabase: public tables without RLS (a commented-out enable does not count); other schemas and RLS loops are fine', async () => {
+  const { supabaseRls } = await import('../src/security.js');
+  const mig = (sql) => supabaseRls(makeProject({ 'package.json': '{}', 'supabase/migrations/1_init.sql': sql }));
+  const open = mig('create table todos (id bigint primary key);\n-- alter table todos enable row level security;\ncreate table public.profiles (id uuid);\nalter table public.profiles enable row level security;');
+  assert.equal(open[0].id, 'supabase-rls-off');
+  assert.match(open[0].title, /1 Supabase table without row level security \(todos\)/);
+  assert.equal(mig('create table app.cats (id int);').length, 0, 'not in the public schema');
+  assert.equal(mig("create table todos (id int);\ndo $$ begin execute format('alter table %I.%I enable row level security', s, t); end $$;").length, 0);
+  assert.equal(supabaseRls(makeProject({ 'package.json': '{}', 'db/schema.sql': 'create table customers (id int);' })).length, 0, 'SQL outside supabase/ may be another database');
+});
+
+test('Google Play restricted permissions: removed ones do not count; photo access next to a picker is high', async () => {
+  const { playRestrictedPermissions } = await import('../src/security.js');
+  const manifest = (perms) => ({ 'android/app/src/main/AndroidManifest.xml': `<manifest>${perms}<application/></manifest>` });
+  const f = playRestrictedPermissions(makeProject(manifest('<uses-permission android:name="android.permission.READ_MEDIA_IMAGES" /><uses-permission android:name="android.permission.CAMERA" />')), { 'expo-image-picker': '~16.0.0' });
+  assert.equal(f[0].severity, 'high');
+  assert.match(f[0].title, /READ_MEDIA_IMAGES/);
+  assert.equal(playRestrictedPermissions(makeProject(manifest('<uses-permission android:name="android.permission.READ_MEDIA_IMAGES" tools:node="remove" />'))).length, 0);
+  assert.equal(playRestrictedPermissions(makeProject(manifest('<uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />')))[0].severity, 'medium');
+  const expo = playRestrictedPermissions(makeProject({ 'app.json': JSON.stringify({ expo: { android: { permissions: ['android.permission.MANAGE_EXTERNAL_STORAGE', 'READ_MEDIA_VIDEO'], blockedPermissions: ['android.permission.READ_MEDIA_VIDEO'] } } }) }));
+  assert.match(expo[0].title, /\(MANAGE_EXTERNAL_STORAGE\)/);
+});

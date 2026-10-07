@@ -40,6 +40,12 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 650+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.25</h2><p class="date">7 October 2026</p>
+<ul>
+<li><span class="tag">Security</span><b>Supabase tables without row level security.</b> The anon key ships inside every copy of the app, so a table in the public schema without RLS can be read and changed by anyone through Supabase's REST API. NativeKeel reads the migrations under <code>supabase/</code> and lists the tables that never enable it (a commented-out <code>enable row level security</code> does not count). Tables in other schemas and RLS enabled in a loop are recognised. In our test set: 3 of the 15 apps with Supabase migrations, one of them a starter template with payment and invoice log tables open.</li>
+<li><span class="tag">Store</span><b>Permissions Google Play restricts.</b> Photo and video access (enforced since May 2025: use the photo picker unless your app is a gallery), all files access, app installs, background location, SMS and call log, full-screen intents and exact alarms each need a core use case and a Play Console declaration, or the app is rejected or removed. Permissions you remove with <code>tools:node="remove"</code> or Expo's <code>blockedPermissions</code> are not counted. Each rule was checked on Google Play's policy pages. Found in 24 apps.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.24</h2><p class="date">7 October 2026</p>
 <ul>
 <li><span class="tag">Accuracy</span><b>200 more apps, all pushed to GitHub in the last month.</b> Our test set now grows every week from recently updated React Native and Expo apps (653 scanned, zero tool failures). What they showed, now fixed:
