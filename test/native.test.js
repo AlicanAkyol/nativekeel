@@ -367,3 +367,12 @@ test('a test keystore used as a local fallback is not a release key', () => {
   assert.ok(!ids.some((i) => i.startsWith('signing-password:')), 'password of the test keystore');
   assert.ok(!ids.some((i) => i.startsWith('signing-keystore:')), 'test.keystore');
 });
+
+test('components with an intent-filter and no android:exported block a targetSdk 31+ build', () => {
+  const manifest = '<manifest><application>\n<service android:name=".Background" />\n<activity android:name=".MainActivity"><intent-filter><action android:name="android.intent.action.MAIN" /></intent-filter></activity>\n<receiver android:name=".Push" android:exported="false"><intent-filter><action android:name="x" /></intent-filter></receiver>\n</application></manifest>';
+  const check = (target) => nativeChecks(loadProject(makeProject(rnApp('0.70.0', { 'android/app/src/main/AndroidManifest.xml': manifest, 'android/build.gradle': `buildscript { ext { targetSdkVersion = ${target} } }` }))), { now: NOW }).find((f) => f.id === 'android-exported-missing');
+  const f = check(30);
+  assert.equal(f.severity, 'high');
+  assert.deepEqual(f.fix.components, ['activity .MainActivity'], 'self-closing service and exported receiver are fine');
+  assert.equal(check(33), undefined, 'already on 31+: it builds, so it is set elsewhere');
+});

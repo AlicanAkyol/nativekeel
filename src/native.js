@@ -54,6 +54,28 @@ export function nativeChecks(project, { rnLatest = null, now = new Date() } = {}
   const hasIos = fs.existsSync(path.join(root, 'ios'));
   const hasAndroid = fs.existsSync(path.join(root, 'android'));
 
+  // Components with an intent-filter must declare android:exported once targetSdk is 31+, or
+  // the build fails ("android:exported needs to be explicitly specified"). Apps below 31 hit this
+  // the moment they raise the target SDK that Google Play requires.
+  const target = project.android && project.android.targetSdk;
+  const appManifest = hasAndroid ? read(path.join(root, 'android', 'app', 'src', 'main', 'AndroidManifest.xml')) || '' : '';
+  if (target && target < 31 && appManifest) {
+    const missing = [];
+    for (const m of appManifest.matchAll(/<(activity|activity-alias|service|receiver)\b((?:[^>/]|\/(?!>))*)>([\s\S]*?)<\/\1>/g)) {
+      if (/<intent-filter/.test(m[3]) && !/android:exported\s*=/.test(m[2])) missing.push(`${m[1]} ${(m[2].match(/android:name\s*=\s*"([^"]+)"/) || [])[1] || '?'}`);
+    }
+    if (missing.length) {
+      add({
+        id: 'android-exported-missing',
+        severity: 'high',
+        area: 'store',
+        title: `${missing.length} Android component${missing.length === 1 ? '' : 's'} will stop the build when you raise targetSdk (${missing.slice(0, 2).join(', ')})`,
+        detail: `${missing.join(', ')} ${missing.length === 1 ? 'has' : 'have'} an intent-filter but no android:exported. From targetSdk 31 that is a build error ("android:exported needs to be explicitly specified"), and Google Play requires a higher target for updates. Set android:exported="true" on the launcher activity and on components other apps must reach, "false" on the rest.`,
+        fix: { kind: 'exported-missing', components: missing },
+      });
+    }
+  }
+
   // 16 KB page size: React Native itself before 0.77, then the actual built binaries.
   const blocked16k = today >= PAGE_SIZE_16K.blockedFrom;
   const policy16k = blocked16k

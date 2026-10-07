@@ -40,6 +40,12 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 650+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.27</h2><p class="date">7 October 2026</p>
+<ul>
+<li><span class="tag">Store</span><b>The build error waiting behind the target SDK bump.</b> Google Play requires API 36 for updates. Apps still targeting 30 or lower usually have activities or receivers with an intent-filter and no <code>android:exported</code>; from target 31 that stops the build. NativeKeel lists them and the plan fixes them first, before the target SDK step. 107 apps in our test set would hit this.</li>
+<li><span class="tag">Behind the scenes</span>Two candidates measured and not shipped: missing Android 13 notification permission (10 of 11 apps already request it at runtime, and Firebase Messaging and Notifee declare it for you), and WebViews opening a URL from a deep link (no case in 653 apps). We add a check when real apps show the problem, not before.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.26</h2><p class="date">7 October 2026</p>
 <ul>
 <li><span class="tag">Stability</span><b>Packages Expo did not test with your SDK.</b> Each Expo SDK pins the library versions it is tested with. A native module from another release is one of the most common causes of build failures and launch crashes in Expo apps. NativeKeel now compares every pinned package (not only Reanimated, Screens and Gesture Handler) and rates the gap: a major difference is high, a minor one medium, a patch low. In our test set, 144 of 390 Expo apps with a lockfile have at least one, most often Reanimated, safe-area-context and Screens. The fix is one command: <code>npx expo install --fix</code>.</li>
