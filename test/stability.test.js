@@ -95,3 +95,23 @@ test('core SafeAreaView with target SDK 35+: medium, Android edge-to-edge explai
   assert.match(f.detail, /edge-to-edge/);
   assert.equal(find({ 'android/build.gradle': 'buildscript { ext { targetSdkVersion = 34 } }', 'android/app/build.gradle': '' }).severity, 'low');
 });
+
+test('release builds talking to a development server; dev-only branches, settings defaults and WebView base URLs are fine', async () => {
+  const { releaseDevServer } = await import('../src/stability.js');
+  const run = (files) => releaseDevServer({ root: makeProject({ 'package.json': '{}', ...files }) });
+  assert.match(run({ 'src/services/api.ts': "export const api = axios.create({ baseURL: 'http://10.0.2.2:3000' });" })[0].detail, /Android emulator/);
+  assert.equal(run({ 'src/lib/socket.ts': "const SOCKET_URL = 'http://192.168.1.100:3000';" })[0].id, 'release-dev-server');
+  assert.equal(run({ 'src/api.ts': "const BASE_URL = __DEV__ ? 'http://localhost:3000' : 'https://api.example.com';" }).length, 0);
+  assert.equal(run({ 'src/config.ts': "baseURL:\n  process.env.SWAP_API_DEV === 'true'\n    ? 'http://localhost:5050'\n    : 'https://swap.example.com'," }).length, 0);
+  assert.equal(run({ 'src/screens/settings/Server.tsx': "const url = 'http://192.168.4.1';" }).length, 0);
+  assert.equal(run({ 'src/Web.tsx': "<WebView source={{ html, baseUrl: 'https://localhost' }} />\nconst uri = 'https://localhost';" }).length, 0);
+  assert.equal(run({ 'src/api.web.ts': "fetch('http://localhost:3000/x')" }).length, 0);
+});
+
+test('dev server: server actions, named local fallbacks and local-service probes are deliberate', async () => {
+  const { releaseDevServer } = await import('../src/stability.js');
+  const run = (files) => releaseDevServer({ root: makeProject({ 'package.json': '{}', ...files }) });
+  assert.equal(run({ 'src/actions/eval.ts': "'use server';\nconst r = await fetch(`http://localhost:8081/x.bundle`);" }).length, 0);
+  assert.equal(run({ 'src/api-base.ts': "const LOCAL_API_URL = 'http://localhost:54321';\nconst API_URL = process.env.EXPO_PUBLIC_API_URL || LOCAL_API_URL;" }).length, 0);
+  assert.equal(run({ 'src/oracle.ts': "// Auto-detect Ollama on localhost\ntry { const r = await fetch('http://localhost:11434/api/tags'); } catch {}" }).length, 0);
+});

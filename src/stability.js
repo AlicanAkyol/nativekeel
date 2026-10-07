@@ -165,6 +165,7 @@ export function stabilityChecks(project) {
 
   for (const f of iosUsageDescriptions(project)) add(f);
   for (const f of removedCoreImports(project)) add(f);
+  if (!project.isLibrary) for (const f of releaseDevServer(project)) add(f);
   return findings;
 }
 
@@ -361,4 +362,63 @@ export function removedCoreImports(project) {
       fix: { kind: 'crash', step: `Move ${[...used.keys()].map((n) => `\`${n}\``).join(', ')} off 'react-native' to their community packages (${[...new Set([...used.keys()].map((n) => REMOVED_FROM_CORE[n] || 'deprecated-react-native-prop-types'))].slice(0, 4).join(', ')}).` },
     },
   ];
+}
+
+// A release build that talks to a development server: the Android emulator's host alias
+// (10.0.2.2), a LAN address, localhost or an ngrok tunnel used as the API address outside any
+// dev-only branch. On users' phones that address does not exist, so the app cannot reach its
+// backend. Settings screens, placeholders and defaults the user can change are left alone.
+const DEV_HOST = /['"`](https?:\/\/(?:localhost|127\.0\.0\.1|10\.0\.2\.2|10\.0\.3\.2|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(?:1[6-9]|2\d|3[01])\.\d+\.\d+|[\w-]+\.ngrok(?:-free)?\.(?:io|app|dev)|[\w-]+\.loca\.lt)(?::\d+)?[^'"`\s]*)['"`]/g;
+const DEV_BRANCH = /__DEV__|NODE_ENV|isDev\b|IS_DEV|\bdev(?:elopment)?\b|\bDev[A-Z]\w*|_DEV\b|\bDEV_|Platform\.OS|debug/i;
+const API_USE = /(?:base_?url|api_?url|api_?base|server_?url|backend_?url|endpoint|host_?url|socket_?url|graphql|uri)\b\s*[:=]\s*$|(?:fetch|axios(?:\.\w+)?|io|create\w*|new\s+WebSocket|EventSource)\s*\(\s*$/i;
+
+export function releaseDevServer(project) {
+  const root = project.root;
+  const SKIP = new Set(['node_modules', '.git', 'android', 'ios', 'build', 'dist', 'Pods', '__tests__', '__mocks__', 'e2e', 'detox', '.expo', 'coverage', 'vendor', 'scripts', 'server', 'backend', 'functions', 'test', 'tests', 'mocks', 'storybook', 'docs', 'example', 'examples', 'cli', 'admin', 'admin-dashboard', 'dashboard', 'web']);
+  const files = [];
+  const walk = (dir, depth) => {
+    let entries = [];
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const e of entries) {
+      if (e.isDirectory()) {
+        if (depth < 8 && !SKIP.has(e.name) && !e.name.startsWith('.')) walk(path.join(dir, e.name), depth + 1);
+      } else if (/\.[cm]?[jt]sx?$/.test(e.name) && !/\.(?:test|spec|stories|config|web)\.|(?:mock|fixture|dev|debug|local)/i.test(e.name)) files.push(path.join(dir, e.name));
+    }
+  };
+  walk(root, 0);
+  for (const file of files) {
+    if (/settings|setup|onboarding|preferences/i.test(path.relative(root, file))) continue;
+    const text = readText(file);
+    if (!text || !/localhost|127\.0\.0\.1|10\.\d|192\.168|172\.|ngrok|loca\.lt/.test(text)) continue;
+    if (/^\s*['"]use server['"]/m.test(text)) continue; // Expo Router server code never ships to phones
+    // Comments blanked out with spaces: positions stay the same as in `text`.
+    const code = text.replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' ')).replace(/(^|[^:])(\/\/[^\n]*)/g, (all, pre, c) => pre + ' '.repeat(c.length));
+    for (const m of code.matchAll(DEV_HOST)) {
+      if (/^https:\/\/localhost\/?$/.test(m[1])) continue; // a WebView base URL, not a server
+      const before = code.slice(Math.max(0, m.index - 300), m.index);
+      const line = code.slice(code.lastIndexOf('\n', m.index) + 1, code.indexOf('\n', m.index) + 1 || undefined);
+      if (DEV_BRANCH.test(before) || /placeholder|default\w*\s*[:=]|example|hint|label/i.test(line + before.slice(-120))) continue;
+      // A named local fallback (LOCAL_API_URL used when the configured one is missing) and
+      // probes for a local service (auto-detect Ollama) are deliberate.
+      if (/\b\w*(?:LOCAL|EMULATOR|SIMULATOR|FALLBACK)\w*\s*[:=]\s*$/i.test(before.slice(-80)) || /detect|probe|discover|fallback|ollama/i.test(text.slice(Math.max(0, m.index - 200), m.index))) continue;
+      if (!API_USE.test(before.slice(-120))) continue;
+      const rel = path.relative(root, file);
+      const at = `${rel}:${code.slice(0, m.index).split('\n').length}`;
+      return [
+        {
+          id: 'release-dev-server',
+          severity: 'high',
+          area: 'crash',
+          title: `The app talks to a development server in release builds (${m[1].slice(0, 40)}, ${at})`,
+          detail: `${m[1]} is used as an API address outside any development-only branch. ${/10\.0\.[23]\.2/.test(m[1]) ? 'It is the Android emulator\'s name for your computer' : /ngrok|loca\.lt/.test(m[1]) ? 'It is a temporary tunnel to your computer' : /localhost|127\.0\.0\.1/.test(m[1]) ? 'On a phone, localhost is the phone itself' : 'It is an address on your local network'}, so on users' phones every call fails. Read the API address from build configuration (EXPO_PUBLIC_API_URL, react-native-config) with the production URL for release builds.`,
+          fix: { kind: 'crash', step: `Replace \`${m[1].slice(0, 40)}\` in \`${at}\` with the production API address from build configuration, keeping local addresses for development builds only.` },
+        },
+      ];
+    }
+  }
+  return [];
 }
