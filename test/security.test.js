@@ -304,3 +304,12 @@ test('Google Play restricted permissions: removed ones do not count; photo acces
   const expo = playRestrictedPermissions(makeProject({ 'app.json': JSON.stringify({ expo: { android: { permissions: ['android.permission.MANAGE_EXTERNAL_STORAGE', 'READ_MEDIA_VIDEO'], blockedPermissions: ['android.permission.READ_MEDIA_VIDEO'] } } }) }));
   assert.match(expo[0].title, /\(MANAGE_EXTERNAL_STORAGE\)/);
 });
+
+test('react-native-blob-util trust manager: unused, behind a setting, or always on', async () => {
+  const { insecureTls } = await import('../src/security.js');
+  const kt = "class MainApplication { override fun onCreate() {\n ReactNativeBlobUtilUtils.sharedTrustManager = object : X509TrustManager {\n override fun checkServerTrusted(chain: Array<X509Certificate>, authType: String) {}\n } } }";
+  const app = (js) => insecureTls(makeProject({ 'android/app/src/main/java/com/a/MainApplication.kt': kt, ...(js ? { 'src/api.ts': js } : {}) }));
+  assert.equal(app(null).length, 0, 'never used by any request');
+  assert.equal(app('ReactNativeBlobUtil.config({ trusty: !certVerification }).fetch("GET", url);')[0].severity, 'high');
+  assert.equal(app('ReactNativeBlobUtil.config({ trusty: true }).fetch("GET", url);')[0].severity, 'critical');
+});

@@ -465,6 +465,17 @@ export function insecureTls(root) {
     { re: /allowsAnyHTTPSCertificateForHost|setAllowsAnyHTTPSCertificate/, what: 'an iOS API that accepts any HTTPS certificate' },
   ];
   const hits = [];
+  let trustyCache = null;
+  const blobTrusty = () => {
+    if (trustyCache) return trustyCache;
+    const values = [];
+    for (const jf of jsFiles(root)) {
+      const t = read(jf);
+      if (t && t.includes('trusty')) for (const m of t.matchAll(/\btrusty\s*:\s*([^,}\n]+)/g)) values.push(m[1].trim());
+    }
+    trustyCache = !values.length ? 'unused' : values.some((v) => v === 'true') ? 'always' : 'setting';
+    return trustyCache;
+  };
   // A setting like "ignore TLS errors" or "trust self-signed" anywhere in the native code: the
   // bypass is often defined in one file and switched on from another.
   const optInSetting = /(?:ignore\w*(?:ssl|tls|cert)\w*|trustSelfSigned|allowSelfSigned|selfSignedCert)/i;
@@ -477,8 +488,11 @@ export function insecureTls(root) {
     const OPT_IN = /\bif\s*\(?[^\n]*(?:validate|verif|trust|self.?signed|ignore\w*(?:ssl|tls|cert)|insecure|allowInvalid|acceptInvalid|unsafe)/i;
     const optIn = (index) => {
       const before = text.slice(Math.max(0, index - 1200), index).split('\n').slice(-25).join('\n');
-      return OPT_IN.test(before) || projectOptIn;
+      return OPT_IN.test(before) || projectOptIn || blobTrusty() === 'setting';
     };
+    // react-native-blob-util's sharedTrustManager is used only for requests made with
+    // `trusty: …`: never used, it changes nothing; tied to a setting, it is an opt-in.
+    if (/(?:ReactNativeBlobUtilUtils|RNFetchBlobUtils)\.sharedTrustManager/.test(text) && blobTrusty() === 'unused') continue;
     for (const p of PATTERNS) {
       const m = text.match(p.re);
       if (m) hits.push({ file: path.relative(root, f), line: text.slice(0, m.index).split('\n').length, what: p.what, optIn: optIn(m.index) });
