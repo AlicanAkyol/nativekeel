@@ -11,7 +11,7 @@ import { lockedVersions } from './lockfile.js';
 import { expoPinnedNames, movesWithExpoSdk } from './expo-pins.js';
 import { findUnused, filesImportingWith } from './usage.js';
 import { matchKnownIssues, compareVersions } from './known-issues.js';
-import { COMPAT, bestRange, checkCompat } from './compat.js';
+import { COMPAT, bestRange, checkCompat, needsNewerRn } from './compat.js';
 import { interopProblems } from './interop.js';
 import {
   CRITICAL_EXPO_MAJORS_BEHIND,
@@ -313,6 +313,39 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
         title: `${name} ${version} → ${dep.latest}`,
         detail: expoManaged ? 'Major version behind; the Expo SDK upgrade moves it.' : 'Major version behind.',
         fix: { kind: 'bump-dep', name, from: version, to: dep.latest, native, expoManaged },
+      });
+    }
+  }
+
+  // Native libraries that need a newer React Native than the app has (a library bumped ahead
+  // of React Native): they use APIs that do not exist yet, so the build or the first call fails.
+  const rnNow = project.rnVersion && cleanVersion(project.rnVersion);
+  if (rnNow && !project.expoVersion) {
+    const locked = lockedVersions(project.root, project.deps);
+    const ranges = {};
+    const ask = [];
+    for (const d of deps.filter((x) => x.native && project.deps[x.name])) {
+      const dir = findPackageDir(project.root, d.name);
+      const local = dir && readJsonFile(path.join(dir, 'package.json'));
+      if (local) {
+        if (local.peerDependencies && local.peerDependencies['react-native']) ranges[d.name] = { range: local.peerDependencies['react-native'], version: local.version };
+      } else if (locked[d.name] && /^\d+\.\d+\.\d+$/.test(locked[d.name])) ask.push({ name: d.name, version: locked[d.name] });
+    }
+    if (ask.length && !forcedOffline) {
+      const fetched = await registry.peerRanges(ask.slice(0, 40));
+      for (const a of ask) if (fetched[a.name]) ranges[a.name] = { range: fetched[a.name], version: a.version };
+    }
+    const ahead = Object.entries(ranges)
+      .map(([name, { range, version }]) => ({ name, version, range, needs: needsNewerRn(range, rnNow) }))
+      .filter((x) => x.needs);
+    if (ahead.length) {
+      add({
+        id: 'crash-needs-newer-rn',
+        severity: 'high',
+        area: 'crash',
+        title: `${ahead.length} native librar${ahead.length === 1 ? 'y needs' : 'ies need'} a newer React Native than ${rnNow} (${ahead.slice(0, 3).map((x) => `${x.name} ${x.version}`).join(', ')})`,
+        detail: `${ahead.map((x) => `${x.name} ${x.version} requires react-native ${x.range}`).join('; ')}. Each library declares it needs that React Native; below it, builds commonly fail or the first call crashes, because it uses APIs your version does not have. Install the newest release of each that supports ${rnNow}, or upgrade React Native first.`,
+        fix: { kind: 'crash', step: `Pin ${ahead.map((x) => `\`${x.name}\``).join(', ')} to the last release that supports React Native ${rnNow} (check each changelog), or upgrade React Native before them.` },
       });
     }
   }

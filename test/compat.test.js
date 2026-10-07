@@ -35,3 +35,14 @@ test('Gesture Handler: 2.x minimums and 3.x needs RN 0.82', () => {
   assert.equal(bestRange('react-native-gesture-handler', 84, true).range, '3.0+');
   assert.equal(bestRange('react-native-gesture-handler', 84, true, { major: 2 }).range, '2.32+ (2.x line)');
 });
+
+test('needsNewerRn: only when every alternative starts above the installed React Native', async () => {
+  const { needsNewerRn } = await import('../src/compat.js');
+  assert.equal(needsNewerRn('^0.73.0', '0.72.7'), '0.73.0');
+  assert.equal(needsNewerRn('>=0.76.0', '0.75.4'), '0.76.0');
+  assert.equal(needsNewerRn('^0.60.0', '0.62.2'), null, 'an upper cap alone is not reported');
+  assert.equal(needsNewerRn('^0.0.0-0 || 0.60 - 0.71 || 1000.0.0', '0.85.3'), null);
+  assert.equal(needsNewerRn('*', '0.70.0'), null);
+  assert.equal(needsNewerRn('1000.0.0', '0.80.0'), null, 'nightly placeholder');
+  assert.equal(needsNewerRn('>=0.71 <0.80 || >=0.81', '0.70.1'), '0.71.0');
+});

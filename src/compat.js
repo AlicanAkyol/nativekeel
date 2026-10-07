@@ -144,3 +144,40 @@ export function bestRange(pkg, rnMinor, newArch, { major = null } = {}) {
   const best = rows.sort((a, b) => compareVersions(b.from, a.from))[0];
   return { range: versionLabel(best), from: best.from, to: best.to || null };
 }
+
+// The React Native version a peer range needs at least, when every alternative of the range
+// starts above `rn` (the library uses APIs this React Native does not have). Ranges that only
+// cap the top (`^0.60.0` on 0.62) are ignored: authors write them loosely and apps run fine.
+// Nightly placeholders (1000.0.0) and "anything" ranges (*, ^0.0.0-0) never trigger it.
+export function needsNewerRn(range, rn) {
+  if (!range || !rn) return null;
+  const norm = (v) => {
+    const p = v.replace(/^[v=]/, '').split('-')[0].split('.');
+    if (!/^\d+$/.test(p[0] || '')) return null;
+    return [p[0], /^\d+$/.test(p[1] || '') ? p[1] : '0', /^\d+$/.test(p[2] || '') ? p[2] : '0'].join('.');
+  };
+  let lowest = null;
+  for (const alt of String(range).split('||').map((a) => a.trim())) {
+    if (!alt || alt === '*' || /^x$/i.test(alt)) return null;
+    let low = null;
+    let strict = false;
+    const hyphen = alt.match(/^(\S+)\s+-\s+\S+$/);
+    if (hyphen) low = norm(hyphen[1]);
+    else {
+      for (const c of alt.split(/\s+/)) {
+        const m = c.match(/^(>=|>|\^|~|=)?(.+)$/);
+        if (!m || /^</.test(c)) continue;
+        const v = norm(m[2]);
+        if (v && (!low || compareVersions(v, low) > 0)) {
+          low = v;
+          strict = m[1] === '>';
+        }
+      }
+    }
+    if (!low || /^0\.0\.0/.test(low)) return null; // no lower bound, or "any prerelease"
+    if (Number(low.split('.')[0]) >= 1000) continue; // nightly builds
+    if (strict ? compareVersions(rn, low) > 0 : compareVersions(rn, low) >= 0) return null;
+    if (!lowest || compareVersions(low, lowest) < 0) lowest = low;
+  }
+  return lowest;
+}

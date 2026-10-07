@@ -115,6 +115,22 @@ export function createRegistry(get = fetchJson) {
       return out;
     },
 
+    // react-native peer ranges of exact versions: { name: range }.
+    async peerRanges(list, concurrency = 8) {
+      const out = {};
+      const queue = [...list];
+      const worker = async () => {
+        while (queue.length) {
+          const { name, version } = queue.shift();
+          const doc = await get(`https://registry.npmjs.org/${name.replace('/', '%2F')}/${version}`);
+          const range = doc && doc.peerDependencies && doc.peerDependencies['react-native'];
+          if (range) out[name] = range;
+        }
+      };
+      await Promise.all(Array.from({ length: concurrency }, worker));
+      return out;
+    },
+
     // Security advisories for exact versions (the endpoint `npm audit` uses). Sends package
     // names and versions, nothing else. Returns { name: [advisory] }, or null if it failed.
     async advisories(versions) {

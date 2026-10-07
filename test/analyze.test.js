@@ -397,3 +397,17 @@ test('network budget: once the deadline has passed, requests are skipped and cou
     globalThis.fetch = realFetch;
   }
 });
+
+test('a native library that needs a newer React Native than installed', async () => {
+  const root = makeProject({
+    'package.json': { name: 'a', dependencies: { 'react-native': '0.72.7', '@react-native-clipboard/clipboard': '1.14.0' } },
+    'node_modules/react-native/package.json': { version: '0.72.7' },
+    'node_modules/@react-native-clipboard/clipboard/package.json': { name: '@react-native-clipboard/clipboard', version: '1.14.0', peerDependencies: { 'react-native': '^0.73.0' } },
+    'node_modules/@react-native-clipboard/clipboard/android/build.gradle': '',
+  });
+  const result = await analyze(loadProject(root), { offline: true });
+  const f = result.findings.find((x) => x.id === 'crash-needs-newer-rn');
+  assert.ok(f, 'reported');
+  assert.match(f.title, /@react-native-clipboard\/clipboard 1\.14\.0/);
+  assert.match(f.detail, /requires react-native \^0\.73\.0/);
+});
