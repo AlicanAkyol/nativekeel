@@ -400,7 +400,12 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
   // Expo SDKs pin tested versions of these libraries (bundledNativeModules.json). A version
   // inside Expo's range is a combination Expo ships, even where the library's table is stricter.
   const expoDir = project.expoVersion ? findPackageDir(project.root, 'expo') : null;
-  const expoPins = expoDir ? readJsonFile(path.join(expoDir, 'bundledNativeModules.json')) : null;
+  // Exact versions of what is installed (node_modules, else the lockfile).
+  const lockedAll = lockedVersions(project.root, project.deps);
+  const exactOf = (n) => installedVersion(project.root, n) || (/^\d+\.\d+\.\d+/.test(lockedAll[n] || '') ? lockedAll[n] : null);
+  let expoPins = expoDir ? readJsonFile(path.join(expoDir, 'bundledNativeModules.json')) : null;
+  const expoExact = project.expoVersion ? exactOf('expo') : null;
+  if (!expoPins && expoExact && !forcedOffline) expoPins = await registry.expoPins(expoExact);
   const expoSdk = project.expoVersion ? majorOf(project.expoVersion) : null;
   if (current) {
     const rnMinor = minorOf(current);
@@ -449,6 +454,33 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
   for (const f of stabilityChecks(project)) add(f);
   // Static signs of performance problems.
   for (const f of performanceChecks(project)) add(f);
+
+  // Packages off the versions the Expo SDK pins (what `npx expo install --check` reports). A
+  // native module from another SDK is a common build failure or launch crash.
+  if (expoPins && project.expoVersion) {
+    const off = [];
+    const reported = new Set(findings.filter((f) => f.id.startsWith('compat:')).map((f) => f.id.slice(7)));
+    for (const [name, range] of Object.entries(expoPins)) {
+      if (!project.deps[name] || ['expo', 'react', 'react-native', 'react-dom', 'react-native-web'].includes(name) || reported.has(name)) continue;
+      const v = exactOf(name);
+      if (!v || satisfiesExpoRange(v, range)) continue;
+      const want = String(range).replace(/^[~^>=\s]+/, '');
+      const level = majorOf(v) !== majorOf(want) ? 'major' : minorOf(v) !== minorOf(want) ? 'minor' : 'patch';
+      off.push({ name, v, range, level });
+    }
+    if (off.length) {
+      const sev = off.some((o) => o.level === 'major') ? 'high' : off.some((o) => o.level === 'minor') ? 'medium' : 'low';
+      off.sort((a, b) => ['major', 'minor', 'patch'].indexOf(a.level) - ['major', 'minor', 'patch'].indexOf(b.level));
+      add({
+        id: 'expo-sdk-mismatch',
+        severity: sev,
+        area: 'crash',
+        title: `${off.length} package${off.length === 1 ? ' is' : 's are'} not the version Expo SDK ${expoSdk} expects (${off.slice(0, 3).map((o) => o.name).join(', ')}${off.length > 3 ? ', …' : ''})`,
+        detail: `${off.slice(0, 8).map((o) => `${o.name} ${o.v} (SDK ${expoSdk} expects ${o.range}${o.level === 'patch' ? '' : `, a ${o.level} difference`})`).join('; ')}${off.length > 8 ? '; …' : ''}. Expo tests each SDK with these versions; native modules from another release are a common cause of build failures and launch crashes. \`npx expo install --fix\` sets them all.`,
+        fix: { kind: 'crash', step: `Run \`npx expo install --fix\` to put ${off.slice(0, 4).map((o) => `\`${o.name}\``).join(', ')}${off.length > 4 ? ' and the rest' : ''} on the versions Expo SDK ${expoSdk} expects, then rebuild.` },
+      });
+    }
+  }
 
   // Security beyond leaked keys.
   for (const f of [...passwordLeaks(project.root), ...webViewRisks(project.root), ...androidBackup(project.root), ...exportedComponents(project.root), ...plainHttpCalls(project.root), ...cloudRules(project.root, project.deps, now), ...insecureTls(project.root), ...weakCrypto(project.root), ...tokenStorage(project.root), ...reverseEngineering(project.root, project), ...expoConfigSecrets(project.root), ...deepLinks(project.root, project.deps), ...supabaseRls(project.root), ...(project.isLibrary ? [] : playRestrictedPermissions(project.root, project.deps))]) add(f);

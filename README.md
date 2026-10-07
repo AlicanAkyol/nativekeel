@@ -6,7 +6,7 @@ Health check for React Native and Expo apps. One command, no install, no account
 npx nativekeel
 ```
 
-**What's new in 0.1.25:** two new critical checks: Supabase tables without row level security (anyone with the app can read them), and permissions Google Play rejects or removes apps for. **0.1.24:** fewer false alarms from 200 apps pushed to GitHub last month (key placeholders, peer-installed worklets, test keystores), and a 90-second network budget so a slow registry never hangs a scan. Recent releases added a *Start here* list in every report, hacking risks mapped to OWASP MASVS, crash and performance checks. Every check is tuned on 650+ open-source React Native and Expo apps, with recently updated ones added every week, to keep false alarms out ([what we found in them](https://dev.to/keel_alican_akyol/we-scanned-470-open-source-react-native-apps-here-is-what-breaks-them-5072)). [All releases →](https://nativekeel.com/changelog)
+**What's new in 0.1.26:** packages that are not the version your Expo SDK expects (37% of Expo apps we test), and native libraries that need a newer React Native than you have. **0.1.25:** two new critical checks: Supabase tables without row level security (anyone with the app can read them), and permissions Google Play rejects or removes apps for. Recent releases added a *Start here* list in every report, hacking risks mapped to OWASP MASVS, crash and performance checks. Every check is tuned on 650+ open-source React Native and Expo apps, with recently updated ones added every week, to keep false alarms out ([what we found in them](https://dev.to/keel_alican_akyol/we-scanned-470-open-source-react-native-apps-here-is-what-breaks-them-5072)). [All releases →](https://nativekeel.com/changelog)
 
 ```
 Summary  4 critical · 5 high · 4 medium · 6 low
@@ -30,7 +30,7 @@ Start here
 - **Will Google Play and the App Store accept your next build?** `targetSdk`, permissions Google Play restricts (photo/video, all files, background location, app installs, SMS), 16 KB memory pages (it also opens your built APK/AAB and checks every native library), the iOS privacy manifest, and missing Info.plist usage descriptions.
 
 **Crashes**
-- **Will it crash at runtime?** Reanimated without its Babel plugin or `react-native-worklets`, mixed `@react-native-firebase/*` or `@react-navigation/*` majors, a second copy of React or React Native inside a dependency, Kotlin modules that cannot load through the New Architecture interop layer, AppDelegate setups that crash in Release, camera/photos/location access without the Info.plist text iOS requires, imports of APIs removed from React Native core (`AsyncStorage`, `Picker`, `ViewPropTypes`, …) or deprecated for removal (`ImageBackground`, `SafeAreaView`), and traps learned from real upgrades.
+- **Will it crash at runtime?** packages off the versions your Expo SDK expects, native libraries that need a newer React Native, Reanimated without its Babel plugin or `react-native-worklets`, mixed `@react-native-firebase/*` or `@react-navigation/*` majors, a second copy of React or React Native inside a dependency, Kotlin modules that cannot load through the New Architecture interop layer, AppDelegate setups that crash in Release, camera/photos/location access without the Info.plist text iOS requires, imports of APIs removed from React Native core (`AsyncStorage`, `Picker`, `ViewPropTypes`, …) or deprecated for removal (`ImageBackground`, `SafeAreaView`), and traps learned from real upgrades.
 
 **Security, grouped by OWASP MASVS**
 - **Secrets in the app or the repo:** AWS, Stripe, OpenAI, Anthropic, GitHub, Slack, SendGrid, Twilio, Shopify, Google OAuth and Supabase `service_role` keys, private keys, `.env` values compiled into the bundle, Expo `extra`/`EXPO_PUBLIC_`/`eas.json` secrets, signing keys and passwords.
@@ -102,7 +102,7 @@ Agencies can put their own name on the HTML report: `npx nativekeel plan --html 
 
 ## Why you can run this on private code
 
-- **Your code never leaves your machine.** The only requests are package-name lookups on npm and React Native Directory, and one request to npm's advisory endpoint with the names and exact versions of your runtime dependencies (what `npm audit` sends). `--offline` makes none; a test traps `fetch` to prove it.
+- **Your code never leaves your machine.** The only requests are package-name lookups on npm and React Native Directory, and one request to npm's advisory endpoint with the names and exact versions of your runtime dependencies (what `npm audit` sends). In Expo projects without `node_modules`, one request to unpkg for the versions your Expo SDK expects (only the `expo` version is sent). `--offline` makes none; a test traps `fetch` to prove it.
 - **Zero dependencies, no install scripts.** Only Node.js built-ins.
 - **Read-only.** It never changes your project.
 - **Secrets are always masked** in every output.

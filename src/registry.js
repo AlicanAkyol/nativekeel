@@ -115,6 +115,12 @@ export function createRegistry(get = fetchJson) {
       return out;
     },
 
+    // The library versions an Expo SDK release pins (bundledNativeModules.json), from unpkg.
+    // Sends only the expo version.
+    async expoPins(version) {
+      return get(`https://unpkg.com/expo@${version}/bundledNativeModules.json`);
+    },
+
     // react-native peer ranges of exact versions: { name: range }.
     async peerRanges(list, concurrency = 8) {
       const out = {};

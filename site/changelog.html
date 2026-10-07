@@ -40,6 +40,14 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 650+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.26</h2><p class="date">7 October 2026</p>
+<ul>
+<li><span class="tag">Stability</span><b>Packages Expo did not test with your SDK.</b> Each Expo SDK pins the library versions it is tested with. A native module from another release is one of the most common causes of build failures and launch crashes in Expo apps. NativeKeel now compares every pinned package (not only Reanimated, Screens and Gesture Handler) and rates the gap: a major difference is high, a minor one medium, a patch low. In our test set, 144 of 390 Expo apps with a lockfile have at least one, most often Reanimated, safe-area-context and Screens. The fix is one command: <code>npx expo install --fix</code>.</li>
+<li><span class="tag">Stability</span><b>A library bumped ahead of React Native.</b> When a native library declares that it needs a newer React Native than the app has (Clipboard 1.14 needs 0.73, the app is on 0.72), builds commonly fail or the first call crashes. Only lower bounds count: loose upper caps such as <code>^0.60.0</code> on 0.62 are ignored, since apps run fine with them.</li>
+<li><span class="tag">Accuracy</span>A TLS bypass set on <code>react-native-blob-util</code> is judged by how requests use it: never used, it is not reported; tied to a setting (<code>trusty: !certVerification</code>, for self-hosted servers), it is high instead of critical. Found while checking well-known open-source apps.</li>
+<li><span class="tag">Privacy</span>In Expo projects without <code>node_modules</code>, NativeKeel asks unpkg for the versions your Expo SDK expects, sending only the <code>expo</code> version number. The privacy page, README and SECURITY.md list every request.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.25</h2><p class="date">7 October 2026</p>
 <ul>
 <li><span class="tag">Security</span><b>Supabase tables without row level security.</b> The anon key ships inside every copy of the app, so a table in the public schema without RLS can be read and changed by anyone through Supabase's REST API. NativeKeel reads the migrations under <code>supabase/</code> and lists the tables that never enable it (a commented-out <code>enable row level security</code> does not count). Tables in other schemas and RLS enabled in a loop are recognised. In our test set: 3 of the 15 apps with Supabase migrations, one of them a starter template with payment and invoice log tables open.</li>

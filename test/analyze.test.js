@@ -411,3 +411,20 @@ test('a native library that needs a newer React Native than installed', async ()
   assert.match(f.title, /@react-native-clipboard\/clipboard 1\.14\.0/);
   assert.match(f.detail, /requires react-native \^0\.73\.0/);
 });
+
+test('Expo SDK mismatch: major differences are high, patch-only ones low', async () => {
+  const files = (svg, splash) => ({
+    'package.json': { name: 'e', dependencies: { expo: '~54.0.0', 'react-native': '0.81.5', 'react-native-svg': svg, 'expo-splash-screen': splash } },
+    'node_modules/expo/package.json': { version: '54.0.23' },
+    'node_modules/expo/bundledNativeModules.json': { 'react-native-svg': '15.12.1', 'expo-splash-screen': '~31.0.13' },
+    'node_modules/react-native/package.json': { version: '0.81.5' },
+    'node_modules/react-native-svg/package.json': { version: svg },
+    'node_modules/expo-splash-screen/package.json': { version: splash },
+  });
+  const find = async (svg, splash) => (await analyze(loadProject(makeProject(files(svg, splash))), { offline: true })).findings.find((f) => f.id === 'expo-sdk-mismatch');
+  const major = await find('15.12.1', '0.29.12');
+  assert.equal(major.severity, 'high');
+  assert.match(major.detail, /expo-splash-screen 0\.29\.12 \(SDK 54 expects ~31\.0\.13, a major difference\)/);
+  assert.equal((await find('15.15.1', '31.0.13')).severity, 'medium', 'svg 15.15 vs 15.12 is a minor difference');
+  assert.equal(await find('15.12.1', '31.0.20'), undefined, 'inside ~31.0.13');
+});

@@ -37,7 +37,7 @@ h1{font-size:30px;margin:0 0 4px}h2{font-size:19px;margin:28px 0 6px}p,li{color:
 <p>Last updated 5 October 2026.</p>
 
 <h2>The command-line tool</h2>
-<p>NativeKeel runs on your machine. It does not upload your source code, reports or secrets anywhere and has no analytics or telemetry. To check versions it sends package names (for example <code>react-native-svg</code>) to the public npm registry and to React Native Directory. For the vulnerability check it sends the names and exact versions of your runtime dependencies to npm's advisory endpoint, the same request <code>npm audit</code> makes. Nothing else is sent. Those services' own privacy policies apply to those requests.</p>
+<p>NativeKeel runs on your machine. It does not upload your source code, reports or secrets anywhere and has no analytics or telemetry. To check versions it sends package names (for example <code>react-native-svg</code>) to the public npm registry and to React Native Directory. For the vulnerability check it sends the names and exact versions of your runtime dependencies to npm's advisory endpoint, the same request <code>npm audit</code> makes. In Expo projects without installed dependencies, it asks unpkg (a public mirror of npm packages) for the list of library versions your Expo SDK release expects, sending only the <code>expo</code> version number. Nothing else is sent. Those services' own privacy policies apply to those requests.</p>
 <p>With <code>--offline</code> it makes no network requests at all.</p>
 
 <h2>When you contact or buy from us</h2>
