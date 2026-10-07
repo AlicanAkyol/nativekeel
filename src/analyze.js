@@ -8,6 +8,7 @@ import { stabilityChecks } from './stability.js';
 import { performanceChecks } from './performance.js';
 import { vulnerableDependencies, passwordLeaks, webViewRisks, androidBackup, exportedComponents, plainHttpCalls, cloudRules, insecureTls, weakCrypto, tokenStorage, reverseEngineering, expoConfigSecrets, deepLinks, supabaseRls, playRestrictedPermissions, masvsOf, MASVS_GROUPS } from './security.js';
 import { lockedVersions } from './lockfile.js';
+import { storeReviewRules } from './store-rules.js';
 import { expoPinnedNames, movesWithExpoSdk } from './expo-pins.js';
 import { findUnused, filesImportingWith } from './usage.js';
 import { matchKnownIssues, compareVersions } from './known-issues.js';
@@ -481,6 +482,9 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
       });
     }
   }
+
+  // App Store / Google Play review rules the code can show.
+  if (!project.isLibrary) for (const f of storeReviewRules(project)) add(f);
 
   // Security beyond leaked keys.
   for (const f of [...passwordLeaks(project.root), ...webViewRisks(project.root), ...androidBackup(project.root), ...exportedComponents(project.root), ...plainHttpCalls(project.root), ...cloudRules(project.root, project.deps, now), ...insecureTls(project.root), ...weakCrypto(project.root), ...tokenStorage(project.root), ...reverseEngineering(project.root, project), ...expoConfigSecrets(project.root), ...deepLinks(project.root, project.deps), ...supabaseRls(project.root), ...(project.isLibrary ? [] : playRestrictedPermissions(project.root, project.deps))]) add(f);

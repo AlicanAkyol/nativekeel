@@ -254,6 +254,7 @@ export function buildPlan(result) {
 
   const storeSteps = [];
   for (const p of byKind('play-permissions')) storeSteps.push(p.step);
+  for (const p of byKind('store-rule')) storeSteps.push(p.step);
   const privacy = byKind('privacy-manifest')[0];
   if (privacy && privacy.generated) {
     storeSteps.push('Run `pod install`, commit the generated `PrivacyInfo.xcprivacy`, and add your collected data types and tracking to it (React Native only fills in the required-reason APIs).');

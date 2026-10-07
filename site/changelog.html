@@ -40,6 +40,13 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 650+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.29</h2><p class="date">7 October 2026</p>
+<ul>
+<li><span class="tag">Store</span><b>Account deletion.</b> The App Store requires apps that let people create an account to let them delete it from inside the app (guideline 5.1.1(v)), and Google Play requires an in-app path plus a web link. It is one of the most common rejection reasons. NativeKeel now flags apps whose code signs users up (Firebase, Supabase, Amplify, Appwrite, Clerk or your own <code>/signup</code> API) with no deletion anywhere. Links to another service's sign-up page and device registration are not counted. 43 apps in our test set.</li>
+<li><span class="tag">Store</span><b>Sign in with Apple.</b> Guideline 4.8: an iOS app that uses Google or Facebook login for the user's account must also offer a privacy-focused login, and Sign in with Apple qualifies. Reported with Apple's exceptions spelled out. 11 apps.</li>
+<li><span class="tag">Behind the scenes</span>App Tracking Transparency was measured and not shipped: without the prompt, ad SDKs simply cannot track, which costs ad revenue but is not a rejection. We only call something a rejection when it is one.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.28</h2><p class="date">7 October 2026</p>
 <ul>
 <li><span class="tag">Stability</span><b>A release build that talks to your laptop.</b> An API address like <code>10.0.2.2</code> (the Android emulator's name for your computer), <code>192.168.x.x</code>, <code>localhost</code> or an ngrok tunnel, used outside any development-only branch, works on your machine and fails on every user's phone. NativeKeel now finds these and points to the line. Development branches (<code>__DEV__</code>, dev environment flags), settings screens where users enter their own server, named local fallbacks, local-service probes and server-only code are left alone. 21 apps in our test set ship one.</li>
