@@ -405,7 +405,7 @@ export function nativeChecks(project, { rnLatest = null, now = new Date() } = {}
         return false;
       }
     };
-    const signing = tracked.filter((f) => /\.(jks|keystore)$/i.test(f) && !/debug|fake|dummy/i.test(path.basename(f)) && !/(?:^|\/)(?:__tests__|tests?|e2e|fixtures?)\//.test(f) && nonEmpty(f));
+    const signing = tracked.filter((f) => /\.(jks|keystore)$/i.test(f) && !/(?:^|[^a-z])(?:debug|fake|dummy|test|sample|example)/i.test(path.basename(f)) && !/(?:^|\/)(?:__tests__|tests?|e2e|fixtures?)\//.test(f) && nonEmpty(f));
     for (const f of signing) {
       add({
         id: `signing-keystore:${f}`,
@@ -451,7 +451,11 @@ export function nativeChecks(project, { rnLatest = null, now = new Date() } = {}
       const leaked = [
         ...[...text.matchAll(/^\s*([A-Z0-9_]*(?:STORE|KEY)_PASSWORD)\s*=\s*(\S+)\s*$/gm)].map((m) => ({ name: m[1], value: m[2] })),
         // Not `props['storePassword']`: there the name is a lookup key, not an assignment.
-        ...[...text.matchAll(/(?<![\w'"[])(storePassword|keyPassword)\s*=?\s*["']([^"'\n]+)["']/g)].map((m) => ({ name: m[1], value: m[2] })),
+        // A password for a test/sample keystore (storeFile file('test.keystore') just above it) is
+        // a local fallback, not the release key.
+        ...[...text.matchAll(/(?<![\w'"[])(storePassword|keyPassword)\s*=?\s*["']([^"'\n]+)["']/g)]
+          .filter((m) => !/storeFile\s*\(?\s*file\s*\(\s*["'](?:[^"']*[^a-z"'])?(?:debug|test|fake|dummy|sample|example)[^"']*["']/i.test(text.slice(Math.max(0, m.index - 300), m.index)))
+          .map((m) => ({ name: m[1], value: m[2] })),
       ]
         .map((l) => ({ ...l, value: l.value.replace(/^["']|["']$/g, '') }))
         // Not leaks: the debug keystore's public password, environment references, empty

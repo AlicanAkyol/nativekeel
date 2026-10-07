@@ -355,3 +355,15 @@ test('sequenced and dev patch names are parsed', () => {
   assert.match(present.title, /react-native-fs/);
   assert.ok(!/react-native-fs, react-native-fs/.test(present.title), 'one package, listed once');
 });
+
+test('a test keystore used as a local fallback is not a release key', () => {
+  const root = makeProject(rnApp('0.80.0', {
+    'android/app/build.gradle': "signingConfigs { release {\n if (project.hasProperty('KEYSTORE_PATH')) { storeFile file(project.KEYSTORE_PATH)\n storePassword project.KEYSTORE_PASSWORD }\n else { storeFile file('test.keystore')\n storePassword '123456'\n keyAlias 'test'\n keyPassword '123456' } } }",
+    'android/app/test.keystore': 'x',
+  }));
+  spawnSync('git', ['init', '-q'], { cwd: root });
+  spawnSync('git', ['add', '-A'], { cwd: root });
+  const ids = nativeChecks(loadProject(root), { now: NOW }).map((f) => f.id);
+  assert.ok(!ids.some((i) => i.startsWith('signing-password:')), 'password of the test keystore');
+  assert.ok(!ids.some((i) => i.startsWith('signing-keystore:')), 'test.keystore');
+});

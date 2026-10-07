@@ -265,3 +265,19 @@ test('token storage: web-only files are skipped', async () => {
   const { tokenStorage } = await import('../src/security.js');
   assert.equal(tokenStorage(makeProject({ 'src/keychain.web.ts': 'await AsyncStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);' })).length, 0);
 });
+
+test('false alarms from the October corpus: key placeholders, Subsonic tokens', async () => {
+  const { weakCrypto } = await import('../src/security.js');
+  const { scanSecrets } = await import('../src/secrets.js');
+  const header = ['-----BEGIN OPENSSH ', 'PRIVATE KEY-----'].join('');
+  const placeholders = makeProject({
+    'package.json': '{}',
+    'src/Form.tsx': `<TextInput placeholder={"${header}\\nPaste your private key here...\\n-----END OPENSSH PRIVATE KEY-----"} />\nconst sample = '${header}\\n...\\n';\n`,
+  });
+  assert.equal(scanSecrets(placeholders).length, 0, 'placeholders and elided samples are not keys');
+  const sub = weakCrypto(makeProject({ 'src/subsonic.ts': '// Subsonic API auth\nexport const token = (password, salt) => md5(password + salt);' }));
+  assert.equal(sub[0].severity, 'low');
+  assert.match(sub[0].title, /required by the Subsonic API/);
+  const plain = weakCrypto(makeProject({ 'src/auth.ts': 'const h = md5(password);' }));
+  assert.equal(plain[0].severity, 'high');
+});

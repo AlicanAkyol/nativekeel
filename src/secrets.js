@@ -13,7 +13,14 @@ const SERVER_DIRS = new Set(['functions', 'server', 'backend', 'api', 'cloud-fun
 const RULES = [
   { id: 'aws-access-key', label: 'AWS access key ID', re: /\b(?<v>(?:AKIA|ASIA)[0-9A-Z]{16})\b/g },
   { id: 'aws-secret-key', label: 'AWS secret access key', re: /secretAccessKey["']?\s*[:=]\s*["'](?<v>[A-Za-z0-9/+]{40})["']/g },
-  { id: 'private-key', label: 'Private key', re: /-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----/g },
+  // A real key has a base64 body after the header; input placeholders ("-----BEGIN … Paste
+  // your key here") and elided samples ("\n...\n") do not.
+  {
+    id: 'private-key',
+    label: 'Private key',
+    re: /-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----/g,
+    validate: (m) => /[A-Za-z0-9+/]{60,}/.test(m.input.slice(m.index + m[0].length, m.index + m[0].length + 400).replace(/\\[nr]|["'`+,\s]/g, '')),
+  },
   { id: 'stripe-secret', label: 'Stripe secret key', re: /\bsk_live_[0-9a-zA-Z]{20,}\b/g },
   { id: 'openai-key', label: 'OpenAI API key', re: /\bsk-(?:proj-)?[A-Za-z0-9_-]{32,}\b/g },
   { id: 'anthropic-key', label: 'Anthropic API key', re: /\bsk-ant-[A-Za-z0-9_-]{32,}\b/g },

@@ -8,7 +8,7 @@ import { loadProject } from '../src/project.js';
 import { analyze } from '../src/analyze.js';
 import { buildPlan } from '../src/plan.js';
 import { applyBaseline, saveBaseline } from '../src/baseline.js';
-import { makeProject, fakeRegistry, FAKE_AWS_ID, FAKE_AWS_SECRET } from './helpers.js';
+import { makeProject, fakeRegistry, FAKE_AWS_ID, FAKE_AWS_SECRET, FAKE_PEM_BODY } from './helpers.js';
 
 const NOW = new Date('2026-10-03T12:00:00Z');
 
@@ -27,7 +27,7 @@ function bareApp() {
     'ios/Podfile': "ENV['RCT_NEW_ARCH_ENABLED'] = '0'\n",
     'src/App.js': "import FastImage from 'react-native-fast-image';\nimport lib from 'some-js-lib';\n",
     'src/aws.js': `AWS.config.update({ accessKeyId: '${FAKE_AWS_ID}', secretAccessKey: '${FAKE_AWS_SECRET}' });\n`,
-    'functions/admin.json': '{"private_key": "-----BEGIN PRIVATE KEY-----\\nabc\\n-----END PRIVATE KEY-----"}',
+    'functions/admin.json': `{"private_key": "-----BEGIN PRIVATE KEY-----${FAKE_PEM_BODY.replace(/\n/g, '\\n')}-----END PRIVATE KEY-----"}`,
   });
 }
 

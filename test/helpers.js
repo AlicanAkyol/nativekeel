@@ -56,3 +56,6 @@ export function fakeRegistry({ directory = {}, latest = {}, published = {}, rnPe
 // that secret scanners flag. (AWS's documented EXAMPLE keys are now treated as placeholders.)
 export const FAKE_AWS_ID = ['AKIA', 'Q7Z3M9N2', 'P4R6T8V1'].join('');
 export const FAKE_AWS_SECRET = ['k7Pq2Rs9', 'Tv4Wx6Yz', '1Ab3Cd5E', 'f7Gh9Jk2', 'Lm4Np6Qr'].join('');
+
+// A PEM-shaped private key with a body (not a real key): header + base64-looking lines.
+export const FAKE_PEM_BODY = `\n${'MIIEowIBAAKCAQEAfake'}${'Q'.repeat(48)}\n${'Z'.repeat(64)}\n`;

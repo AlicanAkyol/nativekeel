@@ -75,7 +75,12 @@ export function stabilityChecks(project) {
       });
     }
     // Reanimated 4 moved worklets into a separate package that must be installed by the app.
-    if (majorOf(rea) >= 4 && !deps['react-native-worklets']) {
+    // npm 7+ and pnpm install peer dependencies on their own: if the lockfile (or node_modules)
+    // already has it, the app has it.
+    const lockHasWorklets = () =>
+      fs.existsSync(path.join(project.root, 'node_modules', 'react-native-worklets')) ||
+      ['package-lock.json', 'yarn.lock', 'pnpm-lock.yaml', 'bun.lock'].some((f) => /(?:node_modules\/|["'\s/])react-native-worklets(?:@|["':])/.test(readText(path.join(project.root, f)) || ''));
+    if (majorOf(rea) >= 4 && !deps['react-native-worklets'] && !lockHasWorklets()) {
       add({
         id: 'crash-reanimated-worklets',
         severity: 'high',

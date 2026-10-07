@@ -551,15 +551,22 @@ export function weakCrypto(root) {
     const code = text.replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' ')).replace(/\/\/[^\n]*/g, '');
     for (const rule of CRYPTO_RULES) {
       const m = code.match(rule.re);
-      if (m && !byRule.has(rule.id)) byRule.set(rule.id, { rule, where: `${path.relative(root, file)}:${code.slice(0, m.index).split('\n').length}` });
+      if (m && !byRule.has(rule.id)) {
+        // The Subsonic API (Navidrome, Airsonic) defines its login token as md5(password + salt):
+        // the app cannot choose, so it is worth knowing, not an app bug.
+        const protocol = rule.id === 'weak-password-hash' && /subsonic/i.test(text);
+        byRule.set(rule.id, { rule, protocol, where: `${path.relative(root, file)}:${code.slice(0, m.index).split('\n').length}` });
+      }
     }
   }
-  return [...byRule.values()].map(({ rule, where }) => ({
+  return [...byRule.values()].map(({ rule, where, protocol }) => ({
     id: `crypto-${rule.id}`,
-    severity: rule.severity,
+    severity: protocol ? 'low' : rule.severity,
     area: 'security',
-    title: `${rule.title} (${where})`,
-    detail: `${rule.detail} (OWASP MASVS-CRYPTO)`,
+    title: `${rule.title} (${where})${protocol ? ', required by the Subsonic API' : ''}`,
+    detail: protocol
+      ? 'The Subsonic API defines its token as md5(password + salt), so the app has no choice here. Anyone who captures a request can try to crack the password from it: use HTTPS only, and the server\'s API-key login if it offers one. (OWASP MASVS-CRYPTO)'
+      : `${rule.detail} (OWASP MASVS-CRYPTO)`,
     fix: { kind: 'security', step: `${rule.title} at \`${where}\`: ${rule.detail.split('. ').slice(-1)[0]}` },
   }));
 }

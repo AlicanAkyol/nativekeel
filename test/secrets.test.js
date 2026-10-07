@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { scanSecrets } from '../src/secrets.js';
-import { makeProject } from './helpers.js';
+import { makeProject, FAKE_PEM_BODY } from './helpers.js';
 
 const jwt = (payload) =>
   `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.${Buffer.from(JSON.stringify(payload)).toString('base64url')}.c2lnbmF0dXJlLXNpZ25hdHVyZS1zaWduYXR1cmU`;
@@ -42,7 +42,7 @@ test('placeholders and docs examples are not secrets', () => {
 });
 
 test('where a secret sits decides whether it ships', () => {
-  const pem = ['-----BEGIN RSA ', 'PRIVATE KEY-----'].join('');
+  const pem = ['-----BEGIN RSA ', 'PRIVATE KEY-----'].join('') + FAKE_PEM_BODY.replace(/\n/g, '\\n');
   const root = makeProject({
     'package.json': '{}',
     'src/app.js': `const k = "${pem}";\n`,
@@ -57,7 +57,7 @@ test('where a secret sits decides whether it ships', () => {
 });
 
 test('a JSON file ships only when the code imports it', () => {
-  const pem = ['-----BEGIN ', 'PRIVATE KEY-----'].join('');
+  const pem = ['-----BEGIN ', 'PRIVATE KEY-----'].join('') + FAKE_PEM_BODY.replace(/\n/g, '\\n');
   const sa = JSON.stringify({ type: 'service_account', private_key: `${pem}\nabc` });
   const loose = makeProject({ 'package.json': '{}', 'service-account.json': sa, 'src/App.js': "export default 1;\n" });
   assert.equal(scanSecrets(loose)[0].inAppBundle, false, 'committed, not shipped');
