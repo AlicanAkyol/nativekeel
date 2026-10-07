@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { PRIVACY_SDKS } from './privacy-sdks.js';
 
 // App Store and Google Play review rules that code can show (checked on Apple's App Review
 // Guidelines and Google Play's policy pages, October 2026). These are common rejection reasons;
@@ -73,5 +74,76 @@ export function storeReviewRules(project) {
       fix: { kind: 'store-rule', step: `Add Sign in with Apple next to ${which} on iOS (${project.expoVersion ? '`npx expo install expo-apple-authentication`' : '`@invertase/react-native-apple-authentication`'}), unless one of guideline 4.8's exceptions applies.` },
     });
   }
+  for (const f of iosSdkPrivacyManifests(root)) findings.push(f);
   return findings;
+}
+
+// iOS SDKs from Apple's list in an old version without a privacy manifest (from ios/Podfile.lock).
+// Apple refuses new apps that include them, and updates that add one, until the SDK ships a
+// manifest. The pod that pulls it in (usually a React Native package) is named, since that is
+// what the developer updates.
+export function iosSdkPrivacyManifests(root) {
+  let lock = '';
+  try {
+    lock = fs.readFileSync(path.join(root, 'ios', 'Podfile.lock'), 'utf8');
+  } catch {
+    return [];
+  }
+  const podsSection = (lock.split(/^DEPENDENCIES:/m)[0] || '').split(/^PODS:/m)[1] || '';
+  const versions = {};
+  const dependents = {}; // pod -> pods that depend on it
+  let current = null;
+  for (const line of podsSection.split('\n')) {
+    const top = line.match(/^ {2}- "?([^\s/("]+)(?:\/[^\s("]+)? \(([^)]+)\)/);
+    if (top) {
+      current = top[1];
+      if (!versions[current]) versions[current] = top[2];
+      continue;
+    }
+    const dep = line.match(/^ {4}- "?([^\s/("]+)/);
+    if (dep && current && dep[1] !== current) (dependents[dep[1]] ||= new Set()).add(current);
+  }
+  const cmp = (a, b) => {
+    const pa = a.split('.').map(Number);
+    const pb = b.split('.').map(Number);
+    for (let i = 0; i < Math.max(pa.length, pb.length); i++) if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) - (pb[i] || 0);
+    return 0;
+  };
+  // The first pods up the chain that are not on Apple's list (RNFastImage, RNFBApp, …).
+  // Climb to the React Native / Expo pods (RNFastImage, RNFBApp, EXImageLoader…): that is the
+  // package the developer updates. Without one, the first pod off the list is named.
+  const isRnPod = (p) => /^(?:RN|React|EX|Expo|lottie-react-native|react-native)/i.test(p);
+  const owners = (pod, seen = new Set()) => {
+    const rn = new Set();
+    const other = new Set();
+    for (const d of dependents[pod] || []) {
+      if (seen.has(d)) continue;
+      seen.add(d);
+      if (isRnPod(d)) rn.add(d);
+      else {
+        const up = owners(d, seen);
+        if (up.size) for (const o of up) rn.add(o);
+        else if (!PRIVACY_SDKS[d]) other.add(d);
+      }
+    }
+    return rn.size ? rn : other;
+  };
+  const old = [];
+  for (const [pod, v] of Object.entries(versions)) {
+    const sdk = PRIVACY_SDKS[pod];
+    if (!sdk || !/^\d+(\.\d+)*$/.test(v)) continue;
+    if (sdk.firstWithManifest === null || cmp(v, sdk.firstWithManifest) < 0) old.push({ pod, v, first: sdk.firstWithManifest, by: [...owners(pod)].slice(0, 3) });
+  }
+  if (!old.length) return [];
+  const byOwner = [...new Set(old.flatMap((o) => o.by))];
+  return [
+    {
+      id: 'ios-sdk-privacy-manifest',
+      severity: 'medium',
+      area: 'store',
+      title: `${old.length} iOS SDK${old.length === 1 ? '' : 's'} on Apple's privacy manifest list ${old.length === 1 ? 'is' : 'are'} too old to have one (${old.slice(0, 3).map((o) => o.pod).join(', ')}${old.length > 3 ? ', …' : ''})`,
+      detail: `${old.map((o) => `${o.pod} ${o.v} (${o.first ? `manifest from ${o.first}` : 'no release has one: replace it'}${o.by.length ? `, pulled in by ${o.by.join(', ')}` : ''})`).slice(0, 6).join('; ')}${old.length > 6 ? '; …' : ''}. Apple requires a privacy manifest for these SDKs: App Store Connect refuses a new app that includes them, or an update that adds one, until they ship it. Update the package that pulls each one in${byOwner.length ? ` (${byOwner.slice(0, 4).join(', ')})` : ''}, then run pod install.`,
+      fix: { kind: 'store-rule', step: `Update ${byOwner.length ? byOwner.slice(0, 4).map((o) => `\`${o}\``).join(', ') : 'the packages that pull in'} so ${old.slice(0, 3).map((o) => `\`${o.pod}\``).join(', ')} reach a release with a privacy manifest (or replace those with none), then \`pod install\`.` },
+    },
+  ];
 }
