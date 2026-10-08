@@ -351,3 +351,17 @@ test('far behind: no latest-version targets on the old React Native, compat pack
   const sec = plan.phases.find((p) => p.title.startsWith('Close security')).steps.join('\n');
   assert.match(sec, /react-native-reanimated.*The React Native steps below move it/);
 });
+
+test('Start here puts the most severe finding first, then urgency', async () => {
+  const { startHere } = await import('../src/plan.js');
+  const r = {
+    ...result,
+    project: { ...result.project, expo: null },
+    findings: [
+      { id: 'expo-sdk-mismatch', severity: 'medium', area: 'crash', title: 'x', detail: 'x', fix: { kind: 'crash', step: 'Run expo install --fix.' } },
+      { id: 'vuln:axios', severity: 'high', area: 'security', title: 'x', detail: 'x', fix: { kind: 'vuln-dep', name: 'axios', from: '1.13.2', to: '1.20.0', severity: 'high' } },
+    ],
+  };
+  const steps = startHere(r).map((s) => s.phase);
+  assert.deepEqual(steps.slice(0, 2), ['Close security gaps', 'Fix crash risks']);
+});

@@ -222,7 +222,12 @@ export function buildPlan(result) {
   }
 
   // Low-severity notes stay in the report; the plan only carries what can break the app.
-  const crashes = byKind('crash');
+  // Most severe first: a high-severity crash should not wait behind a minor version mismatch.
+  const SEV_ORDER = ['critical', 'high', 'medium', 'low', 'info'];
+  const crashes = result.findings
+    .filter((f) => f.fix && f.fix.kind === 'crash')
+    .sort((a, b) => SEV_ORDER.indexOf(a.severity) - SEV_ORDER.indexOf(b.severity))
+    .map((f) => f.fix);
   if (crashes.length) {
     phases.push({
       title: 'Fix crash risks',
@@ -634,13 +639,31 @@ export function planToMarkdown(result, plan) {
 // HTML report and under the summary in the terminal.
 const URGENCY = ['Stop the leaks', 'Fix crash risks', 'Meet the Google Play target SDK', 'Meet App Store and Google Play requirements', 'Close security gaps', 'Avoid known traps'];
 
+// Which fix kinds feed each urgent phase: "Start here" ranks phases by the most severe finding
+// behind them first, and by urgency second.
+const PHASE_KINDS = {
+  'Stop the leaks': ['secret'],
+  'Fix crash risks': ['crash'],
+  'Meet the Google Play target SDK': ['target-sdk', 'exported-missing'],
+  'Meet App Store and Google Play requirements': ['upgrade-rn-min', 'align-16kb', 'privacy-manifest', 'play-permissions', 'store-rule', 'ios-usage'],
+  'Close security gaps': ['security', 'manifest', 'ats', 'vuln-dep'],
+  'Avoid known traps': ['known-issue'],
+};
+
 export function startHere(result, count = 3) {
   const skip = new Set(['Set up a safety net', 'Verify before you ship']);
+  const SEV = ['critical', 'high', 'medium', 'low', 'info'];
   const rank = (t) => (URGENCY.indexOf(t) >= 0 ? URGENCY.indexOf(t) : URGENCY.length);
+  const worst = (t) => {
+    const kinds = PHASE_KINDS[t];
+    if (!kinds) return SEV.length;
+    const sevs = result.findings.filter((f) => f.fix && kinds.includes(f.fix.kind)).map((f) => SEV.indexOf(f.severity));
+    return sevs.length ? Math.min(...sevs) : SEV.length;
+  };
   return buildPlan(result)
     .phases.filter((p) => !skip.has(p.title) && p.steps.length)
     .map((p, i) => ({ p, i }))
-    .sort((a, b) => rank(a.p.title) - rank(b.p.title) || a.i - b.i)
+    .sort((a, b) => worst(a.p.title) - worst(b.p.title) || rank(a.p.title) - rank(b.p.title) || a.i - b.i)
     .slice(0, count)
     .map(({ p }) => ({ phase: p.title, step: p.steps[0].replace(/ The [^.]* phase below gets you there;.*$/, '') }));
 }

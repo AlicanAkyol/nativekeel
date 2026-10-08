@@ -6,7 +6,7 @@ Health check for React Native and Expo apps. One command, no install, no account
 npx nativekeel
 ```
 
-**What's new in 0.1.31:** verified with dependencies installed on 22 apps; Expo SDKs written as `^54` are recognised, and Expo modules that work without an import are never called unused. **0.1.30:** iOS SDKs too old for Apple's privacy manifest rule (old Firebase, SDWebImage, Lottie), with the React Native package to update. Recent releases added a *Start here* list in every report, hacking risks mapped to OWASP MASVS, crash and performance checks. Every check is tuned on 650+ open-source React Native and Expo apps, with recently updated ones added every week, to keep false alarms out ([what we found in them](https://dev.to/keel_alican_akyol/we-scanned-470-open-source-react-native-apps-here-is-what-breaks-them-5072)). [All releases →](https://nativekeel.com/changelog)
+**What's new in 0.1.32:** "Start here" now leads with the most severe problem, not a fixed order of topics. **0.1.31:** verified with dependencies installed on 22 apps; Expo SDKs written as `^54` are recognised, and Expo modules that work without an import are never called unused. Recent releases added a *Start here* list in every report, hacking risks mapped to OWASP MASVS, crash and performance checks. Every check is tuned on 650+ open-source React Native and Expo apps, with recently updated ones added every week, to keep false alarms out ([what we found in them](https://dev.to/keel_alican_akyol/we-scanned-470-open-source-react-native-apps-here-is-what-breaks-them-5072)). [All releases →](https://nativekeel.com/changelog)
 
 ```
 Summary  4 critical · 5 high · 4 medium · 6 low
@@ -15,7 +15,7 @@ Security (OWASP MASVS)  crypto 1 · network 1  ·  7 groups checked
 Start here
   1. Revoke the AWS access key ID in src/App.js:6 at the provider today.
   2. Set targetSdkVersion = 36 and compileSdkVersion = 36 in android/build.gradle.
-  3. Run pod install, commit the generated PrivacyInfo.xcprivacy, and add your data types.
+  3. Move android:usesCleartextTraffic="true" to the debug manifest.
 ```
 
 ## What it checks
