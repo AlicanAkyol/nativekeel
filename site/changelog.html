@@ -40,6 +40,13 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 650+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.40</h2><p class="date">8 October 2026</p>
+<ul>
+<li><span class="tag">Experience</span><b>Tell us when NativeKeel is wrong.</b> Every report now ends with a link to a short form for a wrong or missed finding. Nothing is sent automatically, and the form asks for the finding's title, not your code. Reports from real apps are how most of this month's accuracy fixes happened.</li>
+<li><span class="tag">Accuracy</span>On a React Native release candidate ahead of the latest stable (0.88 RC while 0.87 is stable), library compatibility tables do not cover it yet. Instead of calling Reanimated or Screens incompatible, NativeKeel says the tables do not cover it.</li>
+<li><span class="tag">Behind the scenes</span>Our test set now looks first for open-source apps that link their App Store or Google Play page, which have real users: 30 added this week, 94 already in.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.39</h2><p class="date">8 October 2026</p>
 <ul>
 <li><span class="tag">Accuracy</span>When deciding whether a removed React Native API is still used, names inside <code>/* … */</code> comments (including JSX comments) no longer count as uses.</li>

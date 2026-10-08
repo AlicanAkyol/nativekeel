@@ -1,0 +1,29 @@
+name: Wrong finding
+description: NativeKeel reported something that is not true for your app, or missed something it should catch.
+title: "Wrong finding: "
+labels: ["accuracy"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks: reports like this are how NativeKeel improves. **Do not paste secrets, private code or company names.** The finding's title and a short description are enough; we reproduce it with a small example.
+  - type: input
+    id: finding
+    attributes:
+      label: Which finding?
+      description: The title line from the report, e.g. "react-native-foo is installed but never used".
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why is it wrong for your app?
+      description: For example "the package is used from styles.xml", "the build works on this version", or "this should have been reported".
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: NativeKeel (npx nativekeel --version), React Native, Expo SDK if any, and whether node_modules was installed.
+      placeholder: nativekeel 0.1.40, react-native 0.85.3, no Expo, node_modules installed

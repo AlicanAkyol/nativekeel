@@ -413,7 +413,19 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
   const expoExact = project.expoVersion ? exactOf('expo') : null;
   if (!expoPins && expoExact && !forcedOffline) expoPins = await registry.expoPins(expoExact);
   const expoSdk = project.expoVersion ? majorOf(project.expoVersion) : null;
-  if (current) {
+  // A React Native ahead of the latest stable (a release candidate) is not in the libraries'
+  // compatibility tables yet: say so instead of calling every library incompatible.
+  const aheadOfStable = !!(current && rn && rn.latest && minorOf(current) > minorOf(rn.latest));
+  if (aheadOfStable) {
+    add({
+      id: 'rn-prerelease',
+      severity: 'info',
+      area: 'react-native',
+      title: `React Native ${current} is ahead of the latest stable release (${rn.latest})`,
+      detail: 'Library compatibility tables do not cover it yet, so version checks for Reanimated, Gesture Handler and Screens are skipped. Check each library\'s release notes for this React Native version.',
+    });
+  }
+  if (current && !aheadOfStable) {
     const rnMinor = minorOf(current);
     for (const dep of deps.filter((d) => COMPAT[d.name])) {
       const pinned = expoPins && expoPins[dep.name];

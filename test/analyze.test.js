@@ -448,3 +448,15 @@ test('a package with a podspec but no native sources is JavaScript, and a prerel
   assert.equal(result.deps.find((d) => d.name === 'html-renderer').native, false);
   assert.ok(!result.findings.some((f) => f.id === 'dep-major:@nav/native'), 'no downgrade from 8.0.0-alpha to 7.5.0');
 });
+
+test('a React Native release candidate ahead of the latest stable skips compatibility tables', async () => {
+  const root = makeProject({
+    'package.json': { name: 'rc', dependencies: { 'react-native': '0.88.0-rc.0', 'react-native-reanimated': '4.6.0' } },
+    'node_modules/react-native/package.json': { version: '0.88.0-rc.0' },
+    'node_modules/react-native-reanimated/package.json': { version: '4.6.0' },
+    'node_modules/react-native-reanimated/android/build.gradle': '',
+  });
+  const result = await analyze(loadProject(root), { get: fakeRegistry({ 'react-native': '0.87.1', 'react-native-reanimated': '4.6.0' }) });
+  assert.ok(result.findings.some((f) => f.id === 'rn-prerelease'));
+  assert.ok(!result.findings.some((f) => f.id.startsWith('compat:')), 'no table-based claims for an unreleased React Native');
+});

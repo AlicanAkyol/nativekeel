@@ -2,6 +2,8 @@ import { SEVERITIES, countBySeverity } from './analyze.js';
 import { SITE_URL } from './config.js';
 import { startHere } from './plan.js';
 
+const ISSUE_URL = 'https://github.com/AlicanAkyol/nativekeel/issues/new?template=false-alarm.yml';
+
 export function textReport(result, { color = true, verbose = false } = {}) {
   const paint = (code) => (s) => (color ? `\x1b[${code}m${s}\x1b[0m` : s);
   const c = { red: paint('31'), yellow: paint('33'), blue: paint('34'), gray: paint('90'), bold: paint('1'), green: paint('32') };
@@ -84,6 +86,7 @@ export function textReport(result, { color = true, verbose = false } = {}) {
     out.push('');
     out.push(`Next: ${c.bold('npx nativekeel plan')} writes the full step-by-step plan.`);
     out.push(c.gray(`No time to do it yourself? Fixed-price upgrades: ${SITE_URL}/#services`));
+    out.push(c.gray(`Something wrong for your app? Tell us (no code needed): ${ISSUE_URL}`));
   } else if (!result.findings.length) {
     out.push(c.green('Nothing to fix. This app is in good shape.'));
   }

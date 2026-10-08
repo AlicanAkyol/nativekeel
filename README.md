@@ -6,7 +6,7 @@ Health check for React Native and Expo apps. One command, no install, no account
 npx nativekeel
 ```
 
-**What's new in 0.1.39:** a removed React Native API that is only imported, or only mentioned in comments, is a low "unused import", not a crash. Recent releases added a *Start here* list in every report, hacking risks mapped to OWASP MASVS, crash and performance checks. Every check is tuned on 650+ open-source React Native and Expo apps, with recently updated ones added every week, to keep false alarms out ([what we found in them](https://dev.to/keel_alican_akyol/we-scanned-470-open-source-react-native-apps-here-is-what-breaks-them-5072)). [All releases →](https://nativekeel.com/changelog)
+**What's new in 0.1.40:** every report links a short form to tell us about a wrong or missed finding (nothing is sent automatically), and React Native release candidates no longer trigger compatibility warnings. Recent releases added a *Start here* list in every report, hacking risks mapped to OWASP MASVS, crash and performance checks. Every check is tuned on 650+ open-source React Native and Expo apps, with recently updated ones added every week, to keep false alarms out ([what we found in them](https://dev.to/keel_alican_akyol/we-scanned-470-open-source-react-native-apps-here-is-what-breaks-them-5072)). [All releases →](https://nativekeel.com/changelog)
 
 ```
 Summary  4 critical · 5 high · 4 medium · 6 low
@@ -108,7 +108,7 @@ Agencies can put their own name on the HTML report: `npx nativekeel plan --html 
 - **Secrets are always masked** in every output.
 - **Verifiable releases.** Published with npm provenance from GitHub Actions: `npm audit signatures`.
 
-Details and vulnerability reporting: [SECURITY.md](SECURITY.md).
+Details and vulnerability reporting: [SECURITY.md](SECURITY.md). Wrong or missed finding? [Tell us](https://github.com/AlicanAkyol/nativekeel/issues/new?template=false-alarm.yml), no code needed.
 
 ## Need it done for you?
 
