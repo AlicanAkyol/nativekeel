@@ -21,7 +21,10 @@ const readJson = (file) => {
 
 export function cleanVersion(v) {
   const m = String(v).match(/(\d+)\.(\d+)(?:\.(\d+))?/);
-  return m ? `${m[1]}.${m[2]}.${m[3] || 0}` : null;
+  if (m) return `${m[1]}.${m[2]}.${m[3] || 0}`;
+  // A major only ("54", "^54", "~54"): Expo projects often pin the SDK this way.
+  const major = String(v).trim().match(/^[~^>=v\s]*(\d+)(?:\.x)?$/);
+  return major ? `${major[1]}.0.0` : null;
 }
 
 // Monorepos hoist packages, so look in every node_modules from the app up to the filesystem root.

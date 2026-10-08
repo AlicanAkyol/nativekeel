@@ -40,6 +40,15 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 650+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.31</h2><p class="date">8 October 2026</p>
+<ul>
+<li><span class="tag">Accuracy</span><b>Tested the way you run it: with dependencies installed.</b> Most of our test set is scanned straight from GitHub, without <code>node_modules</code>. This time we installed the dependencies of 22 recent apps (scripts disabled) and compared both scans. With packages installed NativeKeel sees more, as it should: a second copy of React, patches that no longer match, Kotlin modules that fail on the New Architecture, packages off the Expo SDK. Two things were wrong, and are fixed:
+<ul>
+<li>An Expo SDK written as a major only (<code>"expo": "^54"</code>) was not recognised without <code>node_modules</code>, so the app was treated as plain React Native and told its React Native was unsupported. 9 apps in our test set.</li>
+<li><code>expo-system-ui</code>, <code>expo-splash-screen</code>, <code>expo-dev-client</code> and <code>expo-updates</code> work from <code>app.json</code> or register natively, without an import: they were listed as unused. Removing them would break dark mode, the splash screen or updates. The other 44 "unused" packages we checked by hand really were unused.</li>
+</ul></li>
+</ul></div>
+
 <div class="rel"><h2>0.1.30</h2><p class="date">7 October 2026</p>
 <ul>
 <li><span class="tag">Store</span><b>iOS SDKs too old for Apple's privacy manifest rule.</b> Apple lists SDKs (Firebase, SDWebImage, Lottie, GoogleUtilities, Alamofire and others) that must ship a privacy manifest: App Store Connect refuses a new app that includes an old version, or an update that adds one. NativeKeel reads <code>ios/Podfile.lock</code> and names the React Native package that pulls each one in, since that is what you update: SDWebImage 5.11.1 usually comes from <code>react-native-fast-image</code>, old Firebase from <code>@react-native-firebase</code>. The first version with a manifest for each SDK is read from the CocoaPods specs by a script, not typed by hand. 24 of 116 apps with a Podfile.lock in our test set.</li>

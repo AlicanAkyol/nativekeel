@@ -428,3 +428,9 @@ test('Expo SDK mismatch: major differences are high, patch-only ones low', async
   assert.equal((await find('15.15.1', '31.0.13')).severity, 'medium', 'svg 15.15 vs 15.12 is a minor difference');
   assert.equal(await find('15.12.1', '31.0.20'), undefined, 'inside ~31.0.13');
 });
+
+test('an Expo SDK given as a major only ("^54") is still an Expo project without node_modules', async () => {
+  const root = makeProject({ 'package.json': { name: 'e', dependencies: { expo: '^54', 'react-native': '0.81.4' } } });
+  const p = loadProject(root);
+  assert.equal(p.expoVersion, '54.0.0');
+});
