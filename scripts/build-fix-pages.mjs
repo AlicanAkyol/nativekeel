@@ -299,6 +299,52 @@ Your app currently targets API level 34 and must target at least API level 36 to
 **Find the library.** Open your release AAB or APK and check each 64-bit \`.so\` file's alignment. \`npx nativekeel\` does this when a built APK/AAB is in the project, lists the libraries that are not aligned, and flags React Native versions before 0.77 even without a build.`,
     sources: [['Android: support 16 KB page sizes', 'https://developer.android.com/guide/practices/page-sizes']],
   },
+  {
+    slug: 'signed-in-debug-mode',
+    error: 'You uploaded an APK or Android App Bundle that was signed in debug mode',
+    title: 'Google Play: "signed in debug mode" in a React Native app',
+    description: 'Why Google Play refuses a React Native release build "signed in debug mode", and how to set up release signing without committing your passwords.',
+    body: `
+**What it means.** Google Play only accepts uploads signed with your own key. The React Native template signs release builds with the debug key, which is the same public key on every machine:
+
+\`\`\`
+release {
+    // Caution! In production, you need to generate your own keystore file.
+    signingConfig signingConfigs.debug
+}
+\`\`\`
+
+**How to fix it.** Create an upload key once and keep it out of the repository:
+
+\`\`\`
+keytool -genkeypair -v -storetype PKCS12 -keystore upload.keystore -alias upload -keyalg RSA -keysize 2048 -validity 10000
+\`\`\`
+
+Put the passwords in \`~/.gradle/gradle.properties\` (or CI secrets), not in the project, then sign the release build with it in \`android/app/build.gradle\`:
+
+\`\`\`
+signingConfigs {
+    release {
+        storeFile file(MYAPP_UPLOAD_STORE_FILE)
+        storePassword MYAPP_UPLOAD_STORE_PASSWORD
+        keyAlias MYAPP_UPLOAD_KEY_ALIAS
+        keyPassword MYAPP_UPLOAD_KEY_PASSWORD
+    }
+}
+buildTypes {
+    release {
+        signingConfig signingConfigs.release
+    }
+}
+\`\`\`
+
+Build with \`./gradlew bundleRelease\` and upload the \`.aab\`. With Play App Signing, Google re-signs for users and this is your upload key.
+
+**If you build with EAS or sign in CI** (Fastlane, a signing action), the signing happens there and the Gradle setting does not matter.
+
+**How common it is.** In our scan of 653 open-source React Native apps, 62 sign release builds with the debug key and do not sign them elsewhere. \`npx nativekeel\` reports it, together with signing passwords or keystores committed to the repository.`,
+    sources: [['React Native: publishing to Google Play Store', 'https://reactnative.dev/docs/signed-apk-android'], ['Android: sign your app', 'https://developer.android.com/studio/publish/app-signing']],
+  },
 ];
 
 const STYLE = `:root{--bg:#fbfaf7;--text:#15171b;--muted:#5d6470;--accent:#0b5d55;--line:#e3e1db;--card:#ffffff;--code:#f1efea}

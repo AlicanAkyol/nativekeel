@@ -40,6 +40,11 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 650+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.36</h2><p class="date">8 October 2026</p>
+<ul>
+<li><span class="tag">Store</span><b>Release builds signed with the debug key.</b> The React Native template signs release builds with the public debug key, and Google Play refuses the upload ("signed in debug mode"). NativeKeel now reports it when nothing else signs the build: projects built with EAS, or signed in CI with Fastlane or a signing action, are recognised and left alone. 62 apps in our test set. A <a href="/fix/signed-in-debug-mode">fix page</a> shows the setup that keeps passwords out of the repository.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.35</h2><p class="date">8 October 2026</p>
 <ul>
 <li><span class="tag">Fix</span>The npm page showed "What's new in 0.1.33" after 0.1.34 was out. A test now fails the release when the README or this page do not name the version being published, so it cannot happen again.</li>

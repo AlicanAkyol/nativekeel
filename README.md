@@ -6,7 +6,7 @@ Health check for React Native and Expo apps. One command, no install, no account
 npx nativekeel
 ```
 
-**What's new in 0.1.35:** every release is now checked so this line and the changelog always name the current version. **0.1.34:** the GitHub Action is ready for the Marketplace, and the site has [React Native fix pages](https://nativekeel.com/fix/) for common build errors, store rejections and crashes. **0.1.33:** "Start here" leads with the most severe problem. Recent releases added a *Start here* list in every report, hacking risks mapped to OWASP MASVS, crash and performance checks. Every check is tuned on 650+ open-source React Native and Expo apps, with recently updated ones added every week, to keep false alarms out ([what we found in them](https://dev.to/keel_alican_akyol/we-scanned-470-open-source-react-native-apps-here-is-what-breaks-them-5072)). [All releases →](https://nativekeel.com/changelog)
+**What's new in 0.1.36:** release builds still signed with the debug key, which Google Play refuses (EAS and CI signing are recognised). **0.1.35:** every release is checked so this line and the changelog name the current version. Recent releases added a *Start here* list in every report, hacking risks mapped to OWASP MASVS, crash and performance checks. Every check is tuned on 650+ open-source React Native and Expo apps, with recently updated ones added every week, to keep false alarms out ([what we found in them](https://dev.to/keel_alican_akyol/we-scanned-470-open-source-react-native-apps-here-is-what-breaks-them-5072)). [All releases →](https://nativekeel.com/changelog)
 
 ```
 Summary  4 critical · 5 high · 4 medium · 6 low
@@ -27,7 +27,7 @@ Start here
 - **What can you simply delete?** Installed packages that nothing imports, references natively, requires or patches.
 
 **Store**
-- **Will Google Play and the App Store accept your next build?** `targetSdk`, permissions Google Play restricts (photo/video, all files, background location, app installs, SMS), 16 KB memory pages (it also opens your built APK/AAB and checks every native library), the iOS privacy manifest and SDKs too old to have one, missing Info.plist usage descriptions, sign-up without account deletion, and social login without Sign in with Apple.
+- **Will Google Play and the App Store accept your next build?** `targetSdk`, permissions Google Play restricts (photo/video, all files, background location, app installs, SMS), 16 KB memory pages (it also opens your built APK/AAB and checks every native library), the iOS privacy manifest and SDKs too old to have one, missing Info.plist usage descriptions, sign-up without account deletion, social login without Sign in with Apple, and release builds signed with the debug key.
 
 **Crashes**
 - **Will it crash at runtime?** packages off the versions your Expo SDK expects, release builds that still point at a development server, native libraries that need a newer React Native, Reanimated without its Babel plugin or `react-native-worklets`, mixed `@react-native-firebase/*` or `@react-navigation/*` majors, a second copy of React or React Native inside a dependency, Kotlin modules that cannot load through the New Architecture interop layer, AppDelegate setups that crash in Release, camera/photos/location access without the Info.plist text iOS requires, imports of APIs removed from React Native core (`AsyncStorage`, `Picker`, `ViewPropTypes`, …) or deprecated for removal (`ImageBackground`, `SafeAreaView`), and traps learned from real upgrades.

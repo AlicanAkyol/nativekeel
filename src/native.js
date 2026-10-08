@@ -76,6 +76,38 @@ export function nativeChecks(project, { rnLatest = null, now = new Date() } = {}
     }
   }
 
+  // The React Native template signs release builds with the debug key ("Caution! In production,
+  // you need to generate your own keystore file"). Google Play refuses that upload ("signed in
+  // debug mode"). EAS Build and CI signing (Fastlane, signing actions) replace it at build time.
+  const releaseGradle = hasAndroid ? read(path.join(root, 'android', 'app', 'build.gradle')) || '' : '';
+  const buildTypes = releaseGradle.slice(Math.max(0, releaseGradle.indexOf('buildTypes')));
+  const releaseBlock = (buildTypes.match(/release\s*\{([\s\S]*?)\n\s{8}\}/) || buildTypes.match(/release\s*\{([\s\S]*?)\}/) || [])[1] || '';
+  if (/signingConfig\s*=?\s*signingConfigs\.(?:getByName\(\s*"debug"\s*\)|debug)\b/.test(releaseBlock)) {
+    let repo = root;
+    for (let i = 0; i < 4 && !fs.existsSync(path.join(repo, '.git')); i++) repo = path.dirname(repo);
+    const ci = [root, repo]
+      .flatMap((base) => ['.github/workflows', '.circleci', '.gitlab-ci.yml', 'bitrise.yml', 'codemagic.yaml', 'fastlane', 'android/fastlane'].map((d) => path.join(base, d)))
+      .map((p) => {
+        try {
+          return fs.statSync(p).isDirectory() ? fs.readdirSync(p).map((f) => read(path.join(p, f)) || '').join('\n') : read(p) || '';
+        } catch {
+          return '';
+        }
+      })
+      .join('\n');
+    const signedElsewhere = fs.existsSync(path.join(root, 'eas.json')) || fs.existsSync(path.join(repo, 'eas.json')) || /injected\.signing|keystore|apksigner|jarsigner|sign-android-release|upload_to_play_store|supply\(/i.test(ci);
+    if (!signedElsewhere) {
+      add({
+        id: 'android-release-debug-signed',
+        severity: 'medium',
+        area: 'store',
+        title: 'Release builds are signed with the debug key (android/app/build.gradle)',
+        detail: 'The release buildType uses signingConfigs.debug, as the React Native template does. Google Play refuses such an upload ("You uploaded an APK or Android App Bundle that was signed in debug mode"), and the debug key is public. If you publish through Google Play, create an upload key, add a release signingConfig that reads its passwords from ~/.gradle/gradle.properties or environment variables, and use it for the release buildType. Building with EAS or signing in CI is detected and not reported.',
+        fix: { kind: 'store-rule', step: 'Create an upload keystore, add `signingConfigs.release` reading its passwords from `~/.gradle/gradle.properties` (not the repo), and set `signingConfig signingConfigs.release` in the release buildType of `android/app/build.gradle`.' },
+      });
+    }
+  }
+
   // 16 KB page size: React Native itself before 0.77, then the actual built binaries.
   const blocked16k = today >= PAGE_SIZE_16K.blockedFrom;
   const policy16k = blocked16k

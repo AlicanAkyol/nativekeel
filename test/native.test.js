@@ -376,3 +376,13 @@ test('components with an intent-filter and no android:exported block a targetSdk
   assert.deepEqual(f.fix.components, ['activity .MainActivity'], 'self-closing service and exported receiver are fine');
   assert.equal(check(33), undefined, 'already on 31+: it builds, so it is set elsewhere');
 });
+
+test('release signed with the debug key: reported, unless EAS or CI signs it', () => {
+  const gradle = "android {\n    buildTypes {\n        debug {\n            signingConfig signingConfigs.debug\n        }\n        release {\n            // Caution! In production, you need to generate your own keystore file.\n            signingConfig signingConfigs.debug\n            minifyEnabled enableProguardInReleaseBuilds\n        }\n    }\n}";
+  const find = (extra) => nativeChecks(loadProject(makeProject(rnApp('0.80.0', { 'android/app/build.gradle': gradle, ...extra }))), { now: NOW }).find((f) => f.id === 'android-release-debug-signed');
+  assert.equal(find({}).severity, 'medium');
+  assert.equal(find({ 'eas.json': '{}' }), undefined, 'EAS Build signs it');
+  assert.equal(find({ 'fastlane/Fastfile': "gradle(task: 'bundle', properties: { 'android.injected.signing.store.file' => ENV['KEYSTORE'] })" }), undefined, 'Fastlane signs it');
+  const signed = gradle.replace('            signingConfig signingConfigs.debug\n            minifyEnabled', '            signingConfig signingConfigs.release\n            minifyEnabled');
+  assert.equal(nativeChecks(loadProject(makeProject(rnApp('0.80.0', { 'android/app/build.gradle': signed }))), { now: NOW }).find((f) => f.id === 'android-release-debug-signed'), undefined);
+});

@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Google Play: "signed in debug mode" in a React Native app</title>
+<meta name="description" content="Why Google Play refuses a React Native release build "signed in debug mode", and how to set up release signing without committing your passwords.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#0b5d55">
+<link rel="canonical" href="https://nativekeel.com/fix/signed-in-debug-mode">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="NativeKeel">
+<meta property="og:url" content="https://nativekeel.com/fix/signed-in-debug-mode">
+<meta property="og:title" content="Google Play: "signed in debug mode" in a React Native app">
+<meta property="og:description" content="Why Google Play refuses a React Native release build "signed in debug mode", and how to set up release signing without committing your passwords.">
+<meta property="og:image" content="https://nativekeel.com/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://nativekeel.com/og.png">
+<style>:root{--bg:#fbfaf7;--text:#15171b;--muted:#5d6470;--accent:#0b5d55;--line:#e3e1db;--card:#ffffff;--code:#f1efea}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1013;--text:#e9ebef;--muted:#9aa2ad;--accent:#3cc4b4;--line:#262a31;--card:#15181d;--code:#1b1f25}}
+:root[data-theme="dark"]{--bg:#0e1013;--text:#e9ebef;--muted:#9aa2ad;--accent:#3cc4b4;--line:#262a31;--card:#15181d;--code:#1b1f25}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.65 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:760px;margin:0 auto;padding:40px 16px 64px;overflow-wrap:anywhere}
+h1{font-size:28px;line-height:1.25;margin:0 0 6px}h2{font-size:18px;margin:28px 0 6px}a{color:var(--accent)}p,li{color:var(--muted)}strong{color:var(--text)}
+code{font:14px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--code);padding:1px 5px;border-radius:5px}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow-x:auto}pre code{background:none;padding:0;white-space:pre-wrap}
+.cta{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:28px 0}.cta code{font-size:15px}
+.meta{font-size:14px;color:var(--muted)}ul.list li{margin:8px 0}</style>
+</head>
+<body><main>
+<p class="meta"><a href="/">NativeKeel</a> · <a href="/fix/">React Native fixes</a></p>
+<h1>You uploaded an APK or Android App Bundle that was signed in debug mode</h1>
+<p class="meta">Updated 2026-10-08</p>
+<p><strong>What it means.</strong> Google Play only accepts uploads signed with your own key. The React Native template signs release builds with the debug key, which is the same public key on every machine:</p>
+<pre><code>release {
+    // Caution! In production, you need to generate your own keystore file.
+    signingConfig signingConfigs.debug
+}</code></pre>
+<p><strong>How to fix it.</strong> Create an upload key once and keep it out of the repository:</p>
+<pre><code>keytool -genkeypair -v -storetype PKCS12 -keystore upload.keystore -alias upload -keyalg RSA -keysize 2048 -validity 10000</code></pre>
+<p>Put the passwords in <code>~/.gradle/gradle.properties</code> (or CI secrets), not in the project, then sign the release build with it in <code>android/app/build.gradle</code>:</p>
+<pre><code>signingConfigs {
+    release {
+        storeFile file(MYAPP_UPLOAD_STORE_FILE)
+        storePassword MYAPP_UPLOAD_STORE_PASSWORD
+        keyAlias MYAPP_UPLOAD_KEY_ALIAS
+        keyPassword MYAPP_UPLOAD_KEY_PASSWORD
+    }
+}
+buildTypes {
+    release {
+        signingConfig signingConfigs.release
+    }
+}</code></pre>
+<p>Build with <code>./gradlew bundleRelease</code> and upload the <code>.aab</code>. With Play App Signing, Google re-signs for users and this is your upload key.</p>
+<p><strong>If you build with EAS or sign in CI</strong> (Fastlane, a signing action), the signing happens there and the Gradle setting does not matter.</p>
+<p><strong>How common it is.</strong> In our scan of 653 open-source React Native apps, 62 sign release builds with the debug key and do not sign them elsewhere. <code>npx nativekeel</code> reports it, together with signing passwords or keystores committed to the repository.</p>
+<div class="cta"><strong>Check your whole app in one command:</strong> <code>npx nativekeel</code><br><span class="meta">Free, runs locally (your code is not uploaded), no account. It reports this and 80 other upgrade, store, crash and security problems.</span></div>
+<h2>Sources</h2>
+<ul><li><a href="https://reactnative.dev/docs/signed-apk-android">React Native: publishing to Google Play Store</a></li><li><a href="https://developer.android.com/studio/publish/app-signing">Android: sign your app</a></li></ul>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"Google Play: \"signed in debug mode\" in a React Native app","description":"Why Google Play refuses a React Native release build \"signed in debug mode\", and how to set up release signing without committing your passwords.","dateModified":"2026-10-08","author":{"@type":"Organization","name":"NativeKeel","url":"https://nativekeel.com"},"mainEntityOfPage":"https://nativekeel.com/fix/signed-in-debug-mode"}</script>
+</main></body>
+</html>
