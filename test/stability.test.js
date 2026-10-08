@@ -68,12 +68,15 @@ test('iOS usage descriptions: missing key flagged; add-only photo key and Expo p
 
 test('APIs removed from React Native core: crash now or after the upgrade', () => {
   const src = (rn, code) => stabilityChecks(loadProject(makeProject({ 'package.json': { name: 'r', dependencies: { 'react-native': rn } }, 'src/A.js': code }))).find((f) => f.id === 'crash-removed-core-imports');
-  const asyncNow = src('0.80.0', "import { View, AsyncStorage } from 'react-native';");
+  const asyncNow = src('0.80.0', "import { View, AsyncStorage } from 'react-native';\nawait AsyncStorage.getItem('k');");
   assert.equal(asyncNow.severity, 'high');
   assert.match(asyncNow.detail, /@react-native-async-storage\/async-storage/);
-  assert.equal(src('0.65.0', "import { Picker } from 'react-native';").severity, 'medium');
-  assert.equal(src('0.73.0', "const { ViewPropTypes } = require('react-native');").severity, 'medium', 'PropTypes still exist on 0.73');
-  assert.equal(src('0.74.0', "import { ViewPropTypes } from 'react-native';").severity, 'high');
+  assert.equal(src('0.65.0', "import { Picker } from 'react-native';\nconst p = <Picker />;").severity, 'medium');
+  assert.equal(src('0.73.0', "const { ViewPropTypes } = require('react-native');\nX.propTypes = { style: ViewPropTypes.style };").severity, 'medium', 'PropTypes still exist on 0.73');
+  assert.equal(src('0.74.0', "import { ViewPropTypes } from 'react-native';\nX.propTypes = { style: ViewPropTypes.style };").severity, 'high');
+  const importOnly = src('0.85.0', "import { View, DatePickerAndroid } from 'react-native';\nexport default () => <View />;");
+  assert.equal(importOnly.severity, 'low', 'an import that is never used is undefined, not a crash');
+  assert.match(importOnly.title, /unused import/);
   assert.equal(src('0.80.0', "import { View, Text } from 'react-native';\nimport AsyncStorage from '@react-native-async-storage/async-storage';"), undefined);
 });
 

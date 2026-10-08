@@ -295,6 +295,7 @@ const DEPRECATED_IN_CORE = {
 export function removedCoreImports(project) {
   const root = project.root;
   const used = new Map(); // name -> first file:line
+  const referenced = new Set(); // used beyond the import line
   const deprecated = new Map();
   const files = [];
   const walk = (dir) => {
@@ -317,14 +318,19 @@ export function removedCoreImports(project) {
     const text = readText(file) || '';
     if (!text.includes("'react-native'") && !text.includes('"react-native"')) continue;
     const blocks = [
-      ...[...text.matchAll(/import\s*(?:[\w$]+\s*,\s*)?\{([^}]*)\}\s*from\s*['"]react-native['"]/g)].map((m) => ({ names: m[1], index: m.index })),
-      ...[...text.matchAll(/(?:const|let|var)\s*\{([^}]*)\}\s*=\s*require\(\s*['"]react-native['"]\s*\)/g)].map((m) => ({ names: m[1], index: m.index })),
+      ...[...text.matchAll(/import\s*(?:[\w$]+\s*,\s*)?\{([^}]*)\}\s*from\s*['"]react-native['"]/g)].map((m) => ({ names: m[1], index: m.index, length: m[0].length })),
+      ...[...text.matchAll(/(?:const|let|var)\s*\{([^}]*)\}\s*=\s*require\(\s*['"]react-native['"]\s*\)/g)].map((m) => ({ names: m[1], index: m.index, length: m[0].length })),
     ];
     for (const b of blocks) {
       for (const raw of b.names.split(',')) {
         const name = raw.trim().replace(/^type\s+/, '').split(/\s+as\s+/)[0].trim();
         const at = () => `${path.relative(root, file)}:${text.slice(0, b.index).split('\n').length}`;
         if ((REMOVED_FROM_CORE[name] || REMOVED_PROP_TYPES.includes(name)) && !used.has(name)) used.set(name, at());
+        // Referenced anywhere besides the import itself? An import alone is harmless (undefined).
+        if (REMOVED_FROM_CORE[name] || REMOVED_PROP_TYPES.includes(name)) {
+          const rest = text.slice(0, b.index) + text.slice(b.index + b.length);
+          if (new RegExp(`\\b${name}\\b`).test(rest.replace(/\/\/[^\n]*/g, ''))) referenced.add(name);
+        }
         if (DEPRECATED_IN_CORE[name] && !deprecated.has(name)) deprecated.set(name, at());
       }
     }
@@ -349,16 +355,20 @@ export function removedCoreImports(project) {
     });
   }
   if (!used.size) return findings;
-  const crashesNow = [...used.keys()].some((n) => (REMOVED_PROP_TYPES.includes(n) ? minor >= 74 : minor >= 72));
-  const list = [...used].map(([n, at]) => `${n} (${at}) → ${REMOVED_FROM_CORE[n] || 'deprecated-react-native-prop-types'}`);
+  const removedNow = (n) => (REMOVED_PROP_TYPES.includes(n) ? minor >= 74 : minor >= 72);
+  const crashesNow = [...used.keys()].some((n) => removedNow(n) && referenced.has(n));
+  const importOnly = [...used.keys()].every((n) => !referenced.has(n));
+  const list = [...used].map(([n, at]) => `${n} (${at}${referenced.has(n) ? '' : ', imported but not used'}) → ${REMOVED_FROM_CORE[n] || 'deprecated-react-native-prop-types'}`);
   return [
     ...findings,
     {
       id: 'crash-removed-core-imports',
-      severity: crashesNow ? 'high' : 'medium',
+      severity: crashesNow ? 'high' : importOnly ? 'low' : 'medium',
       area: 'crash',
-      title: `${used.size} import${used.size === 1 ? '' : 's'} of APIs removed from React Native core${crashesNow ? '' : ' (they break when you upgrade)'}`,
-      detail: `${list.slice(0, 6).join('; ')}${list.length > 6 ? '; …' : ''}. Importing these from 'react-native' throws "has been removed from react-native core" or returns undefined on current versions, which crashes the screen that uses them. Install the replacement and change the import.`,
+      title: importOnly
+        ? `${used.size} unused import${used.size === 1 ? '' : 's'} of APIs removed from React Native core`
+        : `${used.size} import${used.size === 1 ? '' : 's'} of APIs removed from React Native core${crashesNow ? '' : ' (they break when you upgrade)'}`,
+      detail: `${list.slice(0, 6).join('; ')}${list.length > 6 ? '; …' : ''}. On current React Native these imports are undefined in release builds (development builds throw "has been removed from react-native core"), so ${importOnly ? 'an import that is never used is harmless: delete it' : 'the code that calls them fails at that point. Install the replacement and change the import'}.`,
       fix: { kind: 'crash', step: `Move ${[...used.keys()].map((n) => `\`${n}\``).join(', ')} off 'react-native' to their community packages (${[...new Set([...used.keys()].map((n) => REMOVED_FROM_CORE[n] || 'deprecated-react-native-prop-types'))].slice(0, 4).join(', ')}).` },
     },
   ];
