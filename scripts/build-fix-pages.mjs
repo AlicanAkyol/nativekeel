@@ -213,6 +213,92 @@ With RLS on and no policy, nobody can read the table through the API, so add pol
 **Check your repository.** \`npx nativekeel\` reads the migrations under \`supabase/\` and lists public tables that never enable RLS. Also check the dashboard (Table Editor) for tables created there.`,
     sources: [['Supabase: row level security', 'https://supabase.com/docs/guides/database/postgres/row-level-security'], ['Supabase: database advisors', 'https://supabase.com/docs/guides/database/database-advisors']],
   },
+  {
+    slug: 'app-store-account-deletion-5-1-1-v',
+    error: 'Guideline 5.1.1(v): the app supports account creation but does not include an option to initiate account deletion',
+    title: 'App Store rejection 5.1.1(v): account deletion in a React Native app',
+    description: 'Why Apple rejects React Native and Expo apps under guideline 5.1.1(v), what counts as account deletion, and what Google Play asks for as well.',
+    body: `
+The rejection reads:
+
+\`\`\`
+Guideline 5.1.1(v) - Data Collection and Storage
+The app supports account creation but does not include an option to initiate account deletion. Apps that support account creation must also offer account deletion to give users more control of the data they've shared while using an app.
+\`\`\`
+
+**What Apple asks for.** If people can create an account in your app, they must be able to start deleting it from inside the app. Deactivating or disabling the account is not enough. If deletion has to finish on a website, the app must link directly to that page. A confirmation step is fine.
+
+**Google Play asks for the same, plus a web link.** Apps that let users create an account must offer an in-app path to delete it and its data, and a web page where deletion can be requested, declared in the Data safety form in Play Console.
+
+**How to fix it.** Add "Delete account" to the account or settings screen. It should delete the account and its data on your server (or start that request), sign the user out, and say what happens. With Firebase that is \`deleteUser\` (the user may need to sign in again first); with Supabase it is a server-side call with the service role key, never from the app. Publish the same flow as a web page for Google Play.
+
+**How common it is.** In our scan of 653 open-source React Native apps, 43 sign users up (Firebase, Supabase, Amplify, Appwrite, Clerk or their own /signup API) with no account deletion anywhere in the code. \`npx nativekeel\` flags it before you submit.`,
+    sources: [['App Review Guidelines 5.1.1(v)', 'https://developer.apple.com/app-store/review/guidelines/'], ['Apple: offering account deletion in your app', 'https://developer.apple.com/support/offering-account-deletion-in-your-app/'], ['Google Play: account deletion requirements', 'https://support.google.com/googleplay/android-developer/answer/13327111']],
+  },
+  {
+    slug: 'app-store-sign-in-with-apple-4-8',
+    error: 'Guideline 4.8 - Design - Login Services',
+    title: 'App Store rejection 4.8 (Login Services): Sign in with Apple in a React Native app',
+    description: 'Why an iOS app with Google or Facebook login is rejected under App Store guideline 4.8, the exceptions, and how to add Sign in with Apple in React Native and Expo.',
+    body: `
+**What the guideline says.** Apps that use a third-party or social login (Google, Facebook, Log in with X and others) to set up or authenticate the user's primary account must also offer an equivalent login that:
+
+- limits data collection to the user's name and email address;
+- lets users keep their email address private;
+- does not collect interactions with your app for advertising without consent.
+
+Sign in with Apple meets all three, which is why it is the usual fix.
+
+**When it does not apply.** Your app only uses your company's own accounts; it is an education, enterprise or business app that requires an existing account of that kind; it uses a government or industry-backed ID; or it is a client for a specific third-party service where users sign in to that service to reach their content. Using Google only to connect a service (for example Drive backups) is not the primary account.
+
+**How to add it.**
+
+\`\`\`
+npx expo install expo-apple-authentication        # Expo
+npm install @invertase/react-native-apple-authentication   # bare React Native
+\`\`\`
+
+Enable the Sign in with Apple capability for the app ID, show Apple's button next to the other providers on iOS, and link the Apple identity to the same account on your backend.
+
+**How common it is.** In our scan, 11 apps use Google or Facebook login on iOS with nothing equivalent. \`npx nativekeel\` flags it and lists the exceptions so you can decide.`,
+    sources: [['App Review Guidelines 4.8 Login Services', 'https://developer.apple.com/app-store/review/guidelines/']],
+  },
+  {
+    slug: 'google-play-target-api-level',
+    error: 'Your app currently targets API level 34 and must target at least API level 36',
+    title: 'Google Play: "must target at least API level" in a React Native app',
+    description: 'What Google Play\'s target API level error means for React Native and Expo apps in 2026, the deadlines, and what usually breaks when you raise targetSdk.',
+    body: `
+Play Console shows:
+
+\`\`\`
+Your app currently targets API level 34 and must target at least API level 36 to ensure that it is built on the latest APIs optimized for security and performance.
+\`\`\`
+
+**The rule in 2026.** Since 31 August 2026, new apps and app updates must target Android 16 (API level 36). Existing apps must target at least Android 15 (API level 35) to stay available to new users on newer Android versions. Apps that requested an extension have until 1 November 2026.
+
+**How to fix it in React Native.** Set \`targetSdkVersion = 36\` and \`compileSdkVersion = 36\` in \`android/build.gradle\` (Expo: use the SDK that targets it, or \`expo-build-properties\`). Then check what changes with each API level you skip:
+
+- Target 31: components with an intent filter need \`android:exported\`, or the build fails ([details](/fix/android-exported)).
+- Target 34: foreground services must declare their type, or the app crashes when one starts ([details](/fix/missing-foreground-service-type)).
+- Target 35: the app is drawn edge-to-edge on Android 15, so screens using React Native's own \`SafeAreaView\` slide under the status bar ([details](/fix/imagebackground-safeareaview-deprecated)).
+
+**Check your app first.** \`npx nativekeel\` reports the target SDK problem and each of these follow-on issues, and its upgrade plan orders them.`,
+    sources: [['Google Play target API level requirements', 'https://support.google.com/googleplay/android-developer/answer/11926878']],
+  },
+  {
+    slug: 'google-play-16-kb-page-size',
+    error: 'Your app does not support 16 KB memory page sizes',
+    title: 'Google Play 16 KB page size warning in a React Native app',
+    description: 'What Google Play\'s 16 KB memory page size warning means for React Native and Expo apps, the 1 February 2027 deadline, and which version fixes it.',
+    body: `
+**What it means.** Apps that target Android 15 or higher must support 16 KB memory pages on 64-bit devices. Native libraries (\`.so\` files) built for 4 KB pages do not load on those devices. Google's page says: starting 1 February 2027, if your app updates don't support 16 KB memory page sizes, you won't be able to release them. Until then Play Console warns.
+
+**In React Native.** React Native supports 16 KB pages from 0.77. In Expo that means SDK 53 or later (SDK 52 ships React Native 0.76). Below that, upgrading React Native is the fix. Above it, the warning comes from a library that ships its own native code: update that library, or rebuild it with NDK r28 or newer.
+
+**Find the library.** Open your release AAB or APK and check each 64-bit \`.so\` file's alignment. \`npx nativekeel\` does this when a built APK/AAB is in the project, lists the libraries that are not aligned, and flags React Native versions before 0.77 even without a build.`,
+    sources: [['Android: support 16 KB page sizes', 'https://developer.android.com/guide/practices/page-sizes']],
+  },
 ];
 
 const STYLE = `:root{--bg:#fbfaf7;--text:#15171b;--muted:#5d6470;--accent:#0b5d55;--line:#e3e1db;--card:#ffffff;--code:#f1efea}

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>App Store rejection 5.1.1(v): account deletion in a React Native app</title>
+<meta name="description" content="Why Apple rejects React Native and Expo apps under guideline 5.1.1(v), what counts as account deletion, and what Google Play asks for as well.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#0b5d55">
+<link rel="canonical" href="https://nativekeel.com/fix/app-store-account-deletion-5-1-1-v">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="NativeKeel">
+<meta property="og:url" content="https://nativekeel.com/fix/app-store-account-deletion-5-1-1-v">
+<meta property="og:title" content="App Store rejection 5.1.1(v): account deletion in a React Native app">
+<meta property="og:description" content="Why Apple rejects React Native and Expo apps under guideline 5.1.1(v), what counts as account deletion, and what Google Play asks for as well.">
+<meta property="og:image" content="https://nativekeel.com/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://nativekeel.com/og.png">
+<style>:root{--bg:#fbfaf7;--text:#15171b;--muted:#5d6470;--accent:#0b5d55;--line:#e3e1db;--card:#ffffff;--code:#f1efea}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1013;--text:#e9ebef;--muted:#9aa2ad;--accent:#3cc4b4;--line:#262a31;--card:#15181d;--code:#1b1f25}}
+:root[data-theme="dark"]{--bg:#0e1013;--text:#e9ebef;--muted:#9aa2ad;--accent:#3cc4b4;--line:#262a31;--card:#15181d;--code:#1b1f25}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.65 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:760px;margin:0 auto;padding:40px 16px 64px;overflow-wrap:anywhere}
+h1{font-size:28px;line-height:1.25;margin:0 0 6px}h2{font-size:18px;margin:28px 0 6px}a{color:var(--accent)}p,li{color:var(--muted)}strong{color:var(--text)}
+code{font:14px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--code);padding:1px 5px;border-radius:5px}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow-x:auto}pre code{background:none;padding:0;white-space:pre-wrap}
+.cta{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:28px 0}.cta code{font-size:15px}
+.meta{font-size:14px;color:var(--muted)}ul.list li{margin:8px 0}</style>
+</head>
+<body><main>
+<p class="meta"><a href="/">NativeKeel</a> · <a href="/fix/">React Native fixes</a></p>
+<h1>Guideline 5.1.1(v): the app supports account creation but does not include an option to initiate account deletion</h1>
+<p class="meta">Updated 2026-10-08</p>
+<p>The rejection reads:</p>
+<pre><code>Guideline 5.1.1(v) - Data Collection and Storage
+The app supports account creation but does not include an option to initiate account deletion. Apps that support account creation must also offer account deletion to give users more control of the data they've shared while using an app.</code></pre>
+<p><strong>What Apple asks for.</strong> If people can create an account in your app, they must be able to start deleting it from inside the app. Deactivating or disabling the account is not enough. If deletion has to finish on a website, the app must link directly to that page. A confirmation step is fine.</p>
+<p><strong>Google Play asks for the same, plus a web link.</strong> Apps that let users create an account must offer an in-app path to delete it and its data, and a web page where deletion can be requested, declared in the Data safety form in Play Console.</p>
+<p><strong>How to fix it.</strong> Add "Delete account" to the account or settings screen. It should delete the account and its data on your server (or start that request), sign the user out, and say what happens. With Firebase that is <code>deleteUser</code> (the user may need to sign in again first); with Supabase it is a server-side call with the service role key, never from the app. Publish the same flow as a web page for Google Play.</p>
+<p><strong>How common it is.</strong> In our scan of 653 open-source React Native apps, 43 sign users up (Firebase, Supabase, Amplify, Appwrite, Clerk or their own /signup API) with no account deletion anywhere in the code. <code>npx nativekeel</code> flags it before you submit.</p>
+<div class="cta"><strong>Check your whole app in one command:</strong> <code>npx nativekeel</code><br><span class="meta">Free, runs locally (your code is not uploaded), no account. It reports this and 80 other upgrade, store, crash and security problems.</span></div>
+<h2>Sources</h2>
+<ul><li><a href="https://developer.apple.com/app-store/review/guidelines/">App Review Guidelines 5.1.1(v)</a></li><li><a href="https://developer.apple.com/support/offering-account-deletion-in-your-app/">Apple: offering account deletion in your app</a></li><li><a href="https://support.google.com/googleplay/android-developer/answer/13327111">Google Play: account deletion requirements</a></li></ul>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"App Store rejection 5.1.1(v): account deletion in a React Native app","description":"Why Apple rejects React Native and Expo apps under guideline 5.1.1(v), what counts as account deletion, and what Google Play asks for as well.","dateModified":"2026-10-08","author":{"@type":"Organization","name":"NativeKeel","url":"https://nativekeel.com"},"mainEntityOfPage":"https://nativekeel.com/fix/app-store-account-deletion-5-1-1-v"}</script>
+</main></body>
+</html>
