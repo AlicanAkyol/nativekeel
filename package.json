@@ -1,6 +1,6 @@
 {
   "name": "nativekeel",
-  "version": "0.1.32",
+  "version": "0.1.33",
   "description": "Health check for React Native and Expo apps: upgrade blockers, store deadlines, crash risks, vulnerable dependencies and leaked secrets, with a step-by-step upgrade plan.",
   "type": "module",
   "bin": {

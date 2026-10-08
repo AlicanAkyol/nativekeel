@@ -648,6 +648,10 @@ const PHASE_KINDS = {
   'Meet App Store and Google Play requirements': ['upgrade-rn-min', 'align-16kb', 'privacy-manifest', 'play-permissions', 'store-rule', 'ios-usage'],
   'Close security gaps': ['security', 'manifest', 'ats', 'vuln-dep'],
   'Avoid known traps': ['known-issue'],
+  'Fix the iOS AppDelegate': ['app-dependency-provider'],
+  'Replace blocking and abandoned packages': ['replace-dep'],
+  'Remove legacy tooling': ['deprecated-core', 'remove-flipper', 'podfile-cli-require', 'rctappdelegate', 'enable-hermes', 'folly-flags', 'patch-artifacts', 'patch-version', 'default-react-host'],
+  'Remove unused packages': ['remove-dep'],
 };
 
 export function startHere(result, count = 3) {
