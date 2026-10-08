@@ -113,3 +113,16 @@ test('unused: package.json alias fields and Node core polyfills count as used', 
   });
   assert.deepEqual(findUnused(loadProject(root)).map((u) => u.name), ['left-pad']);
 });
+
+test('Expo modules that work without an import are not unused', () => {
+  const root = makeProject({
+    'package.json': { name: 'e', dependencies: { expo: '54.0.0', 'react-native': '0.81.0', 'expo-system-ui': '6.0.0', 'expo-splash-screen': '31.0.0', 'expo-haptics': '15.0.0' } },
+    'node_modules/react-native/package.json': { version: '0.81.0' },
+    'node_modules/expo-system-ui/package.json': { version: '6.0.0' },
+    'node_modules/expo-splash-screen/package.json': { version: '31.0.0' },
+    'node_modules/expo-haptics/package.json': { version: '15.0.0' },
+    'app.json': JSON.stringify({ expo: { userInterfaceStyle: 'automatic' } }),
+    'App.js': "export default function App() { return null; }\n",
+  });
+  assert.deepEqual(findUnused({ root, hasNodeModules: true, deps: { expo: '54.0.0', 'react-native': '0.81.0', 'expo-system-ui': '6.0.0', 'expo-splash-screen': '31.0.0', 'expo-haptics': '15.0.0' } }).map((u) => u.name), ['expo-haptics']);
+});

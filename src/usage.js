@@ -26,6 +26,9 @@ const IMPLICIT = [
   /^react-native-webp-format$/, // iOS WebP decoder registers itself with the image loader
   /^@react-native-firebase\/(crashlytics|perf)$/, // collect natively without any JS call
   /^react-compiler-runtime$/, // imported by babel-plugin-react-compiler output
+  // Expo modules that act on app.json settings or register natively, never imported:
+  // userInterfaceStyle/backgroundColor, the native splash screen, dev builds, over-the-air updates.
+  /^expo-(system-ui|splash-screen|dev-client|dev-launcher|dev-menu|updates|insights)$/,
   /^@react-native-vector-icons\//, // per-font packages: fonts linked by the build
   /^(hermes-engine|postinstall-postinstall|react-native-web)$/, // engine, install hook, web target
   // Named after Node.js core modules: dependencies require('stream'), Metro resolves the package.
