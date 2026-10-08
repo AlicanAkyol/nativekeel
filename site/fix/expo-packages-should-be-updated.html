@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Expo: "The following packages should be updated for best compatibility"</title>
+<meta name="description" content="What Expo's "packages should be updated for best compatibility with the installed expo version" warning means, when it causes crashes, and the one-command fix.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#0b5d55">
+<link rel="canonical" href="https://nativekeel.com/fix/expo-packages-should-be-updated">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="NativeKeel">
+<meta property="og:url" content="https://nativekeel.com/fix/expo-packages-should-be-updated">
+<meta property="og:title" content="Expo: "The following packages should be updated for best compatibility"">
+<meta property="og:description" content="What Expo's "packages should be updated for best compatibility with the installed expo version" warning means, when it causes crashes, and the one-command fix.">
+<meta property="og:image" content="https://nativekeel.com/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://nativekeel.com/og.png">
+<style>:root{--bg:#fbfaf7;--text:#15171b;--muted:#5d6470;--accent:#0b5d55;--line:#e3e1db;--card:#ffffff;--code:#f1efea}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1013;--text:#e9ebef;--muted:#9aa2ad;--accent:#3cc4b4;--line:#262a31;--card:#15181d;--code:#1b1f25}}
+:root[data-theme="dark"]{--bg:#0e1013;--text:#e9ebef;--muted:#9aa2ad;--accent:#3cc4b4;--line:#262a31;--card:#15181d;--code:#1b1f25}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.65 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:760px;margin:0 auto;padding:40px 16px 64px;overflow-wrap:anywhere}
+h1{font-size:28px;line-height:1.25;margin:0 0 6px}h2{font-size:18px;margin:28px 0 6px}a{color:var(--accent)}p,li{color:var(--muted)}strong{color:var(--text)}
+code{font:14px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--code);padding:1px 5px;border-radius:5px}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow-x:auto}pre code{background:none;padding:0;white-space:pre-wrap}
+.cta{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:28px 0}.cta code{font-size:15px}
+.meta{font-size:14px;color:var(--muted)}ul.list li{margin:8px 0}</style>
+</head>
+<body><main>
+<p class="meta"><a href="/">NativeKeel</a> · <a href="/fix/">React Native fixes</a></p>
+<h1>The following packages should be updated for best compatibility with the installed expo version</h1>
+<p class="meta">Updated 2026-10-08</p>
+<p>Expo prints:</p>
+<pre><code>The following packages should be updated for best compatibility with the installed expo version:
+  react-native-reanimated@3.19.5 - expected version: ~4.1.1
+Your project may not work correctly until you install the expected versions of the packages.</code></pre>
+<p><strong>What it means.</strong> Every Expo SDK release is tested with specific versions of native libraries (listed in the SDK's <code>bundledNativeModules.json</code>). A native module from another release is one of the most common causes of build failures and launch crashes in Expo apps.</p>
+<p><strong>How much it matters.</strong> A patch difference (15.15.5 instead of 15.15.4) is usually harmless. A minor difference can change behaviour. A major difference (Reanimated 3 on an SDK that expects 4) usually fails to build or crashes.</p>
+<p><strong>How to fix it.</strong></p>
+<pre><code>npx expo install --fix</code></pre>
+<p>It sets every package to the version your SDK expects. Do not bump these packages past the SDK yourself: move them with the next SDK upgrade instead.</p>
+<p><strong>How common it is.</strong> In our scan, 144 of 390 Expo apps with a lockfile had at least one package off the SDK's version, most often Reanimated, react-native-safe-area-context and react-native-screens. <code>npx nativekeel</code> reports them with the size of each gap, even without <code>node_modules</code> installed.</p>
+<div class="cta"><strong>Check your whole app in one command:</strong> <code>npx nativekeel</code><br><span class="meta">Free, runs locally (your code is not uploaded), no account. It reports this and 80 other upgrade, store, crash and security problems.</span></div>
+<h2>Sources</h2>
+<ul><li><a href="https://docs.expo.dev/more/expo-cli/#install">Expo: npx expo install</a></li></ul>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"Expo: \"The following packages should be updated for best compatibility\"","description":"What Expo's \"packages should be updated for best compatibility with the installed expo version\" warning means, when it causes crashes, and the one-command fix.","dateModified":"2026-10-08","author":{"@type":"Organization","name":"NativeKeel","url":"https://nativekeel.com"},"mainEntityOfPage":"https://nativekeel.com/fix/expo-packages-should-be-updated"}</script>
+</main></body>
+</html>

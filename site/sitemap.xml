@@ -4,4 +4,11 @@
   <url><loc>https://nativekeel.com/changelog</loc><lastmod>2026-10-06</lastmod></url>
   <url><loc>https://nativekeel.com/case-study</loc></url>
   <url><loc>https://nativekeel.com/privacy</loc></url>
+  <url><loc>https://nativekeel.com/fix/</loc><lastmod>2026-10-08</lastmod></url>
+  <url><loc>https://nativekeel.com/fix/android-exported</loc><lastmod>2026-10-08</lastmod></url>
+  <url><loc>https://nativekeel.com/fix/itms-91061-missing-privacy-manifest</loc><lastmod>2026-10-08</lastmod></url>
+  <url><loc>https://nativekeel.com/fix/missing-foreground-service-type</loc><lastmod>2026-10-08</lastmod></url>
+  <url><loc>https://nativekeel.com/fix/expo-packages-should-be-updated</loc><lastmod>2026-10-08</lastmod></url>
+  <url><loc>https://nativekeel.com/fix/imagebackground-safeareaview-deprecated</loc><lastmod>2026-10-08</lastmod></url>
+  <url><loc>https://nativekeel.com/fix/supabase-rls-disabled</loc><lastmod>2026-10-08</lastmod></url>
 </urlset>

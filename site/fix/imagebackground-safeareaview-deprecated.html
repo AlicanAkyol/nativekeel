@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ImageBackground and SafeAreaView are deprecated in React Native: how to migrate</title>
+<meta name="description" content="React Native 0.87 deprecated ImageBackground (and 0.81 SafeAreaView). Why SafeAreaView already misbehaves on Android 15, and drop-in replacements for both.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#0b5d55">
+<link rel="canonical" href="https://nativekeel.com/fix/imagebackground-safeareaview-deprecated">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="NativeKeel">
+<meta property="og:url" content="https://nativekeel.com/fix/imagebackground-safeareaview-deprecated">
+<meta property="og:title" content="ImageBackground and SafeAreaView are deprecated in React Native: how to migrate">
+<meta property="og:description" content="React Native 0.87 deprecated ImageBackground (and 0.81 SafeAreaView). Why SafeAreaView already misbehaves on Android 15, and drop-in replacements for both.">
+<meta property="og:image" content="https://nativekeel.com/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://nativekeel.com/og.png">
+<style>:root{--bg:#fbfaf7;--text:#15171b;--muted:#5d6470;--accent:#0b5d55;--line:#e3e1db;--card:#ffffff;--code:#f1efea}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1013;--text:#e9ebef;--muted:#9aa2ad;--accent:#3cc4b4;--line:#262a31;--card:#15181d;--code:#1b1f25}}
+:root[data-theme="dark"]{--bg:#0e1013;--text:#e9ebef;--muted:#9aa2ad;--accent:#3cc4b4;--line:#262a31;--card:#15181d;--code:#1b1f25}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.65 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:760px;margin:0 auto;padding:40px 16px 64px;overflow-wrap:anywhere}
+h1{font-size:28px;line-height:1.25;margin:0 0 6px}h2{font-size:18px;margin:28px 0 6px}a{color:var(--accent)}p,li{color:var(--muted)}strong{color:var(--text)}
+code{font:14px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--code);padding:1px 5px;border-radius:5px}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow-x:auto}pre code{background:none;padding:0;white-space:pre-wrap}
+.cta{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:28px 0}.cta code{font-size:15px}
+.meta{font-size:14px;color:var(--muted)}ul.list li{margin:8px 0}</style>
+</head>
+<body><main>
+<p class="meta"><a href="/">NativeKeel</a> · <a href="/fix/">React Native fixes</a></p>
+<h1>ImageBackground is deprecated and will be removed in a future release</h1>
+<p class="meta">Updated 2026-10-08</p>
+<p>React Native logs:</p>
+<pre><code>ImageBackground is deprecated and will be removed in a future release. Use a View with an absolutely positioned Image instead.
+SafeAreaView has been deprecated and will be removed in a future release. Please use 'react-native-safe-area-context' instead.</code></pre>
+<p><strong>What it means.</strong> Both still work and log a warning. Once removed, importing them from <code>'react-native'</code> returns <code>undefined</code> and every screen that renders them crashes. <code>ImageBackground</code> was deprecated in 0.87, <code>SafeAreaView</code> in 0.81 (<code>DrawerLayoutAndroid</code> and <code>UTFSequence</code> in 0.87 too).</p>
+<p><strong>SafeAreaView is already a problem on Android.</strong> The core component only ever applied to iOS. Apps that target Android 15 (API level 35) are drawn edge-to-edge there, so screens wrapped in it sit under the status bar. Replace it with the one from <code>react-native-safe-area-context</code> and wrap the root in <code>SafeAreaProvider</code> (Expo Router already does).</p>
+<pre><code>- import { SafeAreaView } from 'react-native';
++ import { SafeAreaView } from 'react-native-safe-area-context';</code></pre>
+<p><strong>ImageBackground</strong> is a View with an absolutely positioned Image:</p>
+<pre><code>&lt;View style={style}&gt;
+  &lt;Image source={source} resizeMode="cover" style={StyleSheet.absoluteFill} /&gt;
+  {children}
+&lt;/View&gt;</code></pre>
+<p>Add <code>overflow: 'hidden'</code> to the outer style if you used <code>borderRadius</code>.</p>
+<p><strong>Find every import.</strong> <code>npx nativekeel</code> lists each one with its file and line. In our scan, 183 of 653 apps import at least one. A longer walkthrough is on <a href="https://dev.to/keel_alican_akyol/imagebackground-and-safeareaview-are-deprecated-183-of-653-react-native-apps-still-use-them-35ff">dev.to</a>.</p>
+<div class="cta"><strong>Check your whole app in one command:</strong> <code>npx nativekeel</code><br><span class="meta">Free, runs locally (your code is not uploaded), no account. It reports this and 80 other upgrade, store, crash and security problems.</span></div>
+<h2>Sources</h2>
+<ul><li><a href="https://reactnative.dev/docs/imagebackground">React Native: ImageBackground</a></li><li><a href="https://reactnative.dev/docs/safeareaview">React Native: SafeAreaView</a></li><li><a href="https://developer.android.com/about/versions/15/behavior-changes-15">Android 15: edge-to-edge enforcement</a></li></ul>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"ImageBackground and SafeAreaView are deprecated in React Native: how to migrate","description":"React Native 0.87 deprecated ImageBackground (and 0.81 SafeAreaView). Why SafeAreaView already misbehaves on Android 15, and drop-in replacements for both.","dateModified":"2026-10-08","author":{"@type":"Organization","name":"NativeKeel","url":"https://nativekeel.com"},"mainEntityOfPage":"https://nativekeel.com/fix/imagebackground-safeareaview-deprecated"}</script>
+</main></body>
+</html>

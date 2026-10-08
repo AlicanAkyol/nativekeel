@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>android:exported needs to be explicitly specified (React Native, targetSdk 31+)</title>
+<meta name="description" content="Why a React Native build fails with "android:exported needs to be explicitly specified" after raising targetSdk, and how to fix every component at once.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#0b5d55">
+<link rel="canonical" href="https://nativekeel.com/fix/android-exported">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="NativeKeel">
+<meta property="og:url" content="https://nativekeel.com/fix/android-exported">
+<meta property="og:title" content="android:exported needs to be explicitly specified (React Native, targetSdk 31+)">
+<meta property="og:description" content="Why a React Native build fails with "android:exported needs to be explicitly specified" after raising targetSdk, and how to fix every component at once.">
+<meta property="og:image" content="https://nativekeel.com/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://nativekeel.com/og.png">
+<style>:root{--bg:#fbfaf7;--text:#15171b;--muted:#5d6470;--accent:#0b5d55;--line:#e3e1db;--card:#ffffff;--code:#f1efea}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1013;--text:#e9ebef;--muted:#9aa2ad;--accent:#3cc4b4;--line:#262a31;--card:#15181d;--code:#1b1f25}}
+:root[data-theme="dark"]{--bg:#0e1013;--text:#e9ebef;--muted:#9aa2ad;--accent:#3cc4b4;--line:#262a31;--card:#15181d;--code:#1b1f25}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.65 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:760px;margin:0 auto;padding:40px 16px 64px;overflow-wrap:anywhere}
+h1{font-size:28px;line-height:1.25;margin:0 0 6px}h2{font-size:18px;margin:28px 0 6px}a{color:var(--accent)}p,li{color:var(--muted)}strong{color:var(--text)}
+code{font:14px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--code);padding:1px 5px;border-radius:5px}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow-x:auto}pre code{background:none;padding:0;white-space:pre-wrap}
+.cta{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:28px 0}.cta code{font-size:15px}
+.meta{font-size:14px;color:var(--muted)}ul.list li{margin:8px 0}</style>
+</head>
+<body><main>
+<p class="meta"><a href="/">NativeKeel</a> · <a href="/fix/">React Native fixes</a></p>
+<h1>Manifest merger failed: android:exported needs to be explicitly specified</h1>
+<p class="meta">Updated 2026-10-08</p>
+<p>The full message usually reads:</p>
+<pre><code>Manifest merger failed : Apps targeting Android 12 and higher are required to specify an explicit value for android:exported when the corresponding component has an intent filter defined.</code></pre>
+<p><strong>What it means.</strong> From Android 12 (target SDK 31), every activity, service or broadcast receiver that has an <code>&lt;intent-filter&gt;</code> must say whether other apps may start it. Without <code>android:exported</code>, the build fails, and an app built anyway cannot be installed on Android 12 or newer.</p>
+<p><strong>Why React Native apps hit it now.</strong> Google Play requires new apps and updates to target API level 36, so apps that stayed on target 30 or lower meet this the moment they raise the target. In our scan of 653 open-source React Native apps, 107 would.</p>
+<p><strong>How to fix it.</strong> In <code>android/app/src/main/AndroidManifest.xml</code>, add the attribute to each component with an intent filter: <code>"true"</code> for the launcher activity and anything another app must reach (deep links, share targets), <code>"false"</code> for the rest.</p>
+<pre><code>&lt;activity
+  android:name=".MainActivity"
+  android:exported="true"&gt;
+  &lt;intent-filter&gt;
+    &lt;action android:name="android.intent.action.MAIN" /&gt;
+    &lt;category android:name="android.intent.category.LAUNCHER" /&gt;
+  &lt;/intent-filter&gt;
+&lt;/activity&gt;</code></pre>
+<p>If the merger names a component from a library, update that library: current releases declare it themselves. As a stopgap you can override it in your own manifest with <code>tools:node="merge"</code> and the attribute.</p>
+<p><strong>Find every one before you raise the target.</strong> <code>npx nativekeel</code> lists each component that is missing the attribute, and its upgrade plan fixes them before the target SDK step.</p>
+<div class="cta"><strong>Check your whole app in one command:</strong> <code>npx nativekeel</code><br><span class="meta">Free, runs locally (your code is not uploaded), no account. It reports this and 80 other upgrade, store, crash and security problems.</span></div>
+<h2>Sources</h2>
+<ul><li><a href="https://developer.android.com/about/versions/12/behavior-changes-12#exported">Android 12 behavior changes: safer component exporting</a></li><li><a href="https://support.google.com/googleplay/android-developer/answer/11926878">Google Play target API level requirement</a></li></ul>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"android:exported needs to be explicitly specified (React Native, targetSdk 31+)","description":"Why a React Native build fails with \"android:exported needs to be explicitly specified\" after raising targetSdk, and how to fix every component at once.","dateModified":"2026-10-08","author":{"@type":"Organization","name":"NativeKeel","url":"https://nativekeel.com"},"mainEntityOfPage":"https://nativekeel.com/fix/android-exported"}</script>
+</main></body>
+</html>

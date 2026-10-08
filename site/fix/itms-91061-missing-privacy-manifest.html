@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ITMS-91061: Missing privacy manifest in a React Native app</title>
+<meta name="description" content="What App Store Connect's ITMS-91061 "Missing privacy manifest" means for React Native and Expo apps, which pods cause it, and which package to update.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#0b5d55">
+<link rel="canonical" href="https://nativekeel.com/fix/itms-91061-missing-privacy-manifest">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="NativeKeel">
+<meta property="og:url" content="https://nativekeel.com/fix/itms-91061-missing-privacy-manifest">
+<meta property="og:title" content="ITMS-91061: Missing privacy manifest in a React Native app">
+<meta property="og:description" content="What App Store Connect's ITMS-91061 "Missing privacy manifest" means for React Native and Expo apps, which pods cause it, and which package to update.">
+<meta property="og:image" content="https://nativekeel.com/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://nativekeel.com/og.png">
+<style>:root{--bg:#fbfaf7;--text:#15171b;--muted:#5d6470;--accent:#0b5d55;--line:#e3e1db;--card:#ffffff;--code:#f1efea}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1013;--text:#e9ebef;--muted:#9aa2ad;--accent:#3cc4b4;--line:#262a31;--card:#15181d;--code:#1b1f25}}
+:root[data-theme="dark"]{--bg:#0e1013;--text:#e9ebef;--muted:#9aa2ad;--accent:#3cc4b4;--line:#262a31;--card:#15181d;--code:#1b1f25}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.65 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:760px;margin:0 auto;padding:40px 16px 64px;overflow-wrap:anywhere}
+h1{font-size:28px;line-height:1.25;margin:0 0 6px}h2{font-size:18px;margin:28px 0 6px}a{color:var(--accent)}p,li{color:var(--muted)}strong{color:var(--text)}
+code{font:14px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--code);padding:1px 5px;border-radius:5px}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow-x:auto}pre code{background:none;padding:0;white-space:pre-wrap}
+.cta{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:28px 0}.cta code{font-size:15px}
+.meta{font-size:14px;color:var(--muted)}ul.list li{margin:8px 0}</style>
+</head>
+<body><main>
+<p class="meta"><a href="/">NativeKeel</a> · <a href="/fix/">React Native fixes</a></p>
+<h1>ITMS-91061: Missing privacy manifest</h1>
+<p class="meta">Updated 2026-10-08</p>
+<p>Apple's message looks like this:</p>
+<pre><code>ITMS-91061: Missing privacy manifest - Your app includes "Frameworks/FirebaseCore.framework/FirebaseCore", which includes FirebaseCore, an SDK that was identified in the documentation as a privacy-impacting third-party SDK. Starting February 12, 2025, if a new app includes a privacy-impacting SDK, or an app update adds a new privacy-impacting SDK, the SDK must include a privacy manifest file.</code></pre>
+<p><strong>What it means.</strong> Apple keeps a list of commonly used SDKs (Firebase, SDWebImage, Lottie, GoogleUtilities, Alamofire, nanopb and others) that must ship a <code>PrivacyInfo.xcprivacy</code> file. A new app that contains an old version of one of them, or an update that adds one, is refused until the SDK has a manifest.</p>
+<p><strong>Where it comes from in React Native.</strong> You rarely add these pods yourself: a React Native package pulls them in. The most common cases we see:</p>
+<ul><li><code>SDWebImage</code> before 5.18.7, pinned by <code>react-native-fast-image</code> (unmaintained; <code>@d11/react-native-fast-image</code> or <code>expo-image</code> are current).</li><li>Firebase pods before 10.22.0, from an old <code>@react-native-firebase/*</code>.</li><li><code>lottie-ios</code> before 4.4.0, from an old <code>lottie-react-native</code>.</li></ul>
+<p><strong>How to fix it.</strong> Update the React Native package that depends on the pod, run <code>pod install</code>, and check <code>ios/Podfile.lock</code> for the new version. Look up the chain in <code>Podfile.lock</code> (the PODS section lists who depends on what) to find that package.</p>
+<p><strong>One thing that is not the problem.</strong> The "hermes" on Apple's list is a 2015 Imgur project, not React Native's Hermes engine; the React Native team confirmed this with Apple.</p>
+<p><strong>Find them all.</strong> <code>npx nativekeel</code> reads <code>Podfile.lock</code>, lists each SDK that is older than its first release with a manifest, and names the React Native package to update. In our scan, 24 of 116 apps with a Podfile.lock had at least one.</p>
+<div class="cta"><strong>Check your whole app in one command:</strong> <code>npx nativekeel</code><br><span class="meta">Free, runs locally (your code is not uploaded), no account. It reports this and 80 other upgrade, store, crash and security problems.</span></div>
+<h2>Sources</h2>
+<ul><li><a href="https://developer.apple.com/support/third-party-SDK-requirements/">Apple: third-party SDK requirements and the SDK list</a></li><li><a href="https://github.com/react-native-community/discussions-and-proposals/discussions/776">React Native discussion on privacy manifests and Hermes</a></li></ul>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"ITMS-91061: Missing privacy manifest in a React Native app","description":"What App Store Connect's ITMS-91061 \"Missing privacy manifest\" means for React Native and Expo apps, which pods cause it, and which package to update.","dateModified":"2026-10-08","author":{"@type":"Organization","name":"NativeKeel","url":"https://nativekeel.com"},"mainEntityOfPage":"https://nativekeel.com/fix/itms-91061-missing-privacy-manifest"}</script>
+</main></body>
+</html>
