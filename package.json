@@ -1,7 +1,7 @@
 {
   "name": "nativekeel",
   "version": "0.1.33",
-  "description": "Health check for React Native and Expo apps: upgrade blockers, store deadlines, crash risks, vulnerable dependencies and leaked secrets, with a step-by-step upgrade plan.",
+  "description": "Health check for React Native and Expo apps: upgrade blockers, App Store and Google Play rejections, crash risks, security (OWASP MASVS) and performance, with a step-by-step upgrade plan.",
   "type": "module",
   "bin": {
     "nativekeel": "bin/nativekeel.js"
@@ -26,7 +26,17 @@
     "crash",
     "upgrade-plan",
     "google-play",
-    "app-store"
+    "app-store",
+    "owasp",
+    "masvs",
+    "mobile-security",
+    "static-analysis",
+    "cli",
+    "android",
+    "ios",
+    "privacy-manifest",
+    "supabase",
+    "firebase"
   ],
   "license": "MIT",
   "scripts": {
