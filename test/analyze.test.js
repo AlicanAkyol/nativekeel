@@ -434,3 +434,17 @@ test('an Expo SDK given as a major only ("^54") is still an Expo project without
   const p = loadProject(root);
   assert.equal(p.expoVersion, '54.0.0');
 });
+
+test('a package with a podspec but no native sources is JavaScript, and a prerelease ahead of latest is not "behind"', async () => {
+  const root = makeProject({
+    'package.json': { name: 'a', dependencies: { 'react-native': '0.85.3', 'html-renderer': '6.3.4', '@nav/native': '8.0.0-alpha.25' } },
+    'node_modules/react-native/package.json': { version: '0.85.3' },
+    'node_modules/html-renderer/package.json': { name: 'html-renderer', version: '6.3.4' },
+    'node_modules/html-renderer/html-renderer.podspec': 's.source_files = "ios/**/*.{h,m}"',
+    'node_modules/html-renderer/lib/index.js': '',
+    'node_modules/@nav/native/package.json': { name: '@nav/native', version: '8.0.0-alpha.25' },
+  });
+  const result = await analyze(loadProject(root), { get: fakeRegistry({ 'html-renderer': '6.3.4', '@nav/native': '7.5.0' }) });
+  assert.equal(result.deps.find((d) => d.name === 'html-renderer').native, false);
+  assert.ok(!result.findings.some((f) => f.id === 'dep-major:@nav/native'), 'no downgrade from 8.0.0-alpha to 7.5.0');
+});

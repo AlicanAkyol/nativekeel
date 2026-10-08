@@ -35,6 +35,13 @@ const IMPLICIT = [
   /^(assert|buffer|constants|crypto|events|os|path|process|punycode|querystring|stream|string_decoder|timers|tty|url|util|vm|zlib)$/,
 ];
 
+// Packages used only through a theme or resource name in the native project, never imported:
+// react-native-edge-to-edge (parent="Theme.EdgeToEdge" in styles.xml), react-native-bootsplash.
+const RESOURCE_TOKENS = {
+  'react-native-edge-to-edge': ['Theme.EdgeToEdge'],
+  'react-native-bootsplash': ['Theme.BootSplash', 'RNBootSplash'],
+};
+
 function walk(dir, exts, out = []) {
   let list;
   try {
@@ -163,7 +170,7 @@ export function findUnused(project) {
 
   const nativeText = ['ios', 'android'].flatMap((d) => walk(path.join(root, d), NATIVE_EXT)).map(readSmall).join('\n');
   return candidates
-    .filter((n) => !nativeText.includes(n) && !nativeTokens(root, n).some((t) => nativeText.includes(t)))
+    .filter((n) => !nativeText.includes(n) && !nativeTokens(root, n).some((t) => nativeText.includes(t)) && !(RESOURCE_TOKENS[n] || []).some((t) => nativeText.includes(t)))
     .map((name) => ({ name, native: nativeTokens(root, name).length > 0 }));
 }
 

@@ -365,3 +365,14 @@ test('Start here puts the most severe finding first, then urgency', async () => 
   const steps = startHere(r).map((s) => s.phase);
   assert.deepEqual(steps.slice(0, 2), ['Close security gaps', 'Fix crash risks']);
 });
+
+test('a React Native hop does not ask to move a library that is already in the needed range', () => {
+  const r = {
+    ...result,
+    project: { ...result.project, reactNative: '0.85.3', expo: null },
+    deps: [{ name: 'react-native-screens', version: '4.28.0', native: true }],
+    findings: [{ id: 'rn-behind', severity: 'info', area: 'react-native', title: 'x', detail: 'x', fix: { kind: 'upgrade-rn', from: '0.85.3', to: '0.87.1' } }],
+  };
+  const steps = buildPlan(r).phases.find((p) => p.title.startsWith('Upgrade React Native')).steps;
+  assert.ok(!steps[0].includes('react-native-screens'), steps[0]);
+});

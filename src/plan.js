@@ -476,7 +476,19 @@ export function buildPlan(result) {
           const same = major !== null && best && majorOf(best.from) !== major ? bestRange(d.name, minor, archOn, { major }) : null;
           return { name: d.name, best, same };
         })
-        .filter((b) => b.best && (b.same || b.best).range !== lastRange[b.name])
+        .filter((b) => {
+          if (!b.best || (b.same || b.best).range === lastRange[b.name]) return false;
+          // Already inside the range this hop needs (screens 4.28 for "4.26+"): nothing to move.
+          const chosen = b.same || b.best;
+          const installed = tracked.find((d) => d.name === b.name);
+          const v = installed && installed.version;
+          if (lastRange[b.name] === undefined && v && compareVersions(v, chosen.from) >= 0 && (!chosen.to || compareVersions(v, chosen.to) <= 0)) {
+            lastRange[b.name] = chosen.range;
+            lastMajor[b.name] = majorOf(v);
+            return false;
+          }
+          return true;
+        })
         .map((b) => {
           const chosen = b.same || b.best;
           const forcedMajor = !b.same && lastMajor[b.name] !== undefined && majorOf(chosen.from) !== lastMajor[b.name];

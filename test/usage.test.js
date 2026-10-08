@@ -126,3 +126,15 @@ test('Expo modules that work without an import are not unused', () => {
   });
   assert.deepEqual(findUnused({ root, hasNodeModules: true, deps: { expo: '54.0.0', 'react-native': '0.81.0', 'expo-system-ui': '6.0.0', 'expo-splash-screen': '31.0.0', 'expo-haptics': '15.0.0' } }).map((u) => u.name), ['expo-haptics']);
 });
+
+test('packages used only through a theme in styles.xml are not unused', () => {
+  const root = makeProject({
+    'package.json': { name: 't', dependencies: { 'react-native': '0.85.0', 'react-native-edge-to-edge': '1.7.0' } },
+    'node_modules/react-native/package.json': { version: '0.85.0' },
+    'node_modules/react-native-edge-to-edge/package.json': { version: '1.7.0' },
+    'node_modules/react-native-edge-to-edge/android/build.gradle': '',
+    'android/app/src/main/res/values/styles.xml': '<resources><style name="AppTheme" parent="Theme.EdgeToEdge"></style></resources>',
+    'App.js': 'export default () => null;\n',
+  });
+  assert.deepEqual(findUnused({ root, hasNodeModules: true, deps: { 'react-native': '0.85.0', 'react-native-edge-to-edge': '1.7.0' } }), []);
+});

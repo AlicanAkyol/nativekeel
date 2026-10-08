@@ -289,7 +289,7 @@ test('stale folly flags in the Xcode project break an Objective-C++ AppDelegate 
     'ios/App/PrivacyInfo.xcprivacy': '',
     ...extra,
   });
-  assert.equal(check(files('0.80.3')).find((f) => f.id === 'ios-folly-flags').severity, 'high');
+  assert.equal(check(files('0.80.3')).find((f) => f.id === 'ios-folly-flags').severity, 'low', 'already on 0.80+: it usually builds');
   assert.equal(check(files('0.77.1'), { rnLatest: '0.87.1' }).find((f) => f.id === 'ios-folly-flags').severity, 'medium', 'flagged ahead of the upgrade');
   assert.ok(!check(files('0.77.1')).some((f) => f.id === 'ios-folly-flags'), 'no upgrade target known: no claim');
   const fixed = files('0.80.3', { 'ios/App.xcodeproj/project.pbxproj': pbx.replace('"-DFOLLY_USE_LIBCPP=1",', '"-DFOLLY_USE_LIBCPP=1",\n"-DFOLLY_CFG_NO_COROUTINES=1",') });

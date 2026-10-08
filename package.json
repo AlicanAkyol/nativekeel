@@ -1,6 +1,6 @@
 {
   "name": "nativekeel",
-  "version": "0.1.36",
+  "version": "0.1.37",
   "description": "Health check for React Native and Expo apps: upgrade blockers, App Store and Google Play rejections, crash risks, security (OWASP MASVS) and performance, with a step-by-step upgrade plan.",
   "type": "module",
   "bin": {

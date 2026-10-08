@@ -40,6 +40,18 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 650+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.37</h2><p class="date">8 October 2026</p>
+<ul>
+<li><span class="tag">Accuracy</span><b>Lessons from a real production app.</b> NativeKeel was run on a private production app with its dependencies installed. The output showed five things we got wrong, all fixed:
+<ul>
+<li>A prerelease of the next major (React Navigation 8 alpha) was called "a major version behind", and the plan suggested the latest stable: a downgrade. Packages are now "behind" only when npm's latest is newer than what you have.</li>
+<li><code>react-native-edge-to-edge</code> and <code>react-native-bootsplash</code> work through a theme in <code>styles.xml</code>, without an import. They were listed as unused; removing them would break the app's look.</li>
+<li>A JavaScript package that ships an empty iOS podspec (<code>react-native-render-html</code>) was treated as a native module and rated high.</li>
+<li>The missing Folly coroutine flag was rated high on an app already on React Native 0.80+, which builds fine. It is now a warning before you move to 0.80, and a low note after.</li>
+<li>A React Native upgrade step asked to move a library that was already in the range it needs.</li>
+</ul></li>
+</ul></div>
+
 <div class="rel"><h2>0.1.36</h2><p class="date">8 October 2026</p>
 <ul>
 <li><span class="tag">Store</span><b>Release builds signed with the debug key.</b> The React Native template signs release builds with the public debug key, and Google Play refuses the upload ("signed in debug mode"). NativeKeel now reports it when nothing else signs the build: projects built with EAS, or signed in CI with Fastlane or a signing action, are recognised and left alone. 62 apps in our test set. A <a href="/fix/signed-in-debug-mode">fix page</a> shows the setup that keeps passwords out of the repository.</li>

@@ -50,8 +50,11 @@ function isNativeModule(root, name, dir) {
   const base = findPackageDir(root, name);
   if (base) {
     if (fs.existsSync(path.join(base, 'android')) || fs.existsSync(path.join(base, 'ios'))) return true;
+    // A podspec alone is not native code: some JS packages ship one that points at an ios/ folder
+    // they do not have (react-native-render-html). Count it only with sources next to it.
     try {
-      return fs.readdirSync(base).some((f) => f.endsWith('.podspec'));
+      const entries = fs.readdirSync(base);
+      return entries.some((f) => f.endsWith('.podspec')) && entries.some((f) => /^(apple|macos|cpp|common|Sources|src-native|native)$/.test(f) || /\.(m|mm|swift|h)$/.test(f));
     } catch {
       return false;
     }
@@ -304,7 +307,9 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
         detail: 'React Native Directory still lists it as unmaintained. Maintenance may have resumed; check the changelog and issue tracker before replacing it.',
       });
     }
-    if (!noNewArch && !dep.unmaintained && !stale && version && dep.latest && lineOf(version) !== lineOf(dep.latest)) {
+    // Only when npm's latest is newer: a prerelease of the next major (8.0.0-alpha while latest is
+    // 7.x) is ahead, and suggesting the latest would be a downgrade.
+    if (!noNewArch && !dep.unmaintained && !stale && version && dep.latest && lineOf(version) !== lineOf(dep.latest) && compareVersions(dep.latest, version) > 0) {
       // In Expo apps the SDK decides these versions: the SDK upgrade moves them, no separate work.
       const expoManaged = !!project.expoVersion && movesWithExpoSdk(name, expoPinned());
       add({

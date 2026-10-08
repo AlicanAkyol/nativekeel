@@ -304,13 +304,15 @@ export function nativeChecks(project, { rnLatest = null, now = new Date() } = {}
       return /-DFOLLY_NO_CONFIG/.test(text) && !/FOLLY_CFG_NO_COROUTINES/.test(text);
     });
     const target = minorOf(rnLatest);
+    // Ahead of the move to 0.80 it is a likely build break (medium). An app already on 0.80+
+    // usually builds (the flags come from elsewhere), unless it is mid-upgrade: low, conditional.
     if (stale && objcppDelegate && rn !== null && (rn >= 80 || (target !== null && target >= 80))) {
       add({
         id: 'ios-folly-flags',
-        severity: rn >= 80 ? 'high' : 'medium',
+        severity: rn >= 80 ? 'low' : 'medium',
         area: 'native',
         title: `Xcode project lacks -DFOLLY_CFG_NO_COROUTINES (${path.relative(root, stale)})`,
-        detail: `OTHER_CPLUSPLUSFLAGS comes from an older template. From React Native 0.80 an Objective-C++ AppDelegate fails to compile with "'folly/coro/Coroutine.h' file not found". Add "-DFOLLY_CFG_NO_COROUTINES=1" and "-DFOLLY_HAVE_CLOCK_GETTIME=1" next to "-DFOLLY_USE_LIBCPP=1" in both build configurations, as in the current template.`,
+        detail: `OTHER_CPLUSPLUSFLAGS comes from an older template. From React Native 0.80 an Objective-C++ AppDelegate can fail to compile with "'folly/coro/Coroutine.h' file not found"${rn >= 80 ? ' (if your iOS build works, the flags are set elsewhere and you can ignore this)' : ''}. Add "-DFOLLY_CFG_NO_COROUTINES=1" and "-DFOLLY_HAVE_CLOCK_GETTIME=1" next to "-DFOLLY_USE_LIBCPP=1" in both build configurations, as in the current template.`,
         fix: { kind: 'folly-flags', file: path.relative(root, stale) },
       });
     }
