@@ -329,7 +329,7 @@ export function removedCoreImports(project) {
         // Referenced anywhere besides the import itself? An import alone is harmless (undefined).
         if (REMOVED_FROM_CORE[name] || REMOVED_PROP_TYPES.includes(name)) {
           const rest = text.slice(0, b.index) + text.slice(b.index + b.length);
-          if (new RegExp(`\\b${name}\\b`).test(rest.replace(/\/\/[^\n]*/g, ''))) referenced.add(name);
+          if (new RegExp(`\\b${name}\\b`).test(rest.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, ''))) referenced.add(name);
         }
         if (DEPRECATED_IN_CORE[name] && !deprecated.has(name)) deprecated.set(name, at());
       }

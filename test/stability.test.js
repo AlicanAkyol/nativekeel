@@ -77,6 +77,7 @@ test('APIs removed from React Native core: crash now or after the upgrade', () =
   const importOnly = src('0.85.0', "import { View, DatePickerAndroid } from 'react-native';\nexport default () => <View />;");
   assert.equal(importOnly.severity, 'low', 'an import that is never used is undefined, not a crash');
   assert.match(importOnly.title, /unused import/);
+  assert.equal(src('0.85.0', "import { DatePickerAndroid } from 'react-native';\n/* old: DatePickerAndroid.open() */\n{/* DatePickerAndroid */}").severity, 'low', 'mentions in comments are not uses');
   assert.equal(src('0.80.0', "import { View, Text } from 'react-native';\nimport AsyncStorage from '@react-native-async-storage/async-storage';"), undefined);
 });
 

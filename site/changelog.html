@@ -40,6 +40,11 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 650+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.39</h2><p class="date">8 October 2026</p>
+<ul>
+<li><span class="tag">Accuracy</span>When deciding whether a removed React Native API is still used, names inside <code>/* … */</code> comments (including JSX comments) no longer count as uses.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.38</h2><p class="date">8 October 2026</p>
 <ul>
 <li><span class="tag">Accuracy</span><b>Removed core APIs: used or only imported?</b> An import of <code>DatePickerAndroid</code>, <code>AsyncStorage</code> and the like from <code>'react-native'</code> was reported as a crash. In release builds such an import is simply <code>undefined</code> (only development builds throw), so it only fails where the code calls it. NativeKeel now checks whether the name is used beyond the import: if it is, it stays a crash risk; if not, it is a low "unused import, delete it". Found because a production app that works fine was told otherwise.</li>
