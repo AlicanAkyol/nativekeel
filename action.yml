@@ -1,5 +1,5 @@
 name: NativeKeel
-description: 'Health check for React Native and Expo apps. Fails the build on unsupported versions, New Architecture blockers, store deadlines, crash risks, vulnerable dependencies and leaked secrets.'
+description: 'Health check for React Native and Expo apps: upgrade blockers, store rejections, crash risks and security.'
 author: Alican Akyol
 branding:
   icon: anchor
