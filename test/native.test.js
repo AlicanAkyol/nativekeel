@@ -230,6 +230,23 @@ test('signing material committed to git', () => {
   assert.ok(!byId['signing-password:android/app/build.gradle'], "the public 'android' debug password is fine");
 });
 
+test('a fallback keystore with a throwaway password, next to release signing from properties, is not the release key', () => {
+  const gradle = (pw) =>
+    "android { signingConfigs { release { } } }\nif (hasProperty('storeFile')) {\n    android.signingConfigs.release.storeFile = file(storeFile)\n    android.signingConfigs.release.storePassword = storePassword\n} else {\n    println 'Generating a debug package'\n    android.signingConfigs.release.storeFile = file(\"airbitz.keystore\")\n    android.signingConfigs.release.storePassword = \"" + pw + "\"\n    android.signingConfigs.release.keyPassword = \"" + pw + "\"\n}\n";
+  const run = (pw) => {
+    const root = makeProject(rnApp('0.80.0', { 'android/app/build.gradle': gradle(pw), 'android/app/airbitz.keystore': 'x', 'ios/App/PrivacyInfo.xcprivacy': '' }));
+    spawnSync('git', ['init', '-q'], { cwd: root });
+    spawnSync('git', ['add', '-A'], { cwd: root });
+    return ids(nativeChecks(loadProject(root), { now: NOW }));
+  };
+  const local = run('password');
+  assert.ok(!local.includes('signing-keystore:android/app/airbitz.keystore'), 'Edge: local fallback');
+  assert.ok(!local.includes('signing-password:android/app/build.gradle'));
+  const real = run('S3cr3t-Pw');
+  assert.ok(real.includes('signing-keystore:android/app/airbitz.keystore'), 'a real password in the fallback still counts');
+  assert.ok(real.includes('signing-password:android/app/build.gradle'));
+});
+
 test('RCTAppDependencyProvider is required in AppDelegate from React Native 0.77', () => {
   const files = (version, delegate, gradle = 'newArchEnabled=true\n') => rnApp(version, {
     'ios/App/AppDelegate.h': '#import <RCTAppDelegate.h>\n@interface AppDelegate : RCTAppDelegate\n@end',

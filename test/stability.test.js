@@ -30,6 +30,23 @@ test('mixed Firebase and Navigation majors', () => {
   assert.ok(!ids(app({ '@react-navigation/native': '5.9.4', '@react-navigation/web': '1.0.0', '@react-navigation/compat': '5.3.20' })).includes('crash-navigation-versions'), 'own version lines');
 });
 
+test('mixed Navigation majors crash only with two copies of the core', () => {
+  const find = (files) => stabilityChecks(loadProject(makeProject(files))).find((f) => f.id === 'crash-navigation-versions');
+  const deps = { '@react-navigation/native': '7.1.9', '@react-navigation/bottom-tabs': '6.6.1' };
+  const bun = '{\n  "packages": {\n    "@react-navigation/bottom-tabs": ["@react-navigation/bottom-tabs@6.6.1", "", {}],\n    "@react-navigation/native": ["@react-navigation/native@7.1.9", "", {}],\n  }\n}\n';
+  assert.equal(find(app(deps, { 'bun.lock': bun })).severity, 'medium', 'one copy: unsupported, not a crash (Uniswap ships this)');
+  const npmLock = {
+    lockfileVersion: 3,
+    packages: {
+      'node_modules/@react-navigation/native': { version: '7.1.9' },
+      'node_modules/@react-navigation/bottom-tabs/node_modules/@react-navigation/native': { version: '6.1.18' },
+    },
+  };
+  assert.equal(find(app(deps, { 'package-lock.json': npmLock })).severity, 'high', 'two copies of the core');
+  const yarn = '"@react-navigation/native@^7.1.9":\n  version "7.1.9"\n\n"@react-navigation/native@^6.0.0":\n  version "6.1.18"\n';
+  assert.equal(find(app(deps, { 'yarn.lock': yarn })).severity, 'high', 'yarn: two resolved majors');
+});
+
 test('a second React inside a runtime dependency, not inside dev tooling', () => {
   const base = {
     'node_modules/react/package.json': { version: '18.2.0' },

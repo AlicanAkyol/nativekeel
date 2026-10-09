@@ -44,8 +44,21 @@ test('a password on a nearby line of an unrelated call is not a leak', () => {
 });
 
 test('WebView file access and mixed content', () => {
-  const root = makeProject({ 'package.json': '{}', 'src/W.js': "import { WebView } from 'react-native-webview';\n<WebView allowUniversalAccessFromFileURLs={true} mixedContentMode=\"always\" />" });
+  const root = makeProject({ 'package.json': '{}', 'src/W.js': "import { WebView } from 'react-native-webview';\n<WebView source={{ uri: 'file://' + dir + '/page.html' }} allowUniversalAccessFromFileURLs={true} mixedContentMode=\"always\" />" });
   assert.deepEqual(webViewRisks(root).map((f) => f.severity).sort(), ['high', 'medium']);
+});
+
+test('file-URL flags on a WebView that only loads web URLs do nothing today', () => {
+  const remote = makeProject({ 'package.json': '{}', 'src/W.js': "import { WebView } from 'react-native-webview';\nconst P = ({ originWhitelist = ['file://*', 'https://*'] }) => <WebView allowUniversalAccessFromFileURLs originWhitelist={originWhitelist} source={{ uri: partnerUrl }} />;" });
+  assert.deepEqual(webViewRisks(remote).map((f) => f.severity), ['low'], 'Edge partner pages; originWhitelist is not a page');
+  const inline = makeProject({ 'package.json': '{}', 'src/W.js': "import { WebView } from 'react-native-webview';\n<WebView allowFileAccessFromFileURLs source={{ html: content }} />" });
+  assert.deepEqual(webViewRisks(inline).map((f) => f.severity), ['high']);
+  const imported = makeProject({
+    'package.json': '{}',
+    'src/source.ts': "export const EDITOR_URI = Platform.OS === 'android' ? 'file:///android_asset/index.html' : 'build.bundle/index.html';",
+    'src/Editor.tsx': "import { WebView } from 'react-native-webview';\nimport { EDITOR_URI } from './source';\n<WebView allowUniversalAccessFromFileURLs source={{ uri: EDITOR_URI }} />",
+  });
+  assert.deepEqual(webViewRisks(imported).map((f) => f.severity), ['high'], 'Notesnook: the local address is in an imported file');
 });
 
 test('Android backups: flagged only without backup rules', () => {
@@ -173,6 +186,7 @@ test('weak crypto: real uses, not comments or non-security randomness', async ()
   assert.deepEqual(ids('const body = { password: md5(passWord) };'), ['crypto-weak-password-hash']);
   assert.deepEqual(ids('// D1 = MD5( password || salt )\n/* sha1(password) */'), []);
   assert.deepEqual(ids('const nonce = Math.random().toString(16);'), ['crypto-insecure-random']);
+  assert.deepEqual(ids('// Dummy response for the test server\nconst ts = Date.now();\nconst nonce = `nonce_${Math.random().toString(36)}`;'), [], 'a nonce in a dummy response protects nothing');
   assert.deepEqual(ids('const token = Math.floor(Math.random() * 1e9); // cache bust'), []);
 });
 

@@ -123,3 +123,41 @@ function fromYarn(text, declared) {
   }
   return out;
 }
+
+// Every version of one package the lockfile resolves, nested copies included
+// (two copies of a core package means two module instances at runtime). null without a lockfile.
+export function lockedCopies(root, name) {
+  const file = findUp(root, ['package-lock.json', 'npm-shrinkwrap.json', 'pnpm-lock.yaml', 'yarn.lock', 'bun.lock']);
+  const text = file && readText(file);
+  if (!text) return null;
+  const esc = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const found = new Set();
+  if (file.endsWith('bun.lock')) {
+    for (const m of text.matchAll(new RegExp(`^\\s*"(?:[^"]*/)?${esc}": \\["${esc}@(\\d[^"]*)"`, 'gm'))) found.add(m[1]);
+  } else if (file.endsWith('.json')) {
+    try {
+      const lock = JSON.parse(text);
+      for (const [key, v] of Object.entries(lock.packages || {})) {
+        if ((key === `node_modules/${name}` || key.endsWith(`/node_modules/${name}`)) && v.version && /^\d/.test(v.version)) found.add(v.version);
+      }
+    } catch {
+      return null;
+    }
+  } else if (file.endsWith('pnpm-lock.yaml')) {
+    for (const m of text.matchAll(new RegExp(`^ {2}['"]?/?${esc}@(\\d[^(:'"\\s]*)`, 'gm'))) found.add(m[1]);
+  } else {
+    let patterns = null;
+    for (const line of text.split('\n')) {
+      if (/^\S.*:\s*$/.test(line) && !line.startsWith('#')) {
+        patterns = line.replace(/:\s*$/, '').split(/,\s*/).map((p) => p.trim().replace(/^"|"$/g, ''));
+        continue;
+      }
+      const ver = line.match(/^\s+version:?\s+"?([0-9][^"\s]*)"?/);
+      if (ver && patterns) {
+        if (patterns.some((p) => p.startsWith(`${name}@`) && !/@(?:patch|workspace|link|file|portal):/.test(p.slice(name.length)))) found.add(ver[1]);
+        patterns = null;
+      }
+    }
+  }
+  return [...found];
+}

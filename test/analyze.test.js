@@ -28,6 +28,7 @@ function bareApp() {
     'src/App.js': "import FastImage from 'react-native-fast-image';\nimport lib from 'some-js-lib';\n",
     'src/aws.js': `AWS.config.update({ accessKeyId: '${FAKE_AWS_ID}', secretAccessKey: '${FAKE_AWS_SECRET}' });\n`,
     'functions/admin.json': `{"private_key": "-----BEGIN PRIVATE KEY-----${FAKE_PEM_BODY.replace(/\n/g, '\\n')}-----END PRIVATE KEY-----"}`,
+    'src/__tests__/crypto.test.ts': `const privateKey = \`-----BEGIN RSA PRIVATE KEY-----${FAKE_PEM_BODY}-----END RSA PRIVATE KEY-----\``,
   });
 }
 
@@ -57,6 +58,8 @@ test('bare app: version, architecture, store, dependency and secret findings', a
 
   const server = result.findings.find((f) => f.id === 'secret:private-key:functions/admin.json');
   assert.equal(server.severity, 'high', 'server-side secrets are not reported as shipped in the app');
+  const testKey = result.findings.find((f) => f.id === 'secret:private-key:src/__tests__/crypto.test.ts');
+  assert.equal(testKey.severity, 'low', 'a key pair made for a test unlocks nothing');
 
   assert.equal(result.findings[0].severity, 'critical', 'findings are sorted by severity');
   assert.equal(result.latest.reactNative, '0.87.1');
@@ -327,6 +330,23 @@ test('Expo: a library version Expo pins for the SDK is not a compat problem', as
   assert.match(mismatch.detail, /Expo SDK 46 expects ~2\.9\.1/);
   const unknown = await compat(app('2.9.1', false));
   assert.equal(unknown.severity, 'medium', 'without the pin list, Expo projects get a softer finding');
+});
+
+test('a library built from another folder by react-native.config.js is not checked against the legacy architecture', async () => {
+  const app = (config) =>
+    makeProject({
+      'package.json': { name: 'w', dependencies: { 'react-native': '0.79.2', 'react-native-reanimated': '4.1.3', 'react-native-worklets': '0.6.1' } },
+      'node_modules/react-native/package.json': { version: '0.79.2' },
+      'node_modules/react-native-reanimated/package.json': { version: '4.1.3' },
+      'node_modules/react-native-reanimated/android/build.gradle': '',
+      'android/gradle.properties': 'newArchEnabled=false\n',
+      'src/App.js': "import Animated from 'react-native-reanimated';\n",
+      ...(config ? { 'react-native.config.js': config } : {}),
+    });
+  const compat = async (root) => (await analyze(loadProject(root), { get: registry, now: NOW })).findings.find((f) => f.id === 'compat:react-native-reanimated');
+  assert.match((await compat(app(null))).title, /legacy Architecture/);
+  const shim = "module.exports = { dependencies: { 'react-native-reanimated': { platforms: { android: { sourceDir: '../node_modules/r3-hack/node_modules/react-native-reanimated/android' } } } } };";
+  assert.equal(await compat(app(shim)), undefined, 'Edge links Reanimated 3 on Android through a shim');
 });
 
 test('Expo range check', async () => {

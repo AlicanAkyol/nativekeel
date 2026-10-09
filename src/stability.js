@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { cleanVersion, findPackageDir, installedVersion, versionFromSpec } from './project.js';
 import { filesImportingWith } from './usage.js';
+import { lockedCopies } from './lockfile.js';
 
 // Static checks for setups that build fine and then crash at runtime. Each one is a known,
 // documented failure, not a style preference.
@@ -118,12 +119,19 @@ export function stabilityChecks(project) {
     const versions = Object.fromEntries(nav.map((n) => [n, versionOf(n)]).filter(([, v]) => v));
     const majors = new Set(Object.values(versions).map(majorOf));
     if (majors.size > 1) {
+      // The crash comes from two copies of the core (each navigator then has its own
+      // navigation context). With one copy, a navigator from the other major usually still
+      // runs: Uniswap ships bottom-tabs 6 on React Navigation 7. That is unsupported, not a crash.
+      const split = ['@react-navigation/native', '@react-navigation/core'].filter((n) => new Set((lockedCopies(project.root, n) || []).map(majorOf)).size > 1);
+      const list = Object.entries(versions).map(([n, v]) => `${n} ${v}`).join(', ');
       add({
         id: 'crash-navigation-versions',
-        severity: 'high',
+        severity: split.length ? 'high' : 'medium',
         area: 'crash',
         title: 'React Navigation packages are on different major versions',
-        detail: `${Object.entries(versions).map(([n, v]) => `${n} ${v}`).join(', ')}. Navigators from one major do not work with the core of another; this usually crashes on the first navigation ("Couldn't find a navigation context" or undefined functions).`,
+        detail: split.length
+          ? `${list}. The lockfile installs two majors of ${split.join(' and ')}, so navigators from one major run against a different core than the app container: this crashes on the first navigation ("Couldn't find a navigation context" or undefined functions).`
+          : `${list}. React Navigation supports only one major across its packages; a navigator from another major runs against a core it was not built for, so options, types and behaviours can differ silently, and it gets no fixes for this setup. It is not a crash while there is one copy of @react-navigation/native and core; it becomes one if a second copy gets installed.`,
         fix: { kind: 'crash', step: 'Move every `@react-navigation/*` package to the same major version, following its migration guide.' },
       });
     }

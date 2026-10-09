@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { cleanVersion, findPackageDir, installedVersion, versionFromSpec } from './project.js';
 import { createRegistry, fetchJson } from './registry.js';
-import { scanSecrets } from './secrets.js';
+import { scanSecrets, TEST_PATH } from './secrets.js';
 import { nativeChecks } from './native.js';
 import { stabilityChecks } from './stability.js';
 import { performanceChecks } from './performance.js';
@@ -432,10 +432,18 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
   }
   if (current && !aheadOfStable) {
     const rnMinor = minorOf(current);
+    // react-native.config.js can build a library's native side from another folder (Edge links
+    // Reanimated 3 on its legacy-architecture Android build through a shim, Reanimated 4 on iOS).
+    // The installed version then says nothing about the architecture that build runs on.
+    let rnConfig = '';
+    try {
+      rnConfig = fs.readFileSync(path.join(project.root, 'react-native.config.js'), 'utf8');
+    } catch {}
+    const ownNative = (name) => new RegExp(`['"]${name.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}['"]\\s*:\\s*\\{[^}]{0,400}sourceDir`).test(rnConfig);
     for (const dep of deps.filter((d) => COMPAT[d.name])) {
       const pinned = expoPins && expoPins[dep.name];
       if (pinned && dep.version && satisfiesExpoRange(dep.version, pinned)) continue;
-      const problem = checkCompat(dep.name, dep.version, rnMinor, newArchOn);
+      const problem = !newArchOn && ownNative(dep.name) ? null : checkCompat(dep.name, dep.version, rnMinor, newArchOn);
       // Also check the architecture this app has to move to.
       const ahead = !problem && newArchRequired ? checkCompat(dep.name, dep.version, rnMinor, true) : null;
       if (!problem && !ahead) continue;
@@ -552,6 +560,17 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
         area: 'secret',
         title: `${s.label} in a commented-out line (${where})`,
         detail: `${value}Comments are not shipped in the app, but the line is in the repository and its git history. If the value is real, rotate it; either way, delete the line.`,
+        fix: { kind: 'secret', label: s.label, file: s.file, line: s.line, bundled: false },
+      });
+    } else if (s.committed !== false && s.rule === 'private-key' && TEST_PATH.test(s.file.split(path.sep).join('/'))) {
+      // A key pair made for a test (Edge signs and verifies a sample payload with one) unlocks
+      // nothing, unless the same key is also used for real.
+      add({
+        id: `secret:${s.rule}:${s.file}`,
+        severity: 'low',
+        area: 'secret',
+        title: `Private key in a test file (${where})`,
+        detail: `${value}Test code is not shipped, and a key generated for a test protects nothing. Make sure it is not also used by a real server or service; if it is, rotate it.`,
         fix: { kind: 'secret', label: s.label, file: s.file, line: s.line, bundled: false },
       });
     } else if (s.committed !== false) {

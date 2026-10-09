@@ -51,7 +51,7 @@ const RULES = [
 const PLACEHOLDER = /example|test|dummy|fake|sample|placeholder|xxxx|changeme|redacted|your[_-]?(?:api[_-]?)?(?:key|token|secret)/i;
 
 // Test code is never part of the app bundle.
-const TEST_PATH = /(^|\/)(__tests__|__mocks__|__fixtures__|test|tests|e2e|fixtures)\/|\.(test|spec)\.[cm]?[jt]sx?$|(^|\/)tests?\.[cm]?[jt]sx?$|[a-z]Test\.[cm]?[jt]sx?$/;
+export const TEST_PATH = /(^|\/)(__tests__|__mocks__|__fixtures__|test|tests|e2e|fixtures)\/|\.(test|spec)\.[cm]?[jt]sx?$|(^|\/)tests?\.[cm]?[jt]sx?$|[a-z]Test\.[cm]?[jt]sx?$/;
 
 const JS_FILE = /\.[cm]?[jt]sx?$/;
 

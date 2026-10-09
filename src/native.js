@@ -461,7 +461,29 @@ export function nativeChecks(project, { rnLatest = null, now = new Date() } = {}
         return false;
       }
     };
-    const signing = tracked.filter((f) => /\.(jks|keystore)$/i.test(f) && !/(?:^|[^a-z])(?:debug|fake|dummy|test|sample|example)/i.test(path.basename(f)) && !/(?:^|\/)(?:__tests__|tests?|e2e|fixtures?)\//.test(f) && nonEmpty(f));
+    // A local fallback: `if (hasProperty('storeFile')) { …real key from properties… } else { file("x.keystore"),
+    // storePassword "password" }`. Release builds sign with the properties; the committed keystore
+    // with a throwaway password only makes local release builds possible (Edge does this).
+    const fallbackBlocks = [];
+    for (const f of ['android/app/build.gradle', 'android/app/build.gradle.kts'].filter((x) => tracked.includes(x))) {
+      const text = read(path.join(root, f)) || '';
+      for (const m of text.matchAll(/if\s*\([^\n]*(?:hasProperty|findProperty|getenv)\s*\([^\n]*\)\s*\{/g)) {
+        let depth = 1;
+        let i = m.index + m[0].length;
+        while (i < text.length && depth) depth += text[i] === '{' ? 1 : text[i] === '}' ? -1 : 0, i++;
+        const els = text.slice(i).match(/^\s*else\s*\{/);
+        if (!els) continue;
+        const start = i + els[0].length;
+        depth = 1;
+        let j = start;
+        while (j < text.length && depth) depth += text[j] === '{' ? 1 : text[j] === '}' ? -1 : 0, j++;
+        const body = text.slice(start, j - 1);
+        const passwords = [...body.matchAll(/(?:storePassword|keyPassword)\s*=?\s*["']([^"'\n]+)["']/g)].map((x) => x[1]);
+        if (passwords.length && passwords.every((v) => /^(password|android|123456|changeit|keystore|secret)$/i.test(v))) fallbackBlocks.push({ file: f, start, end: j - 1, body });
+      }
+    }
+    const fallbackKeystore = (f) => fallbackBlocks.some((b) => new RegExp(`file\\s*\\(\\s*["'][^"']*${path.basename(f).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["']`).test(b.body));
+    const signing = tracked.filter((f) => /\.(jks|keystore)$/i.test(f) && !/(?:^|[^a-z])(?:debug|fake|dummy|test|sample|example)/i.test(path.basename(f)) && !/(?:^|\/)(?:__tests__|tests?|e2e|fixtures?)\//.test(f) && nonEmpty(f) && !fallbackKeystore(f));
     for (const f of signing) {
       add({
         id: `signing-keystore:${f}`,
@@ -510,6 +532,7 @@ export function nativeChecks(project, { rnLatest = null, now = new Date() } = {}
         // A password for a test/sample keystore (storeFile file('test.keystore') just above it) is
         // a local fallback, not the release key.
         ...[...text.matchAll(/(?<![\w'"[])(storePassword|keyPassword)\s*=?\s*["']([^"'\n]+)["']/g)]
+          .filter((m) => !fallbackBlocks.some((b) => b.file === f && m.index >= b.start && m.index < b.end))
           .filter((m) => !/storeFile\s*\(?\s*file\s*\(\s*["'](?:[^"']*[^a-z"'])?(?:debug|test|fake|dummy|sample|example)[^"']*["']/i.test(text.slice(Math.max(0, m.index - 300), m.index)))
           .map((m) => ({ name: m[1], value: m[2] })),
       ]

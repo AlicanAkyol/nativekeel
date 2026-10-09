@@ -228,7 +228,32 @@ export function webViewRisks(root) {
     const fileAccess = /allowFileAccessFromFileURLs\s*(?:=\s*\{\s*true\s*\}|(?=[\s/>]))/;
     if (universal.test(text) || fileAccess.test(text)) {
       const re = universal.test(text) ? universal : fileAccess;
-      findings.push({
+      // The flags only apply to pages with a file:// origin. A WebView that loads https URLs
+      // (Edge's partner pages) cannot be steered to file:// by its page: Chromium blocks that
+      // navigation. Local content: file:// URLs, bundled or downloaded HTML, inline html sources.
+      // The address often comes from another file (Notesnook: file:///android_asset in source.ts),
+      // so files this one imports by relative path are read too.
+      const localRe = /file:\/\/|android_asset|\bhtml\s*:|require\([^)]*\.html|DocumentDirectory|documentDirectory|cacheDirectory|CachesDirectory|Paths\.(?:document|cache|bundle)|baseUrl/;
+      const hasLocal = (t) => localRe.test(t.replace(/originWhitelist\s*=?\s*\{?\s*\[[^\]]*\]/g, '').replace(/^\s*originWhitelist\s*[:=][^\n]*$/gm, ''));
+      const imported = [...text.matchAll(/from\s+['"](\.{1,2}\/[^'"]+)['"]/g)].map((m) => {
+        const base = path.resolve(path.dirname(file), m[1]);
+        for (const ext of ['', '.ts', '.tsx', '.js', '.jsx', '/index.ts', '/index.tsx', '/index.js']) {
+          const t = fs.existsSync(base + ext) && fs.statSync(base + ext).isFile() ? read(base + ext) : null;
+          if (t) return t;
+        }
+        return '';
+      });
+      const local = hasLocal(text) || imported.some(hasLocal);
+      if (!local) {
+        findings.push({
+          id: `webview-file-access:${rel}`,
+          severity: 'low',
+          area: 'security',
+          title: `WebView has file-URL access flags it does not need (${rel}:${lineOf(re)})`,
+          detail: 'allowUniversalAccessFromFileURLs / allowFileAccessFromFileURLs only affect pages loaded from file://, and this file loads web URLs, so today they do nothing. If a local HTML page is ever shown here, its scripts could read app files and call any origin: remove them now.',
+          fix: { kind: 'security', step: `In \`${rel}\`, remove \`allowUniversalAccessFromFileURLs\` / \`allowFileAccessFromFileURLs\` from the WebView.` },
+        });
+      } else findings.push({
         id: `webview-file-access:${rel}`,
         severity: 'high',
         area: 'security',
@@ -563,8 +588,14 @@ export function weakCrypto(root) {
     if (!text || !/CryptoJS|createCipheriv|md5|sha1|MD5|SHA1|Math\.random/.test(text)) continue;
     // Comments describing an algorithm are not code.
     const code = text.replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' ')).replace(/\/\/[^\n]*/g, '');
+    const lines = text.split('\n');
     for (const rule of CRYPTO_RULES) {
-      const m = code.match(rule.re);
+      // A nonce in a mock or dummy server response (Edge: "// Dummy response") protects nothing.
+      const m = [...code.matchAll(new RegExp(rule.re.source, rule.re.flags.replace('g', '') + 'g'))].find((x) => {
+        if (rule.id !== 'insecure-random') return true;
+        const line = code.slice(0, x.index).split('\n').length;
+        return !/\b(?:dummy|mock|fake|stub)/i.test(lines.slice(Math.max(0, line - 6), line).join('\n'));
+      });
       if (m && !byRule.has(rule.id)) {
         // The Subsonic API (Navidrome, Airsonic) defines its login token as md5(password + salt):
         // the app cannot choose, so it is worth knowing, not an app bug.
