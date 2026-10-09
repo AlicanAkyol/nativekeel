@@ -533,5 +533,4 @@ test('a package note tells what the registries cannot: Track Player 5 is commerc
   assert.match(f.detail, /\(@rntp\/player\) under a commercial license/);
   assert.match(f.detail, /no next\/previous track commands/);
   assert.match(f.detail, /pull\/2685/);
-  assert.match(f.detail, /pull\/2685/);
 });
