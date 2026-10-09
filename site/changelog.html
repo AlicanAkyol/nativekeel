@@ -40,6 +40,12 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.51</h2><p class="date">9 October 2026</p>
+<ul>
+<li><span class="tag">Security</span><b>Recovery phrases and private keys copied to the clipboard.</b> Keyboards with clipboard history and cloud clipboard sync keep a copy, every app the user pastes into receives it, and on Android 9 and older any background app can read it. Reported as medium when a seed phrase, mnemonic, private key or secret key goes to the clipboard and is not cleared again (a timer that clears it after a minute counts as cleared). Found in 8 of 869 open-source apps, almost all crypto wallets. (OWASP MASVS-STORAGE)</li>
+<li><span class="tag">Play Store</span><b>expo-sqlite's sqlite-vec option breaks 16 KB alignment.</b> With <code>withSQLiteVecExtension</code> (or <code>useLibSQL</code> on SDK 57), expo-sqlite adds a prebuilt 64-bit library that is 4 KB aligned, so Google Play will block the app's updates from 1 February 2027. We found it by checking the prebuilt libraries of the 259 native packages our test apps use most, and reported it to Expo (<a href="https://github.com/expo/expo/issues/51329">expo/expo#51329</a>) and upstream (<a href="https://github.com/asg017/sqlite-vec/pull/254">sqlite-vec#254</a>). The default expo-sqlite build is fine.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.50</h2><p class="date">9 October 2026</p>
 <ul>
 <li><span class="tag">Upgrades</span><b>react-native-push-notification and React Native 0.82.</b> The library calls <code>getReactNativeHost()</code> when the FCM token refreshes and when a notification action is tapped. From React Native 0.82 that getter throws unless <code>MainApplication</code> still overrides it, and the 0.82 template no longer does. The finding now warns about it before the upgrade.</li>

@@ -345,3 +345,14 @@ test('AI provider keys read from build-time variables ship inside the app', asyn
   const config = run({ 'src/api.ts': "import Config from 'react-native-config';\nconst k = Config.GEMINI_API_KEY;" }, { 'react-native-config': '^1.5.0' });
   assert.match(config[0].title, /^Google Gemini API key/);
 });
+
+test('wallet secrets copied to the clipboard', async () => {
+  const { clipboardSecrets } = await import('../src/security.js');
+  const run = (src) => clipboardSecrets(makeProject({ 'package.json': '{}', 'src/a.tsx': src }));
+  assert.equal(run("import Clipboard from '@react-native-clipboard/clipboard';\nClipboard.setString(seed.join(' '));").length, 1);
+  assert.equal(run("import * as Clipboard from 'expo-clipboard';\nawait Clipboard.setStringAsync(type === 'privateKey' ? privateKey : publicKey);").length, 1, 'a private key next to a public one');
+  assert.equal(run("Clipboard.setString(displayPublicSeed);").length, 0, 'a public seed');
+  assert.equal(run("Clipboard.setString(address);").length, 0);
+  assert.equal(run("Clipboard.setString(mnemonic);\ntimer.current = setTimeout(() => { Clipboard.setString(''); }, 60000);").length, 0, 'cleared again after a minute');
+  assert.equal(run("// Clipboard.setString(mnemonic);").length, 0, 'comments');
+});

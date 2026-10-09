@@ -668,6 +668,7 @@ export const MASVS_GROUPS = {
 
 export function masvsOf(id) {
   if (/^(secret:|env-bundled|crypto-|expo-secret|ai-key-)/.test(id)) return 'CRYPTO';
+  if (/^clipboard-/.test(id)) return 'STORAGE';
   if (/^(password-leak|token-unencrypted|android-allow-backup)/.test(id)) return 'STORAGE';
   if (/^(insecure-tls|user-certificates|plain-http|ios-ats|android-cleartext)/.test(id)) return 'NETWORK';
   if (/^(webview-|android-exported|deeplink-)/.test(id)) return 'PLATFORM';
@@ -789,6 +790,46 @@ export function expoConfigSecrets(root) {
     });
   }
   return findings;
+}
+
+// Wallet secrets copied to the clipboard (MASVS-STORAGE, MASTG "sensitive data in the
+// clipboard"). Background apps cannot read the clipboard since Android 10, but keyboards with
+// clipboard history and cloud clipboard sync keep a copy, and so does every app the user pastes
+// into. A file that clears the clipboard again (a timer that writes an empty string) is fine.
+const CLIPBOARD_SET = /(?:Clipboard\.setString|Clipboard\.setStringAsync|setStringAsync|Clipboard\.setText)\s*\(\s*([^;\n]{1,120})/g;
+const SECRET_WORDS = new Set(['mnemonic', 'mnemonics', 'seed', 'seedphrase', 'seedwords', 'privatekey', 'privkey', 'secretkey', 'recoveryphrase', 'secretphrase', 'xprv', 'wif', 'nsec']);
+const clipboardWords = (s) => s.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+
+export function clipboardSecrets(root) {
+  const hits = [];
+  for (const file of jsFiles(root)) {
+    const text = read(file);
+    if (!text || !/Clipboard|setStringAsync/.test(text)) continue;
+    const code = text.replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' ')).replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+    // Cleared again later: setString('') / setStringAsync('') next to a timer.
+    if (/setTimeout[\s\S]{0,300}set(?:String|StringAsync|Text)\s*\(\s*(?:''|""|``)\s*\)/.test(code)) continue;
+    for (const m of code.matchAll(CLIPBOARD_SET)) {
+      const words = clipboardWords(m[1]);
+      const joined = words.join('');
+      const strong = /privatekey|privkey|mnemonic|secretkey|recoveryphrase|secretphrase|xprv|nsec|wif/.test(joined) || words.some((w) => ['mnemonic', 'mnemonics', 'xprv', 'wif', 'nsec'].includes(w));
+      // "displayPublicSeed": a seed word next to "public" is a public value.
+      if (!strong && (words.includes('public') || words.includes('pub') || words.includes('xpub'))) continue;
+      if (!strong && !words.some((w) => SECRET_WORDS.has(w)) && !/seedphrase/.test(joined)) continue;
+      hits.push(`${path.relative(root, file)}:${code.slice(0, m.index).split('\n').length}`);
+      break;
+    }
+  }
+  if (!hits.length) return [];
+  return [
+    {
+      id: 'clipboard-secret',
+      severity: 'medium',
+      area: 'security',
+      title: `A recovery phrase, private key or secret key is copied to the clipboard (${hits[0]}${hits.length > 1 ? ` and ${hits.length - 1} more` : ''})`,
+      detail: 'The clipboard is not private storage. Keyboards with clipboard history and cloud clipboard sync (Gboard, Samsung Keyboard, iCloud Universal Clipboard) keep a copy, every app the user pastes into receives it, and on Android 9 and older any background app can read it. If you keep the copy button, clear the clipboard again after about a minute, and on Android 13+ mark the clip as sensitive so it is hidden from the clipboard preview. (OWASP MASVS-STORAGE)',
+      fix: { kind: 'security', step: `Clear the clipboard after a short timeout where a recovery phrase or private key is copied (${hits.slice(0, 3).join(', ')}), or remove the copy option.` },
+    },
+  ];
 }
 
 // AI provider keys read by app code from build-time variables. EXPO_PUBLIC_ variables,

@@ -403,3 +403,11 @@ test('release signed with the debug key: reported, unless EAS or CI signs it', (
   const signed = gradle.replace('            signingConfig signingConfigs.debug\n            minifyEnabled', '            signingConfig signingConfigs.release\n            minifyEnabled');
   assert.equal(nativeChecks(loadProject(makeProject(rnApp('0.80.0', { 'android/app/build.gradle': signed }))), { now: NOW }).find((f) => f.id === 'android-release-debug-signed'), undefined);
 });
+
+test('expo-sqlite options that add 4 KB-aligned prebuilt libraries', () => {
+  const app = (extra) => ({ 'package.json': { name: 'e', dependencies: { expo: '57.0.0', 'react-native': '0.85.0', 'expo-sqlite': '57.0.4' } }, ...extra });
+  const on = ids(check(app({ 'app.json': JSON.stringify({ expo: { plugins: [['expo-sqlite', { withSQLiteVecExtension: true }]] } }) })));
+  assert.ok(on.includes('android-16kb-expo-sqlite'));
+  assert.ok(ids(check(app({ 'android/gradle.properties': 'expo.sqlite.withSQLiteVecExtension=true\n', 'android/app/build.gradle': '' }))).includes('android-16kb-expo-sqlite'));
+  assert.ok(!ids(check(app({ 'app.json': JSON.stringify({ expo: { plugins: ['expo-sqlite'] } }) }))).includes('android-16kb-expo-sqlite'), 'default build is aligned');
+});

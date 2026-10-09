@@ -125,6 +125,30 @@ export function nativeChecks(project, { rnLatest = null, now = new Date() } = {}
       });
     }
     const artifact = findBuiltArtifact(root);
+    // Prebuilt binaries known to be 4 KB aligned that a package adds only behind an option, so
+    // they never show up until someone builds with it (checked with llvm-readelf, 2026-10-09):
+    // expo-sqlite's bundled sqlite-vec (android/vec, expo/expo#51329; upstream asg017/sqlite-vec#254)
+    // and its libSQL binaries (android/libsql, removed after SDK 57).
+    if (!artifact && (project.deps['expo-sqlite'] || (project.devDeps && project.devDeps['expo-sqlite']))) {
+      const config = [
+        ['app.json', 'app.config.js', 'app.config.ts'].map((f) => read(path.join(root, f)) || '').join('\n'),
+        read(path.join(root, 'android', 'gradle.properties')) || '',
+      ].join('\n');
+      const options = [
+        /withSQLiteVecExtension["']?\s*[:=]\s*["']?true/.test(config) && 'withSQLiteVecExtension (sqlite-vec, vec.so)',
+        /useLibSQL["']?\s*[:=]\s*["']?true/.test(config) && 'useLibSQL (libsql_experimental.so)',
+      ].filter(Boolean);
+      if (options.length) {
+        add({
+          id: 'android-16kb-expo-sqlite',
+          severity: blocked16k ? 'critical' : 'high',
+          area: 'store',
+          title: `expo-sqlite's ${options.length === 1 ? 'optional native library is' : 'optional native libraries are'} not 16 KB aligned (${options.map((o) => o.split(' ')[0]).join(', ')})`,
+          detail: `${options.join(' and ')} ${options.length === 1 ? 'adds a prebuilt library' : 'add prebuilt libraries'} to the APK whose 64-bit builds are 4 KB aligned in expo-sqlite 57 and on Expo's main branch (expo/expo#51329; the upstream sqlite-vec fix is asg017/sqlite-vec#254). ${policy16k} Until a fixed release, keep the option off for Android, or ship your own 16 KB-aligned build of the extension. Build a release APK and run NativeKeel again to confirm.`,
+          fix: { kind: 'align-16kb', libs: options, blocked: blocked16k, blockedFrom: PAGE_SIZE_16K.blockedFrom },
+        });
+      }
+    }
     if (artifact) {
       let result = null;
       try {
