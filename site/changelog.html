@@ -40,6 +40,12 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 650+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.41</h2><p class="date">9 October 2026</p>
+<ul>
+<li><span class="tag">Docs</span>The example report in the README, on the homepage and in the share image showed an older "Start here" and security line than the tool prints today. They match again, and a check now compares them with the tool's own output before every release.</li>
+<li><span class="tag">Accuracy</span>Tested with dependencies installed on 17 open-source apps that are published in the App Store or Google Play: no new false alarms, and all 79 packages reported as unused were confirmed unused.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.40</h2><p class="date">8 October 2026</p>
 <ul>
 <li><span class="tag">Experience</span><b>Tell us when NativeKeel is wrong.</b> Every report now ends with a link to a short form for a wrong or missed finding. Nothing is sent automatically, and the form asks for the finding's title, not your code. Reports from real apps are how most of this month's accuracy fixes happened.</li>
