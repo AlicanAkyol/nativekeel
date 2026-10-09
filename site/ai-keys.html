@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Your AI key ships inside your app · NativeKeel</title>
-<meta name="description" content="We scanned 869 open-source React Native and Expo apps. 12 ship an AI provider key (OpenAI, Gemini, Anthropic, Groq…) inside the app, because EXPO_PUBLIC_ and .env variables are compiled into the bundle. How it happens, and how to fix it.">
+<title>Your AI API key ships inside your Expo app · NativeKeel</title>
+<meta name="description" content="12 of 869 open-source React Native and Expo apps ship an OpenAI, Gemini or Anthropic key in the bundle via EXPO_PUBLIC_ or .env. Why, and how to fix it.">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <meta name="theme-color" content="#0b5d55">
@@ -12,15 +12,15 @@
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="NativeKeel">
 <meta property="og:url" content="https://nativekeel.com/ai-keys">
-<meta property="og:title" content="Your AI key ships inside your app · NativeKeel">
-<meta property="og:description" content="We scanned 869 open-source React Native and Expo apps. 12 ship an AI provider key (OpenAI, Gemini, Anthropic, Groq…) inside the app, because EXPO_PUBLIC_ and .env variables are compiled into the bundle. How it happens, and how to fix it.">
+<meta property="og:title" content="Your AI API key ships inside your Expo app · NativeKeel">
+<meta property="og:description" content="12 of 869 open-source React Native and Expo apps ship an OpenAI, Gemini or Anthropic key in the bundle via EXPO_PUBLIC_ or .env. Why, and how to fix it.">
 <meta property="og:image" content="https://nativekeel.com/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="NativeKeel: npx nativekeel, a free health check for React Native and Expo apps">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Your AI key ships inside your app · NativeKeel">
-<meta name="twitter:description" content="We scanned 869 open-source React Native and Expo apps. 12 ship an AI provider key (OpenAI, Gemini, Anthropic, Groq…) inside the app, because EXPO_PUBLIC_ and .env variables are compiled into the bundle. How it happens, and how to fix it.">
+<meta name="twitter:title" content="Your AI API key ships inside your Expo app · NativeKeel">
+<meta name="twitter:description" content="12 of 869 open-source React Native and Expo apps ship an OpenAI, Gemini or Anthropic key in the bundle via EXPO_PUBLIC_ or .env. Why, and how to fix it.">
 <meta name="twitter:image" content="https://nativekeel.com/og.png">
 <style>
 :root{
@@ -74,6 +74,33 @@ td.ok{color:var(--accent);font-weight:600;white-space:nowrap}
 footer{border-top:1px solid var(--line);margin-top:56px;padding:24px 0 40px;color:var(--muted);font-size:14px}
 @media (max-width:680px){.facts{grid-template-columns:repeat(2,1fr)}.before-after{grid-template-columns:1fr}body{font-size:16px}.lead{font-size:18px}}
 </style>
+<script type="application/ld+json">
+{
+ "@context": "https://schema.org",
+ "@type": "Article",
+ "headline": "Your AI API key ships inside your Expo app",
+ "description": "12 of 869 open-source React Native and Expo apps ship an OpenAI, Gemini or Anthropic key in the bundle via EXPO_PUBLIC_ or .env. Why, and how to fix it.",
+ "url": "https://nativekeel.com/ai-keys",
+ "mainEntityOfPage": "https://nativekeel.com/ai-keys",
+ "datePublished": "2026-10-09",
+ "dateModified": "2026-10-09",
+ "image": "https://nativekeel.com/og.png",
+ "author": {
+  "@type": "Person",
+  "name": "Alican Akyol",
+  "url": "https://alicanakyol.com"
+ },
+ "publisher": {
+  "@type": "Organization",
+  "name": "NativeKeel",
+  "url": "https://nativekeel.com",
+  "logo": {
+   "@type": "ImageObject",
+   "url": "https://nativekeel.com/apple-touch-icon.png"
+  }
+ }
+}
+</script>
 </head>
 <body>
 <header class="top">
@@ -86,7 +113,7 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding:24px 0 40px;colo
 
 <main class="wrap">
   <p class="eyebrow">Research · October 2026</p>
-  <h1>Your AI key ships inside your app</h1>
+  <h1>Your AI API key ships inside your Expo app</h1>
   <p class="lead">The AI feature is the newest part of many React Native and Expo apps, and the easiest place to leak a key. We scanned 869 open-source apps: 12 compile an OpenAI, Gemini, Anthropic or other AI provider key into the app they ship, and every one of the 12 calls the provider straight from the phone.</p>
 
   <div class="facts">

@@ -12,6 +12,8 @@ const BASE = 'https://nativekeel.com';
 const UPDATED = '2026-10-08';
 
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+// Inside an attribute a " would end the value (search engines then see half a description).
+const attr = (s) => esc(s).replace(/"/g, '&quot;');
 // Tiny markup: `code`, **bold**, [text](url), blank line = paragraph, lines starting with "- " = list,
 // ``` fenced blocks.
 function md(src) {
@@ -364,7 +366,7 @@ const head = (title, description, url) => `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(title)}</title>
-<meta name="description" content="${esc(description)}">
+<meta name="description" content="${attr(description)}">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <meta name="theme-color" content="#0b5d55">
@@ -372,8 +374,8 @@ const head = (title, description, url) => `<!doctype html>
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="NativeKeel">
 <meta property="og:url" content="${url}">
-<meta property="og:title" content="${esc(title)}">
-<meta property="og:description" content="${esc(description)}">
+<meta property="og:title" content="${attr(title)}">
+<meta property="og:description" content="${attr(description)}">
 <meta property="og:image" content="${BASE}/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="${BASE}/og.png">

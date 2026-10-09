@@ -2,19 +2,19 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://nativekeel.com/</loc><lastmod>2026-10-09</lastmod></url>
   <url><loc>https://nativekeel.com/changelog</loc><lastmod>2026-10-09</lastmod></url>
-  <url><loc>https://nativekeel.com/case-study</loc></url>
+  <url><loc>https://nativekeel.com/case-study</loc><lastmod>2026-10-09</lastmod></url>
   <url><loc>https://nativekeel.com/ai-keys</loc><lastmod>2026-10-09</lastmod></url>
   <url><loc>https://nativekeel.com/privacy</loc></url>
   <url><loc>https://nativekeel.com/fix/</loc><lastmod>2026-10-08</lastmod></url>
-  <url><loc>https://nativekeel.com/fix/android-exported</loc><lastmod>2026-10-08</lastmod></url>
-  <url><loc>https://nativekeel.com/fix/itms-91061-missing-privacy-manifest</loc><lastmod>2026-10-08</lastmod></url>
+  <url><loc>https://nativekeel.com/fix/android-exported</loc><lastmod>2026-10-09</lastmod></url>
+  <url><loc>https://nativekeel.com/fix/itms-91061-missing-privacy-manifest</loc><lastmod>2026-10-09</lastmod></url>
   <url><loc>https://nativekeel.com/fix/missing-foreground-service-type</loc><lastmod>2026-10-08</lastmod></url>
-  <url><loc>https://nativekeel.com/fix/expo-packages-should-be-updated</loc><lastmod>2026-10-08</lastmod></url>
+  <url><loc>https://nativekeel.com/fix/expo-packages-should-be-updated</loc><lastmod>2026-10-09</lastmod></url>
   <url><loc>https://nativekeel.com/fix/imagebackground-safeareaview-deprecated</loc><lastmod>2026-10-08</lastmod></url>
   <url><loc>https://nativekeel.com/fix/supabase-rls-disabled</loc><lastmod>2026-10-08</lastmod></url>
   <url><loc>https://nativekeel.com/fix/app-store-account-deletion-5-1-1-v</loc><lastmod>2026-10-08</lastmod></url>
   <url><loc>https://nativekeel.com/fix/app-store-sign-in-with-apple-4-8</loc><lastmod>2026-10-08</lastmod></url>
-  <url><loc>https://nativekeel.com/fix/google-play-target-api-level</loc><lastmod>2026-10-08</lastmod></url>
+  <url><loc>https://nativekeel.com/fix/google-play-target-api-level</loc><lastmod>2026-10-09</lastmod></url>
   <url><loc>https://nativekeel.com/fix/google-play-16-kb-page-size</loc><lastmod>2026-10-08</lastmod></url>
-  <url><loc>https://nativekeel.com/fix/signed-in-debug-mode</loc><lastmod>2026-10-08</lastmod></url>
+  <url><loc>https://nativekeel.com/fix/signed-in-debug-mode</loc><lastmod>2026-10-09</lastmod></url>
 </urlset>
