@@ -10,12 +10,12 @@ npx nativekeel
 
 ```
 Summary  4 critical · 5 high · 4 medium · 6 low
-Security (OWASP MASVS)  crypto 1 · network 1  ·  7 groups checked
+Security (OWASP MASVS)  crypto 1 · network 1 · code 1  ·  7 groups checked
 
 Start here
   1. Revoke the AWS access key ID in src/App.js:6 at the provider today.
   2. Set targetSdkVersion = 36 and compileSdkVersion = 36 in android/build.gradle.
-  3. Move android:usesCleartextTraffic="true" to the debug manifest.
+  3. Replace react-native-fast-image: no New Architecture support.
 ```
 
 ## What it checks
