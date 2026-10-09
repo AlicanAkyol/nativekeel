@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Your AI key ships inside your app · NativeKeel</title>
+<meta name="description" content="We scanned 869 open-source React Native and Expo apps. 12 ship an AI provider key (OpenAI, Gemini, Anthropic, Groq…) inside the app, because EXPO_PUBLIC_ and .env variables are compiled into the bundle. How it happens, and how to fix it.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#0b5d55">
+<link rel="canonical" href="https://nativekeel.com/ai-keys">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="NativeKeel">
+<meta property="og:url" content="https://nativekeel.com/ai-keys">
+<meta property="og:title" content="Your AI key ships inside your app · NativeKeel">
+<meta property="og:description" content="We scanned 869 open-source React Native and Expo apps. 12 ship an AI provider key (OpenAI, Gemini, Anthropic, Groq…) inside the app, because EXPO_PUBLIC_ and .env variables are compiled into the bundle. How it happens, and how to fix it.">
+<meta property="og:image" content="https://nativekeel.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="NativeKeel: npx nativekeel, a free health check for React Native and Expo apps">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Your AI key ships inside your app · NativeKeel">
+<meta name="twitter:description" content="We scanned 869 open-source React Native and Expo apps. 12 ship an AI provider key (OpenAI, Gemini, Anthropic, Groq…) inside the app, because EXPO_PUBLIC_ and .env variables are compiled into the bundle. How it happens, and how to fix it.">
+<meta name="twitter:image" content="https://nativekeel.com/og.png">
+<style>
+:root{
+  --bg:#fbfaf7;--surface:#ffffff;--text:#15171b;--muted:#5d6470;--line:#e4e2dc;
+  --accent:#0b5d55;--accent-ink:#ffffff;--accent-soft:#e3f1ee;--red:#c62828;--amber:#b26a00;
+  --code-bg:#12151a;--code-text:#d9dee6;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--bg:#0e1013;--surface:#161a1f;--text:#e9ebef;--muted:#9aa2ad;--line:#262b32;--accent:#3cc4b4;--accent-ink:#06201d;--accent-soft:#12302c;--red:#ff6b6b;--amber:#f0a73a;--code-bg:#090b0e}
+}
+:root[data-theme="dark"]{--bg:#0e1013;--surface:#161a1f;--text:#e9ebef;--muted:#9aa2ad;--line:#262b32;--accent:#3cc4b4;--accent-ink:#06201d;--accent-soft:#12302c;--red:#ff6b6b;--amber:#f0a73a;--code-bg:#090b0e}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:17px/1.7 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+.wrap{max-width:760px;margin:0 auto;padding:0 16px}
+header.top{display:flex;align-items:center;justify-content:space-between;padding:18px 0;max-width:1040px;margin:0 auto;padding-left:16px;padding-right:16px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;color:var(--text);text-decoration:none}
+.logo svg{width:28px;height:28px}
+header.top a.back{color:var(--muted);text-decoration:none;font-size:15px}
+.eyebrow{font:600 13px ui-monospace,SFMono-Regular,Menlo,monospace;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin:40px 0 8px}
+h1{font-size:clamp(30px,4.6vw,42px);line-height:1.15;letter-spacing:-.02em;margin:0 0 16px}
+.lead{font-size:20px;color:var(--muted);margin:0 0 28px}
+h2{font-size:24px;letter-spacing:-.01em;margin:48px 0 8px}
+h3{font-size:18px;margin:28px 0 6px}
+p{margin:0 0 16px}
+.facts{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:8px 0 32px}
+.fact{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px}
+.fact b{display:block;font-size:24px;line-height:1.2}
+.fact span{font-size:13px;color:var(--muted);line-height:1.4;display:block;margin-top:4px}
+.before-after{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:8px 0 24px}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px 18px;font-size:15px}
+.box h4{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.box ul{margin:0;padding-left:18px}
+pre{background:var(--code-bg);color:var(--code-text);border-radius:10px;padding:14px 16px;overflow-x:auto;font:13.5px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;margin:0 0 18px}
+code{font:14px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--accent-soft);padding:1px 5px;border-radius:5px;overflow-wrap:anywhere}
+pre code{background:none;padding:0;font-size:inherit}
+.callout{border-left:4px solid var(--accent);background:var(--surface);border-radius:0 10px 10px 0;padding:14px 18px;margin:0 0 20px;font-size:16px}
+.callout.warn{border-left-color:var(--amber)}
+.step{border-top:1px solid var(--line);padding-top:8px}
+.tag{display:inline-block;font:600 12px ui-monospace,monospace;text-transform:uppercase;letter-spacing:.05em;padding:2px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);margin-right:6px}
+.tag.red{background:color-mix(in srgb,var(--red) 14%,transparent);color:var(--red)}
+.tag.amber{background:color-mix(in srgb,var(--amber) 16%,transparent);color:var(--amber)}
+table{width:100%;border-collapse:collapse;font-size:15px;margin:0 0 24px}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+td.ok{color:var(--accent);font-weight:600;white-space:nowrap}
+.cta{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:24px;margin:48px 0}
+.cta h2{margin-top:0}
+.btn{display:inline-block;text-decoration:none;font-weight:600;padding:11px 16px;border-radius:9px;background:var(--accent);color:var(--accent-ink);margin:6px 8px 0 0}
+.btn.ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
+footer{border-top:1px solid var(--line);margin-top:56px;padding:24px 0 40px;color:var(--muted);font-size:14px}
+@media (max-width:680px){.facts{grid-template-columns:repeat(2,1fr)}.before-after{grid-template-columns:1fr}body{font-size:16px}.lead{font-size:18px}}
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="logo" href="/">
+    <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="var(--accent)"/><path d="M16 6v16M9 22h14M11 26h10" stroke="var(--accent-ink)" stroke-width="3" stroke-linecap="round"/></svg>
+    NativeKeel
+  </a>
+  <a class="back" href="/">← Home</a>
+</header>
+
+<main class="wrap">
+  <p class="eyebrow">Research · October 2026</p>
+  <h1>Your AI key ships inside your app</h1>
+  <p class="lead">The AI feature is the newest part of many React Native and Expo apps, and the easiest place to leak a key. We scanned 869 open-source apps: 12 compile an OpenAI, Gemini, Anthropic or other AI provider key into the app they ship, and every one of the 12 calls the provider straight from the phone.</p>
+
+  <div class="facts">
+    <div class="fact"><b>869</b><span>open-source React Native and Expo apps scanned</span></div>
+    <div class="fact"><b>12</b><span>ship an AI provider key inside the app</span></div>
+    <div class="fact"><b>8</b><span>of them through an <code>EXPO_PUBLIC_</code> variable</span></div>
+    <div class="fact"><b>0</b><span>of them had the key in the repository</span></div>
+  </div>
+
+  <h2>Why .gitignore does not save you</h2>
+  <p>Every one of these apps did the thing tutorials tell you to do: the key lives in <code>.env</code>, and <code>.env</code> is not committed. The code reads it like this:</p>
+<pre><code>const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+  headers: { Authorization: `Bearer ${process.env.EXPO_PUBLIC_GROQ_API_KEY}` },
+  ...
+});</code></pre>
+  <p>Expo replaces <code>process.env.EXPO_PUBLIC_*</code> with the value <em>at build time</em>. The key is not in your repository, but it is a plain string in the JavaScript bundle of every build you ship. <a href="https://docs.expo.dev/guides/environment-variables/">Expo's own documentation</a> says not to put secrets in these variables. <code>react-native-config</code> and <code>react-native-dotenv</code> work the same way: they exist to put values into the app.</p>
+  <div class="callout warn"><strong>What someone needs:</strong> the APK or IPA (free from the store), a zip tool, and a text search for <code>sk-</code> or <code>AIza</code>. No reverse engineering skills. Automated scrapers do this at scale, and AI keys are what they look for, because a working key turns straight into free compute on your bill.</div>
+
+  <h2>What we found</h2>
+  <table>
+    <tr><th>Provider</th><th>Apps</th></tr>
+    <tr><td>Google Gemini</td><td>6</td></tr>
+    <tr><td>OpenAI</td><td>5</td></tr>
+    <tr><td>Anthropic</td><td>2</td></tr>
+    <tr><td>Groq</td><td>2</td></tr>
+    <tr><td>OpenRouter, xAI, Replicate, fal.ai</td><td>1 each</td></tr>
+  </table>
+  <p>Several apps ship more than one key. Eight use <code>EXPO_PUBLIC_</code> variables, three <code>react-native-dotenv</code>, one <code>react-native-config</code>. One of the 12 is published on the app stores. They are mostly recent: chat assistants, journaling with AI summaries, photo and voice features added in the last year.</p>
+  <p>While checking these results we also found, in a different app, a server credential committed to the repository itself. We told the owner without publishing any details, and we name no app here.</p>
+
+  <h2>The fix</h2>
+  <p>The key has to live somewhere the user's phone cannot read:</p>
+  <ol>
+    <li><strong>Move the call behind your own endpoint.</strong> An Expo API route (<code>app/api/chat+api.ts</code>), a Firebase or Supabase function, or any small server. It holds the key, the app calls it.</li>
+    <li><strong>Check who is calling.</strong> Require your user's session token, and add per-user rate limits. Otherwise your endpoint becomes the free proxy instead of the key.</li>
+    <li><strong>Revoke the key that shipped.</strong> Old builds stay on phones and in APK mirrors. Moving the code does not un-leak the old key.</li>
+    <li><strong>Set a spending limit</strong> at the provider, so a leak costs you a bounded amount.</li>
+  </ol>
+  <p>If users bring their own key, store it with <code>expo-secure-store</code> or the Keychain/Keystore, and do not fall back to a built-in key when theirs is missing. We saw that fallback too.</p>
+
+  <h2>Find it in your app</h2>
+  <p>Since version 0.1.47, NativeKeel reports this as a high finding. It reads your code, not your secrets: the variable name is enough to know the value is compiled in. Server folders and Expo API routes are left out, because code there never reaches the phone.</p>
+<pre><code>▲ HIGH  Groq API key ships inside the app (utils/ai/client.ts:3)
+        The app reads EXPO_PUBLIC_GROQ_API_KEY, and EXPO_PUBLIC_ variables are compiled
+        into the JavaScript bundle; the app also calls Groq directly. ...</code></pre>
+
+  <div class="cta">
+    <h2>Run it on your app</h2>
+    <p>One command, no signup, nothing leaves your machine:</p>
+<pre><code>npx nativekeel</code></pre>
+    <a class="btn" href="sample-report.html">See a sample report</a><a class="btn ghost" href="/changelog">What else it checks</a>
+  </div>
+
+  <footer>Results from open-source repositories, scanned without installing or running them. No app is named; results about other people's apps are not published. · <a href="/">NativeKeel</a></footer>
+</main>
+</body>
+</html>
