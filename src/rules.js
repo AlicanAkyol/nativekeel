@@ -77,6 +77,19 @@ export const REPLACEMENTS = {
   'react-native-datepicker': ['@react-native-community/datetimepicker'],
 };
 
+// What a user needs to know before acting on a dep-risk finding, when the registries cannot
+// say it. Shown after the finding's detail. Sourced and dated.
+export const PACKAGE_NOTES = {
+  // README and rntp.dev/pricing, checked 2026-10-09. v4 branch MusicModule.kt: 37 @ReactMethod
+  // functions are written `= scope.launch { }` and return a coroutine Job, which the interop
+  // layer rejects ("Detected unsupported return class: kotlinx.coroutines.Job"). expo-audio:
+  // lock screen controls and background playback via setActiveForLockScreen, but no
+  // next/previous track commands yet (expo/expo#43538). Kotlin 2.1, crash and the first-setupPlayer
+  // race reproduced on RN 0.81.4 and fixed in our PR #2685 (tested on an emulator, 2026-10-09).
+  'react-native-track-player':
+    'Version 5, the New Architecture rewrite, is a different package (@rntp/player) under a commercial license: free for personal and educational use, paid for commercial apps (rntp.dev/pricing). The free 4.x line (4.1.2) does not compile with Kotlin 2.1 (React Native 0.79+) and crashes at launch on Android with the New Architecture (its methods return a coroutine Job); the fixes are in github.com/doublesymmetry/react-native-track-player/pull/2685, which you can apply with patch-package until it is released. For simple playback, expo-audio has background playback and lock screen controls, but no next/previous track commands yet.',
+};
+
 // Packages that moved to a new name with the same API: swap the package, update the imports.
 export const RENAMED = {
   '@react-native-community/async-storage': '@react-native-async-storage/async-storage',

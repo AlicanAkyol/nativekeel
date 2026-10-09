@@ -23,6 +23,7 @@ import {
   PLAY_TARGET_SDK,
   RENAMED,
   REPLACEMENTS,
+  PACKAGE_NOTES,
   SUPPORTED_EXPO_MAJORS,
   SUPPORTED_RN_MINORS,
 } from './rules.js';
@@ -300,7 +301,7 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
         severity: noNewArch || native ? 'high' : (stale && !dep.unmaintained && release.rnLink === 'name') || (release && !release.rnLink && !/react-native|expo|^@react-navigation\//.test(name)) ? 'low' : 'medium',
         area: 'dependency',
         title: `${name}: ${problems.join(', ')}`,
-        detail: `${why}${alternatives.length ? ` Alternatives: ${alternatives.join(', ')}.` : ''}`,
+        detail: `${why}${alternatives.length ? ` Alternatives: ${alternatives.join(', ')}.` : ''}${PACKAGE_NOTES[name] ? ` ${PACKAGE_NOTES[name]}` : ''}`,
         fix: { kind: 'replace-dep', name, native, noNewArch, unmaintained: dep.unmaintained || stale, alternatives, renamedTo: RENAMED[name] || null },
       });
     } else if (revived) {

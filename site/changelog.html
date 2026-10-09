@@ -40,6 +40,11 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.49</h2><p class="date">9 October 2026</p>
+<ul>
+<li><span class="tag">Upgrades</span><b>react-native-track-player: what the registries do not tell you.</b> Version 5, the New Architecture rewrite, is a different package (<code>@rntp/player</code>) under a commercial license. The free 4.x line does not compile with Kotlin 2.1 and crashes at launch with the New Architecture on Android. The finding now says so, and points to <a href="https://github.com/doublesymmetry/react-native-track-player/pull/2685">our pull request with the fixes</a> (apply it with patch-package until it is released), or to expo-audio for simple playback.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.48</h2><p class="date">9 October 2026</p>
 <ul>
 <li><span class="tag">Accuracy</span><b>Face ID with expo-local-authentication is not a crash.</b> Without <code>NSFaceIDUsageDescription</code>, most biometrics libraries crash on iOS 17+, and that stays high. <code>expo-local-authentication</code> checks for the key itself and skips Face ID instead, so it is now a medium "Face ID never shows" finding.</li>

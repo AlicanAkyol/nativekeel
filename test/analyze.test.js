@@ -516,3 +516,22 @@ test('packages from the same monorepo (workspace:, link:, file:) are not checked
   assert.ok(!ids.some((i) => i.includes('@acme/env-link')), 'a workspace package is developed in the repo');
   assert.ok(ids.includes('dep-risk:old-lib'));
 });
+
+test('a package note tells what the registries cannot: Track Player 5 is commercially licensed', async () => {
+  const reg = fakeRegistry({
+    directory: { 'react-native-track-player': { ios: true, android: true, newArchitecture: false } },
+    latest: { 'react-native-track-player': '4.1.2' },
+  });
+  const root = makeProject({
+    'package.json': { name: 'p', dependencies: { 'react-native': '0.80.0', 'react-native-track-player': '4.1.2' } },
+    'node_modules/react-native/package.json': { version: '0.80.0' },
+    'node_modules/react-native-track-player/package.json': { version: '4.1.2' },
+    'node_modules/react-native-track-player/android/build.gradle': '',
+    'src/App.js': "import TrackPlayer from 'react-native-track-player';\n",
+  });
+  const f = (await analyze(loadProject(root), { get: reg, now: NOW })).findings.find((x) => x.id === 'dep-risk:react-native-track-player');
+  assert.match(f.detail, /\(@rntp\/player\) under a commercial license/);
+  assert.match(f.detail, /no next\/previous track commands/);
+  assert.match(f.detail, /pull\/2685/);
+  assert.match(f.detail, /pull\/2685/);
+});
