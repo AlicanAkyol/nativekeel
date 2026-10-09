@@ -11,6 +11,15 @@ const scan = (src) => scanSecrets(makeProject({ 'package.json': '{}', 'src/confi
 test('Supabase: service_role is reported, anon key is not', () => {
   assert.deepEqual(scan(`const k = '${jwt({ iss: 'supabase', role: 'service_role' })}';`), ['supabase-service-role']);
   assert.deepEqual(scan(`const k = '${jwt({ iss: 'supabase', role: 'anon' })}';`), []);
+  assert.deepEqual(scan(`const LOCAL_SERVICE_ROLE_KEY = '${jwt({ iss: 'supabase-demo', role: 'service_role' })}';`), [], 'the public `supabase start` demo key');
+});
+
+test('.env values reach the bundle only through EXPO_PUBLIC_ or an env-inlining library', () => {
+  const pem = `"-----BEGIN PRIVATE KEY-----\\n${FAKE_PEM_BODY.replace(/\n/g, '\\n')}-----END PRIVATE KEY-----"`;
+  const env = (pkg, line) => scanSecrets(makeProject({ 'package.json': pkg, '.env': `API_URL=https://x.io\n${line}\n` }))[0];
+  assert.equal(env({ dependencies: { expo: '53.0.0' } }, `FIREBASE_PRIVATE_KEY=${pem}`).inAppBundle, false, 'server-only name in an Expo app (API routes)');
+  assert.equal(env({ dependencies: { expo: '53.0.0' } }, `EXPO_PUBLIC_FIREBASE_PRIVATE_KEY=${pem}`).inAppBundle, true);
+  assert.equal(env({ dependencies: { 'react-native-config': '1.5.0' } }, `FIREBASE_PRIVATE_KEY=${pem}`).inAppBundle, true, 'react-native-config inlines every variable');
 });
 
 test('provider key formats', () => {

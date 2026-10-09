@@ -667,7 +667,7 @@ export const MASVS_GROUPS = {
 };
 
 export function masvsOf(id) {
-  if (/^(secret:|env-bundled|crypto-|expo-secret)/.test(id)) return 'CRYPTO';
+  if (/^(secret:|env-bundled|crypto-|expo-secret|ai-key-)/.test(id)) return 'CRYPTO';
   if (/^(password-leak|token-unencrypted|android-allow-backup)/.test(id)) return 'STORAGE';
   if (/^(insecure-tls|user-certificates|plain-http|ios-ats|android-cleartext)/.test(id)) return 'NETWORK';
   if (/^(webview-|android-exported|deeplink-)/.test(id)) return 'PLATFORM';
@@ -789,6 +789,77 @@ export function expoConfigSecrets(root) {
     });
   }
   return findings;
+}
+
+// AI provider keys read by app code from build-time variables. EXPO_PUBLIC_ variables,
+// react-native-config and react-native-dotenv inline the value into the JavaScript bundle, so
+// the key ships even though .env is not committed: anyone who unpacks the app can bill
+// requests to it. The variable name is enough; the value never needs to be in the repository.
+const AI_PROVIDERS = [
+  ['OPENAI', 'OpenAI', /api\.openai\.com/],
+  ['ANTHROPIC|CLAUDE', 'Anthropic', /api\.anthropic\.com/],
+  ['GEMINI|GOOGLE_AI|GOOGLE_GENAI|GENAI', 'Google Gemini', /generativelanguage\.googleapis\.com|@google\/gen(?:erative-)?ai/],
+  ['GROQ', 'Groq', /api\.groq\.com/],
+  ['MISTRAL', 'Mistral', /api\.mistral\.ai/],
+  ['DEEPSEEK', 'DeepSeek', /api\.deepseek\.com/],
+  ['OPENROUTER', 'OpenRouter', /openrouter\.ai\/api/],
+  ['XAI|GROK', 'xAI', /api\.x\.ai/],
+  ['REPLICATE', 'Replicate', /api\.replicate\.com/],
+  ['ELEVENLABS|ELEVEN_LABS', 'ElevenLabs', /api\.elevenlabs\.io/],
+  ['PERPLEXITY', 'Perplexity', /api\.perplexity\.ai/],
+  ['COHERE', 'Cohere', /api\.cohere\.(?:ai|com)/],
+  ['DEEPGRAM', 'Deepgram', /api\.deepgram\.com/],
+  ['ASSEMBLYAI', 'AssemblyAI', /api\.assemblyai\.com/],
+  ['FAL', 'fal.ai', /fal\.run|fal\.ai/],
+];
+const AI_NAME = new RegExp(`^[A-Z0-9_]*?(?:^|_)(${AI_PROVIDERS.map((p) => p[0]).join('|')})(?:_[A-Z0-9_]*)?_(?:API_)?(?:KEY|TOKEN|SECRET)$`);
+const AI_SERVER_DIRS = /^(?:functions|server|backend|api|cloud-functions|scripts|supabase|convex|worker|workers)(?:\/|$)|(?:^|\/)app\/api\/|\+api\.[jt]sx?$/;
+
+export function aiKeysInBundle(root, deps = {}) {
+  const expo = !!deps.expo;
+  const ways = [
+    expo && [/process\.env\.(EXPO_PUBLIC_[A-Z0-9_]+)/g, 'EXPO_PUBLIC_ variables are compiled into the JavaScript bundle'],
+    deps['react-native-config'] && [/\bConfig\.([A-Z0-9_]+)/g, 'react-native-config compiles its values into the app'],
+    (deps['react-native-dotenv'] || deps['module:react-native-dotenv']) && [/import\s*\{([^}]+)\}\s*from\s*['"](?:@env|react-native-dotenv)['"]/g, 'react-native-dotenv inlines its values into the JavaScript bundle'],
+  ].filter(Boolean);
+  if (!ways.length) return [];
+  const byProvider = new Map();
+  for (const file of jsFiles(root)) {
+    const rel = path.relative(root, file).split(path.sep).join('/');
+    if (AI_SERVER_DIRS.test(rel)) continue;
+    const text = read(file);
+    if (!text || !/KEY|TOKEN|SECRET/.test(text)) continue;
+    const code = text.replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' ')).replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+    for (const [re, how] of ways) {
+      for (const m of code.matchAll(re)) {
+        for (const name of m[1].split(',').map((n) => n.trim().split(/\s+as\s+/)[0].replace(/^EXPO_PUBLIC_/, ''))) {
+          const hit = name.match(AI_NAME);
+          if (!hit) continue;
+          const provider = AI_PROVIDERS.find((p) => new RegExp(`^(?:${p[0]})$`).test(hit[1]));
+          if (!provider || byProvider.has(provider[1])) continue;
+          const full = m[0].startsWith('process.env.') ? m[1] : m[0].startsWith('Config.') ? `Config.${name}` : name;
+          byProvider.set(provider[1], { provider, name: full, how, where: `${rel}:${code.slice(0, m.index).split('\n').length}` });
+        }
+      }
+    }
+  }
+  if (!byProvider.size) return [];
+  // Direct calls from the app to the provider confirm the key is used on the device.
+  const direct = new Set();
+  for (const file of jsFiles(root)) {
+    const rel = path.relative(root, file).split(path.sep).join('/');
+    if (AI_SERVER_DIRS.test(rel)) continue;
+    const text = read(file) || '';
+    for (const { provider } of byProvider.values()) if (provider[2].test(text)) direct.add(provider[1]);
+  }
+  return [...byProvider.values()].map(({ provider, name, how, where }) => ({
+    id: `ai-key-in-bundle:${provider[1]}`,
+    severity: 'high',
+    area: 'security',
+    title: `${provider[1]} API key ships inside the app (${where})`,
+    detail: `The app reads ${name}, and ${how}${direct.has(provider[1]) ? `; the app also calls ${provider[1]} directly` : ''}. Anyone who unpacks the app gets the key and can run requests on your bill (AI keys are a favourite target of bundle scrapers). Move the ${provider[1]} call to a server you control (an Expo API route, a Firebase or Supabase function) that holds the key and checks who is calling, then revoke the current key. (OWASP MASVS-CRYPTO-2)`,
+    fix: { kind: 'security', step: `Move the ${provider[1]} call (${where}) behind your own server endpoint that keeps the key, then revoke the key that shipped.` },
+  }));
 }
 
 // Deep links (MASVS-PLATFORM). A web link (https://your.domain/...) opens the app only when the

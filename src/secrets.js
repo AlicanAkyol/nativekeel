@@ -39,7 +39,10 @@ const RULES = [
     re: /\b(?<v>eyJ[A-Za-z0-9_-]{10,}\.(?<payload>eyJ[A-Za-z0-9_-]{10,})\.[A-Za-z0-9_-]{20,})\b/g,
     validate: (m) => {
       try {
-        return JSON.parse(Buffer.from(m.groups.payload, 'base64url').toString('utf8')).role === 'service_role';
+        // `supabase start` gives every developer the same demo keys (iss "supabase-demo"); they only
+        // open a local database on 127.0.0.1.
+        const claims = JSON.parse(Buffer.from(m.groups.payload, 'base64url').toString('utf8'));
+        return claims.role === 'service_role' && claims.iss !== 'supabase-demo';
       } catch {
         return false;
       }
@@ -107,6 +110,15 @@ export function scanSecrets(root) {
   const tracked = gitTrackedFiles(root);
   const files = [...walk(root)];
   let jsonImports = null; // computed only if a JSON file holds a secret
+  // A .env file reaches the bundle only through EXPO_PUBLIC_ names (Expo) or a library that
+  // inlines every variable (react-native-config, react-native-dotenv). Other names stay with
+  // server code (Expo API routes, functions) and the build.
+  let pkg = {};
+  try {
+    pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+  } catch {}
+  const allDeps = { ...(pkg.dependencies || {}), ...(pkg.devDependencies || {}) };
+  const inlinesAllEnv = ['react-native-config', 'react-native-dotenv', 'babel-plugin-transform-inline-environment-variables'].some((n) => allDeps[n]);
   for (const file of files) {
     let text;
     try {
@@ -131,13 +143,15 @@ export function scanSecrets(root) {
           jsonImports = jsonImports || importedJsonNames(files);
           unreferencedJson = !jsonImports.has(path.basename(file));
         }
+        const envFile = /^\.env(\.|$)/.test(path.basename(file));
+        const envShipped = !envFile || inlinesAllEnv || /^\s*(?:export\s+)?EXPO_PUBLIC_/.test(lines[line - 1] || '');
         findings.push({
           rule: rule.id,
           label: rule.label,
           file: rel,
           line,
           preview: value ? mask(value) : null,
-          inAppBundle: !SERVER_DIRS.has(posix.split('/')[0]) && !TEST_PATH.test(posix) && !inComment && !unreferencedJson,
+          inAppBundle: !SERVER_DIRS.has(posix.split('/')[0]) && !TEST_PATH.test(posix) && !inComment && !unreferencedJson && envShipped,
           inComment,
           committed: tracked ? tracked.has(posix) : null,
         });

@@ -327,3 +327,20 @@ test('react-native-blob-util trust manager: unused, behind a setting, or always 
   assert.equal(app('ReactNativeBlobUtil.config({ trusty: !certVerification }).fetch("GET", url);')[0].severity, 'high');
   assert.equal(app('ReactNativeBlobUtil.config({ trusty: true }).fetch("GET", url);')[0].severity, 'critical');
 });
+
+test('AI provider keys read from build-time variables ship inside the app', async () => {
+  const { aiKeysInBundle } = await import('../src/security.js');
+  const run = (files, deps) => aiKeysInBundle(makeProject({ 'package.json': '{}', ...files }), deps);
+  const groq = run({ 'utils/ai/client.ts': "const key = () => process.env.EXPO_PUBLIC_GROQ_API_KEY || '';\nfetch('https://api.groq.com/openai/v1/chat/completions', { headers: { Authorization: `Bearer ${key()}` } });" }, { expo: '~54.0.0' });
+  assert.equal(groq.length, 1);
+  assert.equal(groq[0].severity, 'high');
+  assert.match(groq[0].title, /^Groq API key ships inside the app \(utils\/ai\/client\.ts:1\)/);
+  assert.match(groq[0].detail, /calls Groq directly/);
+  assert.equal(run({ 'src/a.ts': 'const k = process.env.EXPO_PUBLIC_OPENAI_API_KEY;' }, {}).length, 0, 'not an Expo app: nothing inlines it');
+  assert.equal(run({ 'server/ai.ts': 'const k = process.env.EXPO_PUBLIC_OPENAI_API_KEY;', 'app/chat+api.ts': 'const k = process.env.EXPO_PUBLIC_ANTHROPIC_API_KEY;' }, { expo: '~54.0.0' }).length, 0, 'server code and Expo API routes stay on the server');
+  assert.equal(run({ 'src/a.ts': '// const k = process.env.EXPO_PUBLIC_OPENAI_API_KEY;\nconst m = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;' }, { expo: '~54.0.0' }).length, 0, 'comments and non-AI keys');
+  const dotenv = run({ 'services/t.js': "import { OPENAI_API_KEY, API_URL } from '@env';" }, { 'react-native-dotenv': '^3.4.0' });
+  assert.match(dotenv[0].detail, /react-native-dotenv/);
+  const config = run({ 'src/api.ts': "import Config from 'react-native-config';\nconst k = Config.GEMINI_API_KEY;" }, { 'react-native-config': '^1.5.0' });
+  assert.match(config[0].title, /^Google Gemini API key/);
+});
