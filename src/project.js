@@ -111,7 +111,13 @@ const EXPO_FORK_RN = { 31: '0.57.1', 32: '0.57.1', 33: '0.59.8', 34: '0.59.8', 3
 // whose numbers are not the package version.
 export function versionFromSpec(name, spec) {
   if (!spec) return null;
-  const s = String(spec);
+  let s = String(spec);
+  // Yarn's patch protocol wraps the real version: patch:react-native@npm%3A0.83.4#~/.yarn/patches/…
+  // and the npm: alias protocol names it directly: npm:react-native@0.83.4.
+  const patched = s.match(/^patch:(?:@[^@/]+\/)?[^@]+@(?:npm(?:%3A|:))?([^#]+)#/);
+  if (patched) s = decodeURIComponent(patched[1]);
+  const alias = s.match(/^npm:(?:@[^@/]+\/)?[^@]+@(.+)$/);
+  if (alias) s = alias[1];
   if (/:\/\/|^(github|git|file|link|workspace):|#|\.tgz$|\.tar\.gz$/.test(s)) {
     const sdk = name === 'react-native' && s.match(/expo\/react-native\/archive\/sdk-(\d+)/);
     return sdk && EXPO_FORK_RN[Number(sdk[1])] ? EXPO_FORK_RN[Number(sdk[1])] : null;

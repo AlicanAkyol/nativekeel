@@ -425,7 +425,10 @@ test('Expo SDK mismatch: major differences are high, patch-only ones low', async
   const major = await find('15.12.1', '0.29.12');
   assert.equal(major.severity, 'high');
   assert.match(major.detail, /expo-splash-screen 0\.29\.12 \(SDK 54 expects ~31\.0\.13, a major difference\)/);
-  assert.equal((await find('15.15.1', '31.0.13')).severity, 'medium', 'svg 15.15 vs 15.12 is a minor difference');
+  const newer = await find('15.15.1', '31.0.13');
+  assert.equal(newer.severity, 'low', 'newer than the SDK expects is usually deliberate');
+  assert.match(newer.detail, /expo\.install\.exclude/);
+  assert.equal((await find('15.9.0', '31.0.13')).severity, 'medium', 'an older minor is a real risk');
   assert.equal(await find('15.12.1', '31.0.20'), undefined, 'inside ~31.0.13');
 });
 
@@ -459,4 +462,16 @@ test('a React Native release candidate ahead of the latest stable skips compatib
   const result = await analyze(loadProject(root), { get: fakeRegistry({ 'react-native': '0.87.1', 'react-native-reanimated': '4.6.0' }) });
   assert.ok(result.findings.some((f) => f.id === 'rn-prerelease'));
   assert.ok(!result.findings.some((f) => f.id.startsWith('compat:')), 'no table-based claims for an unreleased React Native');
+});
+
+test('Expo SDK mismatch respects expo.install.exclude', async () => {
+  const root = makeProject({
+    'package.json': { name: 'e', dependencies: { expo: '~54.0.0', 'react-native': '0.81.5', 'expo-splash-screen': '0.29.12' }, expo: { install: { exclude: ['expo-splash-screen'] } } },
+    'node_modules/expo/package.json': { version: '54.0.23' },
+    'node_modules/expo/bundledNativeModules.json': { 'expo-splash-screen': '~31.0.13' },
+    'node_modules/react-native/package.json': { version: '0.81.5' },
+    'node_modules/expo-splash-screen/package.json': { version: '0.29.12' },
+  });
+  const result = await analyze(loadProject(root), { offline: true });
+  assert.equal(result.findings.find((f) => f.id === 'expo-sdk-mismatch'), undefined);
 });

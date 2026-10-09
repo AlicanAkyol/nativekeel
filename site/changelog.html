@@ -40,6 +40,15 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 650+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.42</h2><p class="date">9 October 2026</p>
+<ul>
+<li><span class="tag">Accuracy</span><b>Tested on large open-source production apps.</b> We added well-known open-source apps with millions of users (hardware and crypto wallets, a forum platform) to the test set. They showed two things to fix:
+<ul>
+<li>React Native declared through Yarn's patch protocol (<code>patch:react-native@npm%3A0.83.4#…</code>) or an <code>npm:</code> alias was read as "no version", so the version checks were skipped and the New Architecture looked off. Both are read now.</li>
+<li>Packages <b>newer</b> than the Expo SDK expects were treated like older ones, with <code>npx expo install --fix</code> as the advice, which would downgrade a version the team chose on purpose. Older versions are still the build and crash risk they were; newer ones are now low (medium for a major) with the right advice: list them in <code>expo.install.exclude</code> after testing. Packages already in that list, Expo's own opt-out, are no longer reported.</li>
+</ul></li>
+</ul></div>
+
 <div class="rel"><h2>0.1.41</h2><p class="date">9 October 2026</p>
 <ul>
 <li><span class="tag">Docs</span>The example report in the README, on the homepage and in the share image showed an older "Start here" and security line than the tool prints today. They match again, and a check now compares them with the tool's own output before every release.</li>

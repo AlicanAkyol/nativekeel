@@ -473,35 +473,41 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
   // Static signs of performance problems.
   for (const f of performanceChecks(project)) add(f);
 
-  // Packages off the versions the Expo SDK pins (what `npx expo install --check` reports). A
-  // native module from another SDK is a common build failure or launch crash.
+  // Packages off the versions the Expo SDK pins (what `npx expo install --check` reports). Older
+  // than the SDK expects is a common build failure or launch crash; newer is usually a choice the
+  // team made (and `--fix` would downgrade it). Packages in package.json `expo.install.exclude`
+  // (Expo's own opt-out) are skipped.
   if (expoPins && project.expoVersion) {
+    const pkgJson = readJsonFile(path.join(project.root, 'package.json')) || {};
+    const excluded = new Set(((pkgJson.expo && pkgJson.expo.install && pkgJson.expo.install.exclude) || []).map(String));
     const off = [];
     const reported = new Set(findings.filter((f) => f.id.startsWith('compat:')).map((f) => f.id.slice(7)));
     for (const [name, range] of Object.entries(expoPins)) {
-      if (!project.deps[name] || ['expo', 'react', 'react-native', 'react-dom', 'react-native-web'].includes(name) || reported.has(name)) continue;
+      if (!project.deps[name] || ['expo', 'react', 'react-native', 'react-dom', 'react-native-web'].includes(name) || reported.has(name) || excluded.has(name)) continue;
       const v = exactOf(name);
       if (!v || satisfiesExpoRange(v, range)) continue;
       const want = String(range).replace(/^[~^>=\s]+/, '');
       const level = majorOf(v) !== majorOf(want) ? 'major' : minorOf(v) !== minorOf(want) ? 'minor' : 'patch';
-      off.push({ name, v, range, level });
+      off.push({ name, v, range, level, newer: compareVersions(v, want) > 0 });
     }
     if (off.length) {
-      const sev = off.some((o) => o.level === 'major') ? 'high' : off.some((o) => o.level === 'minor') ? 'medium' : 'low';
-      off.sort((a, b) => ['major', 'minor', 'patch'].indexOf(a.level) - ['major', 'minor', 'patch'].indexOf(b.level));
+      const rank = (o) => (o.newer ? { major: 1, minor: 0, patch: 0 } : { major: 3, minor: 2, patch: 0 })[o.level];
+      const worst = Math.max(...off.map(rank));
+      const sev = ['low', 'medium', 'medium', 'high'][worst];
+      off.sort((a, b) => rank(b) - rank(a));
+      const older = off.filter((o) => !o.newer);
+      const newer = off.filter((o) => o.newer);
+      const line = (o) => `${o.name} ${o.v} (SDK ${expoSdk} expects ${o.range}${o.level === 'patch' ? '' : `, a ${o.level} difference`}${o.newer ? ', newer' : ''})`;
       add({
         id: 'expo-sdk-mismatch',
         severity: sev,
         area: 'crash',
         title: `${off.length} package${off.length === 1 ? ' is' : 's are'} not the version Expo SDK ${expoSdk} expects (${off.slice(0, 3).map((o) => o.name).join(', ')}${off.length > 3 ? ', …' : ''})`,
-        detail: `${off.slice(0, 8).map((o) => `${o.name} ${o.v} (SDK ${expoSdk} expects ${o.range}${o.level === 'patch' ? '' : `, a ${o.level} difference`})`).join('; ')}${off.length > 8 ? '; …' : ''}. Expo tests each SDK with these versions; native modules from another release are a common cause of build failures and launch crashes. \`npx expo install --fix\` sets them all.`,
-        fix: { kind: 'crash', step: `Run \`npx expo install --fix\` to put ${off.slice(0, 4).map((o) => `\`${o.name}\``).join(', ')}${off.length > 4 ? ' and the rest' : ''} on the versions Expo SDK ${expoSdk} expects, then rebuild.` },
+        detail: `${off.slice(0, 8).map(line).join('; ')}${off.length > 8 ? '; …' : ''}. ${older.length ? `Expo tests each SDK with its versions; native modules older than that are a common cause of build failures and launch crashes: \`npx expo install --fix\` sets them.` : ''}${newer.length ? ` ${newer.length === off.length ? 'All are newer' : `${newer.length} ${newer.length === 1 ? 'is' : 'are'} newer`} than the SDK expects, which is usually a deliberate choice: if you tested ${newer.length === 1 ? 'it' : 'them'}, list ${newer.length === 1 ? 'it' : 'them'} in \`expo.install.exclude\` in package.json (\`--fix\` would downgrade ${newer.length === 1 ? 'it' : 'them'}).` : ''}`.trim(),
+        fix: { kind: 'crash', step: older.length ? `Run \`npx expo install --fix\` to put ${older.slice(0, 4).map((o) => `\`${o.name}\``).join(', ')}${older.length > 4 ? ' and the rest' : ''} on the versions Expo SDK ${expoSdk} expects, then rebuild${newer.length ? '; list the deliberately newer ones in `expo.install.exclude` first' : ''}.` : `Confirm the newer ${newer.slice(0, 4).map((o) => `\`${o.name}\``).join(', ')} work with Expo SDK ${expoSdk}, then list them in \`expo.install.exclude\` in package.json.` },
       });
     }
   }
-
-  // App Store / Google Play review rules the code can show.
-  if (!project.isLibrary) for (const f of storeReviewRules(project)) add(f);
 
   // Security beyond leaked keys.
   for (const f of [...passwordLeaks(project.root), ...webViewRisks(project.root), ...androidBackup(project.root), ...exportedComponents(project.root), ...plainHttpCalls(project.root), ...cloudRules(project.root, project.deps, now), ...insecureTls(project.root), ...weakCrypto(project.root), ...tokenStorage(project.root), ...reverseEngineering(project.root, project), ...expoConfigSecrets(project.root), ...deepLinks(project.root, project.deps), ...supabaseRls(project.root), ...(project.isLibrary ? [] : playRestrictedPermissions(project.root, project.deps))]) add(f);
