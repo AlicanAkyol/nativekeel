@@ -249,8 +249,25 @@ export function iosUsageDescriptions(project) {
     const inExpo = keys.some((k) => expoConfig.includes(k)) || used.some((p) => expoConfig.includes(`"${p}"`) || expoConfig.includes(`'${p}'`));
     if (!inPlist && !inExpo) missing.push({ ...u, used });
   }
-  if (!missing.length) return [];
+  // expo-local-authentication checks for the Face ID key itself (LocalAuthenticationModule.swift):
+  // biometrics-only requests resolve with missing_usage_description, the default falls back to
+  // the passcode. Face ID silently never works; it does not crash.
+  const out = [];
+  const faceIdx = missing.findIndex((m) => m.key === 'NSFaceIDUsageDescription' && m.used.every((p) => p === 'expo-local-authentication'));
+  if (faceIdx >= 0) {
+    missing.splice(faceIdx, 1);
+    out.push({
+      id: 'ios-faceid-description',
+      severity: 'medium',
+      area: 'store',
+      title: 'Face ID never shows: Info.plist has no NSFaceIDUsageDescription',
+      detail: 'expo-local-authentication sees the missing key and does not ask for Face ID: biometrics-only prompts fail with missing_usage_description, others go straight to the device passcode. Add NSFaceIDUsageDescription with a sentence that says why the app uses Face ID.',
+      fix: { kind: 'crash', step: 'Add `NSFaceIDUsageDescription` to the app\'s Info.plist with a user-facing reason.' },
+    });
+  }
+  if (!missing.length) return out;
   return [
+    ...out,
     {
       id: 'crash-ios-usage-description',
       severity: 'high',

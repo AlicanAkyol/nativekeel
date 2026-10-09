@@ -81,6 +81,9 @@ test('iOS usage descriptions: missing key flagged; add-only photo key and Expo p
   assert.ok(!ids(withCam(['NSCameraUsageDescription', 'NSPhotoLibraryAddUsageDescription'])).includes('crash-ios-usage-description'));
   const expo = { 'package.json': { name: 'e', dependencies: { expo: '52.0.0', 'react-native': '0.76.0', 'expo-camera': '16.0.0' } }, 'ios/App/Info.plist': plist([]), 'app.json': JSON.stringify({ expo: { plugins: ['expo-camera'] } }) };
   assert.ok(!ids(expo).includes('crash-ios-usage-description'), 'the Expo config plugin adds it at prebuild');
+  const face = (pkg) => stabilityChecks(loadProject(makeProject({ ...app({ [pkg]: '15.0.0' }), 'ios/App/Info.plist': plist([]) }))).map((x) => `${x.id}:${x.severity}`);
+  assert.deepEqual(face('expo-local-authentication').filter((x) => /faceid|usage-description/.test(x)), ['ios-faceid-description:medium'], 'Expo Go: the library checks the key, Face ID just never shows');
+  assert.ok(face('react-native-biometrics').includes('crash-ios-usage-description:high'), 'other libraries crash since iOS 17');
 });
 
 test('APIs removed from React Native core: crash now or after the upgrade', () => {

@@ -33,7 +33,7 @@ const read = (file) => {
   }
 };
 
-const SERVER_ONLY = /node\.?js|server[- ]side|\bhttp adapter\b|\bhttp\/2\b|\bssr\b|\bssrf\b|no_proxy|proxy-authorization|cloud metadata/i;
+const SERVER_ONLY = /node\.?js|server[- ]side|\bhttp adapter\b|\bhttp\/2\b|\bssr\b|\bssrf\b|no_proxy|proxy-authorization|config\.proxy|\bproxy is re-evaluated|cloud metadata|formDataToStream/i;
 const SEVERITY = { critical: 'critical', high: 'high', moderate: 'medium', low: 'low', info: 'low' };
 const RANK = ['low', 'medium', 'high', 'critical'];
 
@@ -76,7 +76,7 @@ export async function vulnerableDependencies(registry, versions, latestOf = {}) 
       id: `vuln:${name}`,
       severity,
       area: 'security',
-      title: `${name} ${version}: ${relevant.length} known vulnerabilit${relevant.length === 1 ? 'y' : 'ies'}${fixedIn ? ` (fixed in ${fixedIn})` : noFix ? ' (no fixed release)' : ''}`,
+      title: `${name} ${version}: ${relevant.length - serverOnly || relevant.length} known vulnerabilit${(relevant.length - serverOnly || relevant.length) === 1 ? 'y' : 'ies'}${serverOnly && serverOnly < relevant.length ? ` (+${serverOnly} for Node.js only)` : ''}${fixedIn ? ` (fixed in ${fixedIn})` : noFix ? ' (no fixed release)' : ''}`,
       detail: `${top.join('; ')}${relevant.length > 3 ? `; and ${relevant.length - 3} more` : ''}. ${fixedIn ? `Fixed in ${fixedIn}${fixedIn.startsWith('a release') ? '' : ' or later'}.` : noFix ? `No fixed release exists yet (the latest is ${newest}): replace it, or make sure it never handles untrusted input.` : 'Check the advisories for a fixed version.'}${serverOnly ? ` ${serverOnly} of them concern Node.js/server use only and are counted as low.` : ''} Source: GitHub Advisory Database (via npm).`,
       fix: { kind: 'vuln-dep', name, from: version, to: fixedIn, noFix, latest: newest || null, severity },
     });

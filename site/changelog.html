@@ -40,6 +40,14 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.48</h2><p class="date">9 October 2026</p>
+<ul>
+<li><span class="tag">Accuracy</span><b>Face ID with expo-local-authentication is not a crash.</b> Without <code>NSFaceIDUsageDescription</code>, most biometrics libraries crash on iOS 17+, and that stays high. <code>expo-local-authentication</code> checks for the key itself and skips Face ID instead, so it is now a medium "Face ID never shows" finding.</li>
+<li><span class="tag">Accuracy</span><b>Vulnerability counts show what reaches a mobile app.</b> axios advisories about proxies, <code>no_proxy</code>, SSRF and the Node.js HTTP adapter cannot reach React Native, which uses XMLHttpRequest. The title now reads "21 known vulnerabilities (+11 for Node.js only)" instead of 32.</li>
+<li><span class="tag">Fix</span>React Native release candidates show their full version (<code>0.88.0-rc.4</code>), not <code>0.88.0</code>.</li>
+<li><span class="tag">Behind the scenes</span>Checked on Expo Go, the Yoroi and Valora wallets.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.47</h2><p class="date">9 October 2026</p>
 <ul>
 <li><span class="tag">Security</span><b>AI provider keys that ship inside the app.</b> Reading <code>process.env.EXPO_PUBLIC_OPENAI_API_KEY</code> (or a Gemini, Anthropic, Groq, OpenRouter, Replicate, fal.ai… key) in app code compiles the key into the JavaScript bundle, even though <code>.env</code> is never committed. The same goes for <code>react-native-config</code> and <code>react-native-dotenv</code>. Anyone who unpacks the app can run requests on your bill. Reported as high, with a note when the app also calls the provider directly; server folders and Expo API routes are left out. Found in 12 of 869 open-source apps, almost all AI features added in the last year (<a href="/ai-keys">what we found</a>).</li>

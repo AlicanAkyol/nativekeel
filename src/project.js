@@ -159,6 +159,8 @@ export function loadProject(root) {
     deps,
     devDeps,
     rnVersion: cleanVersion(installedVersion(root, 'react-native') || versionFromSpec('react-native', declared('react-native')) || ''),
+    // "rc.4" for 0.88.0-rc.4: shown next to the version, never used in comparisons.
+    rnPrerelease: (String(installedVersion(root, 'react-native') || versionFromSpec('react-native', declared('react-native')) || '').match(/^[^-]*\d-((?:rc|alpha|beta|nightly|canary)[\w.-]*)/) || [])[1] || null,
     expoVersion: declared('expo') ? cleanVersion(installedVersion(root, 'expo') || declared('expo')) : null,
     // Expo "managed" apps generate android/ and ios/ at build time (Continuous Native Generation).
     managed: !!declared('expo') && !hasAndroid && !hasIos,

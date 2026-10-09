@@ -426,7 +426,7 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
       id: 'rn-prerelease',
       severity: 'info',
       area: 'react-native',
-      title: `React Native ${current} is ahead of the latest stable release (${rn.latest})`,
+      title: `React Native ${current}${project.rnPrerelease ? `-${project.rnPrerelease}` : ''} is ahead of the latest stable release (${rn.latest})`,
       detail: 'Library compatibility tables do not cover it yet, so version checks for Reanimated, Gesture Handler and Screens are skipped. Check each library\'s release notes for this React Native version.',
     });
   }
@@ -601,7 +601,7 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
     project: {
       name: project.name,
       root: project.root,
-      reactNative: project.rnVersion,
+      reactNative: project.rnVersion && project.rnPrerelease ? `${project.rnVersion}-${project.rnPrerelease}` : project.rnVersion,
       expo: project.expoVersion,
       managed: project.managed,
       newArch: project.newArch,

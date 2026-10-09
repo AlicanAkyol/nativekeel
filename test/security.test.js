@@ -77,12 +77,13 @@ test('vulnerable dependencies: exact versions, highest severity, fixed version',
         { title: 'Prototype pollution', severity: 'high', vulnerable_versions: '<0.30.0', url: 'https://github.com/advisories/1' },
         { title: 'ReDoS', severity: 'moderate', vulnerable_versions: '<0.21.2', url: 'https://github.com/advisories/2' },
         { title: 'Old', severity: 'critical', vulnerable_versions: '<0.10.0', url: 'https://github.com/advisories/3' },
+        { title: 'Axios: no_proxy bypass via IP alias allows SSRF', severity: 'high', vulnerable_versions: '<0.30.0', url: 'https://github.com/advisories/4' },
       ],
     };
   });
   const [f] = await vulnerableDependencies(registry, { axios: '0.21.0' });
   assert.equal(f.severity, 'high', 'the critical one does not apply to 0.21.0');
-  assert.match(f.title, /axios 0\.21\.0: 2 known vulnerabilities/);
+  assert.match(f.title, /axios 0\.21\.0: 2 known vulnerabilities \(\+1 for Node\.js only\)/, 'the proxy advisory cannot reach a React Native app');
   assert.equal(f.fix.to, '0.30.0');
 });
 
