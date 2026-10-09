@@ -81,8 +81,10 @@ export function createRegistry(get = fetchJson) {
             // How tightly it is tied to React Native: through its dependencies ('deps'; some only
             // indirectly, e.g. react-native-elements peers on react-native-vector-icons), only by
             // name ('name'), or not at all (null).
+            // A scoped package that builds on a sibling (@rneui/themed on @rneui/base) belongs to that
+            // family, so it counts as tied too.
             rnLink: ['peerDependencies', 'dependencies'].some((k) =>
-              Object.keys(manifest[k] || {}).some((d) => /^(react-native|expo)(-|$)|^@react-native(-community)?\//.test(d)),
+              Object.keys(manifest[k] || {}).some((d) => /^(react-native|expo)(-|$)|^@react-native(-community)?\//.test(d) || (name.startsWith('@') && d.startsWith(`${name.split('/')[0]}/`))),
             )
               ? 'deps'
               : /react-native|^expo-/.test(name)

@@ -292,7 +292,9 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
         : 'No fixes will come for future React Native, iOS or Android releases.';
       add({
         id: `dep-risk:${name}`,
-        severity: noNewArch || native ? 'high' : stale && !dep.unmaintained && release.rnLink === 'name' ? 'low' : 'medium',
+        // A general-purpose JS utility (clsx, lodash-style helpers) does not affect React Native
+        // upgrades even when unmaintained: low. React Native/Expo-specific JS packages stay medium.
+        severity: noNewArch || native ? 'high' : (stale && !dep.unmaintained && release.rnLink === 'name') || (release && !release.rnLink && !/react-native|expo|^@react-navigation\//.test(name)) ? 'low' : 'medium',
         area: 'dependency',
         title: `${name}: ${problems.join(', ')}`,
         detail: `${why}${alternatives.length ? ` Alternatives: ${alternatives.join(', ')}.` : ''}`,

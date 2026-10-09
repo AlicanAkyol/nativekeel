@@ -475,3 +475,16 @@ test('Expo SDK mismatch respects expo.install.exclude', async () => {
   const result = await analyze(loadProject(root), { offline: true });
   assert.equal(result.findings.find((f) => f.id === 'expo-sdk-mismatch'), undefined);
 });
+
+test('an unmaintained general-purpose JS utility is low; React Native ones stay medium', async () => {
+  const root = makeProject({ 'package.json': { name: 'r', dependencies: { 'react-native': '0.86.0', clsx: '2.0.0', 'ui-kit': '3.4.3' } } });
+  const get = fakeRegistry({
+    directory: { clsx: { ios: true, android: true, web: true, unmaintained: true, newArchitecture: true }, 'ui-kit': { ios: true, android: true, web: true, unmaintained: true, newArchitecture: true } },
+    latest: { clsx: '2.1.1', 'ui-kit': '3.4.3' },
+    published: { clsx: '2024-04-23', 'ui-kit': '2022-12-23' },
+    rnPeers: ['ui-kit'],
+  });
+  const byId = Object.fromEntries((await analyze(loadProject(root), { get, now: NOW })).findings.map((f) => [f.id, f]));
+  assert.equal(byId['dep-risk:clsx'].severity, 'low', 'clsx has nothing to do with React Native upgrades');
+  assert.equal(byId['dep-risk:ui-kit'].severity, 'medium');
+});
