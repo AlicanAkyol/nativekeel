@@ -488,3 +488,11 @@ test('an unmaintained general-purpose JS utility is low; React Native ones stay 
   assert.equal(byId['dep-risk:clsx'].severity, 'low', 'clsx has nothing to do with React Native upgrades');
   assert.equal(byId['dep-risk:ui-kit'].severity, 'medium');
 });
+
+test('packages from the same monorepo (workspace:, link:, file:) are not checked against npm', async () => {
+  const root = makeProject({ 'package.json': { name: 'm', dependencies: { 'react-native': '0.86.0', '@acme/env-link': 'workspace:*', 'old-lib': '1.0.0' } } });
+  const get = fakeRegistry({ latest: { '@acme/env-link': '1.0.0', 'old-lib': '1.0.0' }, published: { '@acme/env-link': '2023-04-01', 'old-lib': '2021-01-01' }, directory: { 'old-lib': { ios: true, android: true, web: true, unmaintained: true } } });
+  const ids = (await analyze(loadProject(root), { get, now: NOW })).findings.map((f) => f.id);
+  assert.ok(!ids.some((i) => i.includes('@acme/env-link')), 'a workspace package is developed in the repo');
+  assert.ok(ids.includes('dep-risk:old-lib'));
+});

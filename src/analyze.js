@@ -97,8 +97,11 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
   const findings = [];
   const add = (f) => findings.push(f);
 
-  const runtime = Object.keys(project.deps).filter(isTracked);
-  const devCandidates = Object.keys(project.devDeps || {}).filter((n) => isTracked(n) && !runtime.includes(n));
+  // Packages from the same monorepo (workspace:, link:, file:, portal:) are developed in the repo:
+  // npm's copy of the name (if any) says nothing about them.
+  const local = (n) => /^(workspace|link|file|portal):/.test(String(project.deps[n] || project.devDeps[n] || ''));
+  const runtime = Object.keys(project.deps).filter((n) => isTracked(n) && !local(n));
+  const devCandidates = Object.keys(project.devDeps || {}).filter((n) => isTracked(n) && !local(n) && !runtime.includes(n));
   const [rn, expo, directory] = await Promise.all([
     project.rnVersion ? registry.releaseLines('react-native', (v) => (v.startsWith('0.') ? minorOf(v) : NaN)) : null,
     project.expoVersion ? registry.releaseLines('expo', majorOf) : null,
@@ -505,8 +508,8 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
         severity: sev,
         area: 'crash',
         title: `${off.length} package${off.length === 1 ? ' is' : 's are'} not the version Expo SDK ${expoSdk} expects (${off.slice(0, 3).map((o) => o.name).join(', ')}${off.length > 3 ? ', …' : ''})`,
-        detail: `${off.slice(0, 8).map(line).join('; ')}${off.length > 8 ? '; …' : ''}. ${older.length ? `Expo tests each SDK with its versions; native modules older than that are a common cause of build failures and launch crashes: \`npx expo install --fix\` sets them.` : ''}${newer.length ? ` ${newer.length === off.length ? 'All are newer' : `${newer.length} ${newer.length === 1 ? 'is' : 'are'} newer`} than the SDK expects, which is usually a deliberate choice: if you tested ${newer.length === 1 ? 'it' : 'them'}, list ${newer.length === 1 ? 'it' : 'them'} in \`expo.install.exclude\` in package.json (\`--fix\` would downgrade ${newer.length === 1 ? 'it' : 'them'}).` : ''}`.trim(),
-        fix: { kind: 'crash', step: older.length ? `Run \`npx expo install --fix\` to put ${older.slice(0, 4).map((o) => `\`${o.name}\``).join(', ')}${older.length > 4 ? ' and the rest' : ''} on the versions Expo SDK ${expoSdk} expects, then rebuild${newer.length ? '; list the deliberately newer ones in `expo.install.exclude` first' : ''}.` : `Confirm the newer ${newer.slice(0, 4).map((o) => `\`${o.name}\``).join(', ')} work with Expo SDK ${expoSdk}, then list them in \`expo.install.exclude\` in package.json.` },
+        detail: `${off.slice(0, 8).map(line).join('; ')}${off.length > 8 ? '; …' : ''}.${older.length ? ` Expo tests each SDK with its versions; native modules older than that are a common cause of build failures and launch crashes: \`npx expo install --fix\` sets them.` : ''}${newer.length ? ` ${newer.length === off.length ? 'All are newer' : `${newer.length} ${newer.length === 1 ? 'is' : 'are'} newer`} than the SDK expects, which is usually a deliberate choice: if you tested ${newer.length === 1 ? 'it' : 'them'}, list ${newer.length === 1 ? 'it' : 'them'} in \`expo.install.exclude\` in package.json (\`--fix\` would downgrade ${newer.length === 1 ? 'it' : 'them'}).` : ''}`.trim(),
+        fix: { kind: 'crash', step: older.length ? `Run \`npx expo install --fix\` to put ${older.slice(0, 4).map((o) => `\`${o.name}\``).join(', ')}${older.length > 4 ? ' and the rest' : ''} on the versions Expo SDK ${expoSdk} expects, then rebuild${newer.length ? '; list the deliberately newer ones in `expo.install.exclude` first' : ''}.` : `Confirm the newer ${newer.slice(0, 4).map((o) => `\`${o.name}\``).join(', ')} ${newer.length === 1 ? 'works' : 'work'} with Expo SDK ${expoSdk}, then list ${newer.length === 1 ? 'it' : 'them'} in \`expo.install.exclude\` in package.json.` },
       });
     }
   }

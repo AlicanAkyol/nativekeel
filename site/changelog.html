@@ -40,6 +40,12 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 650+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.45</h2><p class="date">9 October 2026</p>
+<ul>
+<li><span class="tag">Accuracy</span><b>Monorepo packages are yours, not npm's.</b> In large monorepos (we re-checked three big wallet apps), packages linked with <code>workspace:</code>, <code>link:</code>, <code>file:</code> or <code>portal:</code> are developed in the same repository. NativeKeel used to look up their name on npm and report an unrelated publish date ("no release since 2023"). They are skipped now. Packages that a pnpm <code>catalog:</code> pins to an npm version are still checked, because they do come from npm.</li>
+<li><span class="tag">Fix</span>Wording of the Expo SDK step for a single newer package.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.44</h2><p class="date">9 October 2026</p>
 <ul>
 <li><span class="tag">Performance</span><b>Redux selectors that re-render on every store update.</b> <code>useSelector(state =&gt; ({ ... }))</code>, or a fallback like <code>state.x[id] || {}</code>, returns a new value on every call, so the component re-renders whenever anything in the store changes. Reported with the fix (select values separately, <code>shallowEqual</code>, or a constant fallback).</li>
