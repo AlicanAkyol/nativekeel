@@ -88,6 +88,12 @@ export const PACKAGE_NOTES = {
   // race reproduced on RN 0.81.4 and fixed in our PR #2685 (tested on an emulator, 2026-10-09).
   'react-native-track-player':
     'Version 5, the New Architecture rewrite, is a different package (@rntp/player) under a commercial license: free for personal and educational use, paid for commercial apps (rntp.dev/pricing). The free 4.x line (4.1.2) does not compile with Kotlin 2.1 (React Native 0.79+) and crashes at launch on Android with the New Architecture (its methods return a coroutine Job); the fixes are in github.com/doublesymmetry/react-native-track-player/pull/2685, which you can apply with patch-package until it is released. For simple playback, expo-audio has background playback and lock screen controls, but no next/previous track commands yet.',
+  // RNPushNotificationListenerService.onNewToken and RNPushNotificationActions (8.1.1) call
+  // getReactNativeHost() on the main thread without a guard. ReactApplication.reactNativeHost
+  // throws by default from React Native 0.82 (ReactApplication.kt), and the 0.82+ template's
+  // MainApplication no longer overrides it. Checked 2026-10-09.
+  'react-native-push-notification':
+    'It calls getReactNativeHost() when the FCM token refreshes (on every fresh install) and when a notification action is tapped. From React Native 0.82 that getter throws unless MainApplication still overrides reactNativeHost, which the 0.82+ template no longer does, so the app crashes there. Replace it before that upgrade, or keep reactNativeHost in MainApplication.',
 };
 
 // Packages that moved to a new name with the same API: swap the package, update the imports.
