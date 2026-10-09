@@ -6,7 +6,7 @@ Health check for React Native and Expo apps. One command, no install, no account
 npx nativekeel
 ```
 
-**What's new in 0.1.43:** unmaintained general JavaScript utilities (like `clsx`) no longer rank with React Native libraries. **0.1.42:** reads React Native declared through Yarn patches or npm aliases, and respects `expo.install.exclude`. Recent releases added a *Start here* list in every report, hacking risks mapped to OWASP MASVS, crash and performance checks. Every check is tuned on 650+ open-source React Native and Expo apps, with recently updated ones added every week, to keep false alarms out ([what we found in them](https://dev.to/keel_alican_akyol/we-scanned-470-open-source-react-native-apps-here-is-what-breaks-them-5072)). [All releases →](https://nativekeel.com/changelog)
+**What's new in 0.1.44:** Redux selectors that re-render the component on every store update, and correct line numbers for performance findings. **0.1.43:** unmaintained general JavaScript utilities no longer rank with React Native libraries. Recent releases added a *Start here* list in every report, hacking risks mapped to OWASP MASVS, crash and performance checks. Every check is tuned on 650+ open-source React Native and Expo apps, with recently updated ones added every week, to keep false alarms out ([what we found in them](https://dev.to/keel_alican_akyol/we-scanned-470-open-source-react-native-apps-here-is-what-breaks-them-5072)). [All releases →](https://nativekeel.com/changelog)
 
 ```
 Summary  4 critical · 5 high · 4 medium · 6 low
@@ -44,7 +44,7 @@ Start here
 These are static checks: they catch the common, detectable mistakes, not everything a penetration test of the running app and backend would.
 
 **Performance**
-- **Is it slow or heavy?** A FlatList inside a ScrollView (no virtualization), animations with `useNativeDriver: false`, `console.log` left in release builds, whole-library `lodash`/`moment` imports, images over 500 KB that the app requires.
+- **Is it slow or heavy?** A FlatList inside a ScrollView (no virtualization), animations with `useNativeDriver: false`, `console.log` left in release builds, whole-library `lodash`/`moment` imports, images over 500 KB that the app requires, Redux selectors that re-render on every store update.
 
 ## Usage
 

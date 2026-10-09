@@ -53,11 +53,13 @@ export function performanceChecks(project) {
   let jsDriverAt = null;
   let logs = 0;
   const heavyImports = new Map();
+  const selectors = [];
   for (const file of walk(root, JS_EXT)) {
     const text = read(file);
     if (!text) continue;
     const rel = path.relative(root, file);
-    const code = text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+    // Comments blanked with spaces, newlines kept: line numbers stay right.
+    const code = text.replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' ')).replace(/\/\/[^\n]*/g, (c) => ' '.repeat(c.length));
 
     // A vertical FlatList/SectionList inside a vertical ScrollView renders every item at once
     // (React Native warns "VirtualizedLists should never be nested").
@@ -81,6 +83,14 @@ export function performanceChecks(project) {
       jsDriverAt = jsDriverAt || `${rel}:${code.slice(0, m.index).split('\n').length}`;
     }
     logs += (code.match(/\bconsole\.(?:log|debug|info)\s*\(/g) || []).length;
+    // Redux selectors that build a new object or array on every call ({ ... }, or `|| {}` / `|| []`
+    // as a fallback) without an equality function: the component re-renders on every store update.
+    for (const m of code.matchAll(/\buseSelector\s*\(\s*\(?\s*\w+\s*\)?\s*=>\s*(\(\s*\{|[^,;\n]*\|\|\s*(?:\{\s*\}|\[\s*\]))/g)) {
+      const call = code.slice(m.index, m.index + 600);
+      const close = call.indexOf(')\n') >= 0 ? call.slice(0, call.indexOf(')\n') + 1) : call;
+      if (/shallowEqual|isEqual|equalityFn|,\s*\w+Equal\s*\)/.test(close)) continue;
+      selectors.push(`${rel}:${code.slice(0, m.index).split('\n').length}`);
+    }
     // Whole-library imports of packages with per-function or lighter alternatives.
     if (/from\s+['"]lodash['"]|require\(\s*['"]lodash['"]\s*\)/.test(code)) heavyImports.set('lodash', heavyImports.get('lodash') || rel);
     if (/from\s+['"]moment['"]|require\(\s*['"]moment['"]\s*\)/.test(code)) heavyImports.set('moment', heavyImports.get('moment') || rel);
@@ -115,6 +125,16 @@ export function performanceChecks(project) {
       title: `${logs} console.log calls ship in the release build`,
       detail: 'They run in production, slow the JavaScript thread in hot paths, and can write user data to the device log. Strip them from release builds with babel-plugin-transform-remove-console (keep console.error/warn).',
       fix: { kind: 'performance', step: "Add `['transform-remove-console', { exclude: ['error', 'warn'] }]` to the production `env` of your Babel config." },
+    });
+  }
+  if (selectors.length) {
+    findings.push({
+      id: 'perf-redux-selector-new-object',
+      severity: 'low',
+      area: 'performance',
+      title: `${selectors.length} Redux selector${selectors.length === 1 ? ' returns' : 's return'} a new object on every call (${selectors[0]}${selectors.length > 1 ? ` and ${selectors.length - 1} more` : ''})`,
+      detail: 'useSelector compares results by reference. A selector that builds an object, or falls back to a new {} or [], returns a different value every time, so the component re-renders on every store update anywhere in the app (react-redux warns about it in development). Select each value separately, pass shallowEqual as the second argument, or keep a constant fallback outside the component.',
+      fix: { kind: 'performance', step: `In \`${selectors[0]}\`, select values separately or pass \`shallowEqual\` to useSelector, and use a constant (not a new {} or []) as the fallback.` },
     });
   }
   if (heavyImports.size) {

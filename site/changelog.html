@@ -40,6 +40,13 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 650+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.44</h2><p class="date">9 October 2026</p>
+<ul>
+<li><span class="tag">Performance</span><b>Redux selectors that re-render on every store update.</b> <code>useSelector(state =&gt; ({ ... }))</code>, or a fallback like <code>state.x[id] || {}</code>, returns a new value on every call, so the component re-renders whenever anything in the store changes. Reported with the fix (select values separately, <code>shallowEqual</code>, or a constant fallback).</li>
+<li><span class="tag">Fix</span>Performance findings could point at the wrong line in files with block comments. They point at the right line now.</li>
+<li><span class="tag">Behind the scenes</span>We measured other re-render patterns on 653 apps and did not ship them: effects without dependencies that set state (22 hits, almost all harmless because they set the same value), inline Context values (155 apps, impact depends on how often the provider renders), and Zustand 5 object selectors (no confirmed case; the one hit used a different store library). Real re-render costs need a profiler on a device; we only report patterns that are wrong every time.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.43</h2><p class="date">9 October 2026</p>
 <ul>
 <li><span class="tag">Accuracy</span><b>Less noise about general JavaScript utilities.</b> A small, finished utility such as <code>clsx</code> was rated like a React Native library when React Native Directory marks it unmaintained. It has no effect on React Native upgrades, so it is now low. Packages tied to React Native stay medium: by name, through a <code>react-native</code> dependency, or through a sibling in the same scope (<code>@rneui/themed</code> builds on <code>@rneui/base</code>). Found while scanning more large open-source apps (wallets and a travel app).</li>
