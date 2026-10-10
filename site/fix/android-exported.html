@@ -31,7 +31,7 @@ pre{background:var(--code);border:1px solid var(--line);border-radius:10px;paddi
 <body><main>
 <p class="meta"><a href="/">NativeKeel</a> · <a href="/fix/">React Native fixes</a></p>
 <h1>Manifest merger failed: android:exported needs to be explicitly specified</h1>
-<p class="meta">Updated 2026-10-08</p>
+<p class="meta">Updated 2026-10-10</p>
 <p>The full message usually reads:</p>
 <pre><code>Manifest merger failed : Apps targeting Android 12 and higher are required to specify an explicit value for android:exported when the corresponding component has an intent filter defined.</code></pre>
 <p><strong>What it means.</strong> From Android 12 (target SDK 31), every activity, service or broadcast receiver that has an <code>&lt;intent-filter&gt;</code> must say whether other apps may start it. Without <code>android:exported</code>, the build fails, and an app built anyway cannot be installed on Android 12 or newer.</p>
@@ -50,6 +50,6 @@ pre{background:var(--code);border:1px solid var(--line);border-radius:10px;paddi
 <div class="cta"><strong>Check your whole app in one command:</strong> <code>npx nativekeel</code><br><span class="meta">Free, runs locally (your code is not uploaded), no account. It reports this and 80 other upgrade, store, crash and security problems.</span></div>
 <h2>Sources</h2>
 <ul><li><a href="https://developer.android.com/about/versions/12/behavior-changes-12#exported">Android 12 behavior changes: safer component exporting</a></li><li><a href="https://support.google.com/googleplay/android-developer/answer/11926878">Google Play target API level requirement</a></li></ul>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"android:exported needs to be explicitly specified (React Native, targetSdk 31+)","description":"Why a React Native build fails with \"android:exported needs to be explicitly specified\" after raising targetSdk, and how to fix every component at once.","dateModified":"2026-10-08","author":{"@type":"Organization","name":"NativeKeel","url":"https://nativekeel.com"},"mainEntityOfPage":"https://nativekeel.com/fix/android-exported"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"android:exported needs to be explicitly specified (React Native, targetSdk 31+)","description":"Why a React Native build fails with \"android:exported needs to be explicitly specified\" after raising targetSdk, and how to fix every component at once.","dateModified":"2026-10-10","author":{"@type":"Organization","name":"NativeKeel","url":"https://nativekeel.com"},"mainEntityOfPage":"https://nativekeel.com/fix/android-exported"}</script>
 </main></body>
 </html>

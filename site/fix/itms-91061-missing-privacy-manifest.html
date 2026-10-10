@@ -31,7 +31,7 @@ pre{background:var(--code);border:1px solid var(--line);border-radius:10px;paddi
 <body><main>
 <p class="meta"><a href="/">NativeKeel</a> · <a href="/fix/">React Native fixes</a></p>
 <h1>ITMS-91061: Missing privacy manifest</h1>
-<p class="meta">Updated 2026-10-08</p>
+<p class="meta">Updated 2026-10-10</p>
 <p>Apple's message looks like this:</p>
 <pre><code>ITMS-91061: Missing privacy manifest - Your app includes "Frameworks/FirebaseCore.framework/FirebaseCore", which includes FirebaseCore, an SDK that was identified in the documentation as a privacy-impacting third-party SDK. Starting February 12, 2025, if a new app includes a privacy-impacting SDK, or an app update adds a new privacy-impacting SDK, the SDK must include a privacy manifest file.</code></pre>
 <p><strong>What it means.</strong> Apple keeps a list of commonly used SDKs (Firebase, SDWebImage, Lottie, GoogleUtilities, Alamofire, nanopb and others) that must ship a <code>PrivacyInfo.xcprivacy</code> file. A new app that contains an old version of one of them, or an update that adds one, is refused until the SDK has a manifest.</p>
@@ -43,6 +43,6 @@ pre{background:var(--code);border:1px solid var(--line);border-radius:10px;paddi
 <div class="cta"><strong>Check your whole app in one command:</strong> <code>npx nativekeel</code><br><span class="meta">Free, runs locally (your code is not uploaded), no account. It reports this and 80 other upgrade, store, crash and security problems.</span></div>
 <h2>Sources</h2>
 <ul><li><a href="https://developer.apple.com/support/third-party-SDK-requirements/">Apple: third-party SDK requirements and the SDK list</a></li><li><a href="https://github.com/react-native-community/discussions-and-proposals/discussions/776">React Native discussion on privacy manifests and Hermes</a></li></ul>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"ITMS-91061: Missing privacy manifest in a React Native app","description":"What App Store Connect's ITMS-91061 \"Missing privacy manifest\" means for React Native and Expo apps, which pods cause it, and which package to update.","dateModified":"2026-10-08","author":{"@type":"Organization","name":"NativeKeel","url":"https://nativekeel.com"},"mainEntityOfPage":"https://nativekeel.com/fix/itms-91061-missing-privacy-manifest"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"ITMS-91061: Missing privacy manifest in a React Native app","description":"What App Store Connect's ITMS-91061 \"Missing privacy manifest\" means for React Native and Expo apps, which pods cause it, and which package to update.","dateModified":"2026-10-10","author":{"@type":"Organization","name":"NativeKeel","url":"https://nativekeel.com"},"mainEntityOfPage":"https://nativekeel.com/fix/itms-91061-missing-privacy-manifest"}</script>
 </main></body>
 </html>

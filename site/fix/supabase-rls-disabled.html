@@ -31,7 +31,7 @@ pre{background:var(--code);border:1px solid var(--line);border-radius:10px;paddi
 <body><main>
 <p class="meta"><a href="/">NativeKeel</a> · <a href="/fix/">React Native fixes</a></p>
 <h1>Supabase: RLS disabled in public (0013_rls_disabled_in_public)</h1>
-<p class="meta">Updated 2026-10-08</p>
+<p class="meta">Updated 2026-10-10</p>
 <p>Supabase's security advisor reports it as lint <code>0013_rls_disabled_in_public</code>.</p>
 <p><strong>What it means.</strong> Your app talks to Supabase with the anon key, and that key ships inside every copy of the app. Anyone can extract it and call the REST API directly. For a table in the <code>public</code> schema without row level security, that means reading and changing every row.</p>
 <p><strong>How to fix it.</strong> Enable RLS and add a policy for the access each table needs, in a migration:</p>
@@ -46,6 +46,6 @@ create policy "Users read their own todos"
 <div class="cta"><strong>Check your whole app in one command:</strong> <code>npx nativekeel</code><br><span class="meta">Free, runs locally (your code is not uploaded), no account. It reports this and 80 other upgrade, store, crash and security problems.</span></div>
 <h2>Sources</h2>
 <ul><li><a href="https://supabase.com/docs/guides/database/postgres/row-level-security">Supabase: row level security</a></li><li><a href="https://supabase.com/docs/guides/database/database-advisors">Supabase: database advisors</a></li></ul>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"Supabase tables without row level security in a React Native app","description":"Why a Supabase table without row level security is readable by anyone who has your React Native or Expo app, and how to enable RLS with policies.","dateModified":"2026-10-08","author":{"@type":"Organization","name":"NativeKeel","url":"https://nativekeel.com"},"mainEntityOfPage":"https://nativekeel.com/fix/supabase-rls-disabled"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"Supabase tables without row level security in a React Native app","description":"Why a Supabase table without row level security is readable by anyone who has your React Native or Expo app, and how to enable RLS with policies.","dateModified":"2026-10-10","author":{"@type":"Organization","name":"NativeKeel","url":"https://nativekeel.com"},"mainEntityOfPage":"https://nativekeel.com/fix/supabase-rls-disabled"}</script>
 </main></body>
 </html>

@@ -534,3 +534,15 @@ test('a package note tells what the registries cannot: Track Player 5 is commerc
   assert.match(f.detail, /no next\/previous track commands/);
   assert.match(f.detail, /pull\/2685/);
 });
+
+test('store review rules run as part of analyze (lost in 0.1.42, restored in 0.1.52)', async () => {
+  const root = makeProject({
+    'package.json': { name: 's', dependencies: { 'react-native': '0.85.0', '@react-native-firebase/auth': '23.0.0', '@react-native-google-signin/google-signin': '15.0.0' } },
+    'node_modules/react-native/package.json': { version: '0.85.0' },
+    'src/App.js': "import auth from '@react-native-firebase/auth';\nauth().createUserWithEmailAndPassword(email, password);\nGoogleSignin.signIn();\n",
+    'ios/Podfile': '',
+  });
+  const ids = (await analyze(loadProject(root), { get: registry, now: NOW })).findings.map((f) => f.id);
+  assert.ok(ids.includes('store-account-deletion'));
+  assert.ok(ids.includes('store-sign-in-with-apple'));
+});

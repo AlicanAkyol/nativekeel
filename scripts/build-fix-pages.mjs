@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 
 const SITE = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'site');
 const BASE = 'https://nativekeel.com';
-const UPDATED = '2026-10-08';
+const UPDATED = '2026-10-10';
 
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 // Inside an attribute a " would end the value (search engines then see half a description).
@@ -346,6 +346,45 @@ Build with \`./gradlew bundleRelease\` and upload the \`.aab\`. With Play App Si
 
 **How common it is.** In our scan of 653 open-source React Native apps, 62 sign release builds with the debug key and do not sign them elsewhere. \`npx nativekeel\` reports it, together with signing passwords or keystores committed to the repository.`,
     sources: [['React Native: publishing to Google Play Store', 'https://reactnative.dev/docs/signed-apk-android'], ['Android: sign your app', 'https://developer.android.com/studio/publish/app-signing']],
+  },
+  {
+    slug: 'uiscene-life-cycle-required-xcode-27',
+    error: 'UIScene life cycle is required for apps built with this SDK',
+    title: 'Xcode 27 "UIScene life cycle is required": React Native fix',
+    description: 'Why a React Native or Expo app stops at launch when built with Xcode 27 and the iOS 27 SDK, the April 2027 App Store deadline, and how to adopt UIScene.',
+    body: `
+**What it means.** Built with the iOS 27 SDK (Xcode 27), an app that has not adopted the UIKit scene life cycle stops right at launch:
+
+\`\`\`
+Application failed to launch: UIScene life cycle is required for apps built with this SDK.
+\`\`\`
+
+Apple announced it in TN3187: from the first major release after iOS 26, building with the latest SDK requires the scene life cycle. The check depends on the SDK you build with, not the user's iOS version. The same app built with Xcode 26 still runs on iOS 27, so the problem only shows up when you move to Xcode 27. App Store Connect requires the iOS 27 SDK for uploads from **April 2027**.
+
+**Have you adopted it?** You have if your \`Info.plist\` has a \`UIApplicationSceneManifest\` with scene configurations, or your app delegate implements \`application(_:configurationForConnecting:options:)\`. A manifest that only sets \`UIApplicationSupportsMultipleScenes\` does not count.
+
+**React Native.** 0.88 is the first release whose template adopts it. Its \`SceneDelegate.swift\` starts React Native in the window scene, and \`Info.plist\` names it in the scene manifest. React Native 0.87 and earlier have no scene support in the template. Upgrade, then copy both from the Upgrade Helper.
+
+**Expo.** On SDK 57, opt in with expo 57.0.23+ and expo-build-properties 57.0.20+:
+
+\`\`\`
+["expo-build-properties", { "ios": { "enableSceneSupport": true } }]
+\`\`\`
+
+Then run prebuild again. SDK 58 has it by default. SDK 56 and earlier need an upgrade.
+
+**Two things break after the move.**
+
+- **Deep links and universal links** stop reaching \`AppDelegate\`. Forward \`scene(_:openURLContexts:)\` and \`scene(_:continue:)\` to \`RCTLinkingManager\` in \`SceneDelegate\`, and pass the connection options to React Native so links that launch the app arrive too. The 0.88 template does both.
+- **Libraries that read the window from the app delegate crash.** The 0.88 template's \`AppDelegate\` has no \`window\`. We reproduced \`-[AppDelegate window]: unrecognized selector sent to instance\` on that template with react-native-blob-util and react-native-google-mobile-ads, and the same Objective-C call is in about a dozen popular packages, including @react-native-firebase/messaging at launch. Until they are fixed, keep \`var window: UIWindow?\` in \`AppDelegate\` and set it from \`SceneDelegate\`.
+
+**How common it is.** 767 of the 833 iOS apps in our scan of open-source React Native and Expo apps have not adopted it yet. \`npx nativekeel\` reports it, the links that still go to \`AppDelegate\`, and the installed libraries that read the app delegate's window.`,
+    sources: [
+      ['Apple TN3187: Migrating to the UIKit scene-based life cycle', 'https://developer.apple.com/documentation/technotes/tn3187-migrating-to-the-uikit-scene-based-life-cycle'],
+      ['Apple: upcoming App Store requirements (iOS 27 SDK from April 2027)', 'https://developer.apple.com/news/?id=k1mtkt1k'],
+      ['React Native 0.88 template: SceneDelegate.swift', 'https://github.com/react-native-community/template/blob/0.88-stable/template/ios/HelloWorld/SceneDelegate.swift'],
+      ['Expo: Xcode 27 support for SDK 57', 'https://github.com/expo/expo/issues/46664#issuecomment-5683396867'],
+    ],
   },
 ];
 

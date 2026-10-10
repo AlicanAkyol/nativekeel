@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { PRIVACY_SDKS } from './privacy-sdks.js';
+import { IOS_SDK_27, SCENE_WINDOW_LIBS } from './rules.js';
 
 // App Store and Google Play review rules that code can show (checked on Apple's App Review
 // Guidelines and Google Play's policy pages, October 2026). These are common rejection reasons;
@@ -42,7 +43,7 @@ const DELETION = /deleteUser|deleteAccount|delete[_\- ]?account|deleteMe\b|remov
 const SOCIAL_LOGIN = ['@react-native-google-signin/google-signin', '@react-native-community/google-signin', 'react-native-google-signin', 'react-native-fbsdk-next', 'react-native-fbsdk'];
 const APPLE_LOGIN = ['@invertase/react-native-apple-authentication', 'expo-apple-authentication', 'react-native-apple-authentication'];
 
-export function storeReviewRules(project) {
+export function storeReviewRules(project, now = new Date()) {
   const root = project.root;
   const deps = project.deps || {};
   const findings = [];
@@ -75,6 +76,7 @@ export function storeReviewRules(project) {
     });
   }
   for (const f of iosSdkPrivacyManifests(root)) findings.push(f);
+  for (const f of iosSceneLifecycle(project, now)) findings.push(f);
   return findings;
 }
 
@@ -146,4 +148,122 @@ export function iosSdkPrivacyManifests(root) {
       fix: { kind: 'store-rule', step: `Update ${byOwner.length ? byOwner.slice(0, 4).map((o) => `\`${o}\``).join(', ') : 'the packages that pull in'} so ${old.slice(0, 3).map((o) => `\`${o.pod}\``).join(', ')} reach a release with a privacy manifest (or replace those with none), then \`pod install\`.` },
     },
   ];
+}
+
+// The UIScene life cycle: required to launch when built with the iOS 27 SDK, which App Store
+// Connect requires from April 2027 (see IOS_SDK_27). Bare projects: a scene manifest in
+// Info.plist or application(_:configurationForConnecting:options:) in the app delegate.
+function iosFiles(root, test, depth = 0, out = []) {
+  let entries = [];
+  try {
+    entries = fs.readdirSync(root, { withFileTypes: true });
+  } catch {
+    return out;
+  }
+  for (const e of entries) {
+    const p = path.join(root, e.name);
+    if (e.isDirectory()) {
+      if (depth < 3 && !/^(Pods|build|DerivedData|\..*)$/.test(e.name) && !/Tests?$|Extension$|Widget|Intents|NotificationService|Share/i.test(e.name)) iosFiles(p, test, depth + 1, out);
+    } else if (test(e.name)) out.push(p);
+  }
+  return out;
+}
+
+function sceneWindowLibs(project) {
+  const deps = { ...(project.deps || {}), ...(project.devDeps || {}) };
+  return Object.keys(SCENE_WINDOW_LIBS).filter((n) => deps[n]);
+}
+
+export function iosSceneLifecycle(project, now = new Date()) {
+  const root = project.root;
+  const iosDir = path.join(root, 'ios');
+  const bare = fs.existsSync(iosDir);
+  if (!bare && !(project.managed && project.expoVersion)) return [];
+  const due = now.toISOString().slice(0, 10) >= IOS_SDK_27.from;
+  const deadline = due
+    ? 'App Store Connect only accepts apps built with the iOS 27 SDK (since April 2027)'
+    : 'App Store Connect requires the iOS 27 SDK (Xcode 27) for uploads from April 2027';
+  const why = `Apps built with the iOS 27 SDK that have not adopted the UIScene life cycle stop at launch ("UIScene life cycle is required for apps built with this SDK", Apple TN3187), and ${deadline}.`;
+  const expoSdk = project.expoVersion ? Number(String(project.expoVersion).split('.')[0]) : null;
+  const read = (f) => {
+    try {
+      return fs.readFileSync(f, 'utf8');
+    } catch {
+      return '';
+    }
+  };
+  const libs = sceneWindowLibs(project);
+  const libNote = libs.length
+    ? ` After the move, ${libs.join(', ')} ${libs.length === 1 ? 'reads' : 'read'} the window from the app delegate and ${libs.length === 1 ? 'crashes' : 'crash'} if AppDelegate has no \`window\` property, as in the React Native 0.88 template: keep \`var window: UIWindow?\` in AppDelegate and set it from SceneDelegate until ${libs.length === 1 ? 'it is' : 'they are'} fixed.`
+    : '';
+  const finding = (fix, extra = '') => ({
+    id: 'ios-uiscene-required',
+    severity: due ? 'critical' : 'high',
+    area: 'store',
+    title: 'The iOS app will not launch once it is built with Xcode 27 (no UIScene life cycle)',
+    detail: `${why}${extra} ${fix}${libNote}`,
+    fix: { kind: 'store-rule', step: fix },
+  });
+
+  if (expoSdk !== null) {
+    if (expoSdk >= IOS_SDK_27.expoDefaultSdk) return [];
+    const config = ['app.json', 'app.config.js', 'app.config.ts'].map((f) => read(path.join(root, f))).join('\n');
+    if (expoSdk === IOS_SDK_27.expoOptInSdk) {
+      if (/enableSceneSupport["']?\s*:\s*true/.test(config)) return [];
+      if (!bare || !/UIApplicationSceneManifest[\s\S]*?UISceneConfigurations/.test(iosFiles(iosDir, (n) => n === 'Info.plist').map(read).join(''))) {
+        return [finding('On Expo SDK 57, update expo to 57.0.23+ and expo-build-properties to 57.0.20+, set `ios.enableSceneSupport: true` in its plugin options, then prebuild again (SDK 58 has it by default).')];
+      }
+      return [];
+    }
+    if (!bare) return [finding(`Expo SDK ${expoSdk} cannot adopt it: upgrade to SDK 57 and turn on \`ios.enableSceneSupport\` in expo-build-properties, or to SDK 58, where it is the default.`)];
+  }
+
+  const plists = iosFiles(iosDir, (n) => n === 'Info.plist');
+  const delegates = iosFiles(iosDir, (n) => /^AppDelegate\.(swift|m|mm)$/.test(n));
+  if (!plists.length || !delegates.length) return [];
+  const delegateText = delegates.map(read).join('\n');
+  // TN3187: a manifest without scene configurations does not count (Notesnook ships one with
+  // only UIApplicationSupportsMultipleScenes).
+  const adopted = plists.some((f) => /UIApplicationSceneManifest[\s\S]*?UISceneConfigurations/.test(read(f))) || /configurationForConnecting/.test(delegateText);
+  const rn = project.rnVersion ? Number(String(project.rnVersion).split('.')[1]) : null;
+  if (!adopted) {
+    const fix = expoSdk !== null
+      ? expoSdk === IOS_SDK_27.expoOptInSdk
+        ? 'On Expo SDK 57, set `ios.enableSceneSupport: true` in expo-build-properties (expo 57.0.23+, expo-build-properties 57.0.20+) and run prebuild, or move to SDK 58.'
+        : `Upgrade to Expo SDK 57 (with \`ios.enableSceneSupport\`) or SDK 58.`
+      : rn !== null && rn < IOS_SDK_27.firstRnMinor
+        ? `React Native 0.${IOS_SDK_27.firstRnMinor} is the first release whose template has scene support: upgrade, then add its SceneDelegate and the UIApplicationSceneManifest entry to Info.plist (React Native Upgrade Helper shows both).`
+        : 'Add a SceneDelegate that starts React Native in the window scene and a UIApplicationSceneManifest entry in Info.plist, as in the React Native 0.88 template.';
+    return [finding(fix, ' Building with Xcode 26 keeps the app working until then.')];
+  }
+  // Adopted: libraries that read the app delegate's window crash without one.
+  const out = [];
+  const hasWindow = /var\s+window\s*:\s*UIWindow|@property[^;]*UIWindow\s*\*\s*window\b|@synthesize\s+window/.test(delegateText);
+  if (libs.length && !hasWindow) {
+    out.push({
+      id: 'ios-scene-delegate-window',
+      severity: 'high',
+      area: 'crash',
+      title: `${libs.length === 1 ? `${libs[0]} crashes` : `${libs.length} libraries crash`}: AppDelegate has no window after the move to UIScene`,
+      detail: `${libs.map((l) => `${l} (${SCENE_WINDOW_LIBS[l]})`).join('; ')} ${libs.length === 1 ? 'calls' : 'call'} [UIApplication sharedApplication].delegate.window from Objective-C. With the scene life cycle the window lives in SceneDelegate, and an AppDelegate without a window property throws "-[AppDelegate window]: unrecognized selector sent to instance", which ends the app. Reproduced on the React Native 0.88 template.`,
+      fix: { kind: 'crash', step: 'Add `var window: UIWindow?` to AppDelegate and set it in SceneDelegate (`(UIApplication.shared.delegate as? AppDelegate)?.window = window`) until the libraries use RCTKeyWindow() / RCTPresentedViewController().' },
+    });
+  }
+  // Adopted: URL and universal-link handlers must move to the scene delegate.
+  const sources = iosFiles(iosDir, (n) => /\.(swift|m|mm)$/.test(n)).map(read).join('\n');
+  const appHandlesUrls = /application\s*\([^)]*open\s+url|openURL:\s*\(NSURL|continueUserActivity|continue\s+userActivity|RCTLinkingManager\s+application|RCTLinkingManager\.application/.test(delegateText);
+  const sceneHandlesUrls = /openURLContexts|scene\s*\([^)]*continue\s+userActivity|scene:\s*\(UIScene\s*\*\)\s*scene\s+continueUserActivity/.test(sources);
+  if (appHandlesUrls && !sceneHandlesUrls) {
+    out.push(
+      {
+        id: 'ios-uiscene-url-handlers',
+        severity: 'high',
+        area: 'crash',
+        title: 'Deep links and universal links still go to AppDelegate after the move to UIScene',
+        detail: 'With a scene manifest, UIKit delivers opened URLs and universal links to the scene delegate (scene(_:openURLContexts:), scene(_:continue:), and the connection options at launch), so the AppDelegate handlers no longer receive them: deep links, OAuth and payment redirects stop arriving. The React Native 0.88 template forwards them to RCTLinkingManager in SceneDelegate.',
+        fix: { kind: 'store-rule', step: 'Implement scene(_:openURLContexts:) and scene(_:continue:) in SceneDelegate and forward them to RCTLinkingManager (and to any SDK that handled them in AppDelegate), and pass connectionOptions to startReactNative.' },
+      },
+    );
+  }
+  return out;
 }

@@ -6,7 +6,7 @@ Health check for React Native and Expo apps. One command, no install, no account
 npx nativekeel
 ```
 
-**What's new in 0.1.51:** wallet recovery phrases and private keys copied to the clipboard; expo-sqlite's sqlite-vec option, which is not 16 KB aligned (reported to Expo). **0.1.50:** react-native-push-notification warns about the React Native 0.82 template change. Recent releases added a *Start here* list in every report, hacking risks mapped to OWASP MASVS, crash and performance checks. Every check is tuned on 850+ open-source React Native and Expo apps, with recently updated ones added every week, to keep false alarms out ([what we found in them](https://dev.to/keel_alican_akyol/we-scanned-470-open-source-react-native-apps-here-is-what-breaks-them-5072)). [All releases →](https://nativekeel.com/changelog)
+**What's new in 0.1.52:** Xcode 27's UIScene requirement (apps do not launch without it; App Store uploads need it from April 2027), the deep links and libraries that break after the move, and the store review checks are back (they had stopped running in 0.1.42). **0.1.51:** wallet secrets copied to the clipboard; expo-sqlite's sqlite-vec option is not 16 KB aligned. Recent releases added a *Start here* list in every report, hacking risks mapped to OWASP MASVS, crash and performance checks. Every check is tuned on 850+ open-source React Native and Expo apps, with recently updated ones added every week, to keep false alarms out ([what we found in them](https://dev.to/keel_alican_akyol/we-scanned-470-open-source-react-native-apps-here-is-what-breaks-them-5072)). [All releases →](https://nativekeel.com/changelog)
 
 ```
 Summary  4 critical · 5 high · 4 medium · 6 low

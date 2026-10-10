@@ -31,13 +31,13 @@ pre{background:var(--code);border:1px solid var(--line);border-radius:10px;paddi
 <body><main>
 <p class="meta"><a href="/">NativeKeel</a> · <a href="/fix/">React Native fixes</a></p>
 <h1>Your app does not support 16 KB memory page sizes</h1>
-<p class="meta">Updated 2026-10-08</p>
+<p class="meta">Updated 2026-10-10</p>
 <p><strong>What it means.</strong> Apps that target Android 15 or higher must support 16 KB memory pages on 64-bit devices. Native libraries (<code>.so</code> files) built for 4 KB pages do not load on those devices. Google's page says: starting 1 February 2027, if your app updates don't support 16 KB memory page sizes, you won't be able to release them. Until then Play Console warns.</p>
 <p><strong>In React Native.</strong> React Native supports 16 KB pages from 0.77. In Expo that means SDK 53 or later (SDK 52 ships React Native 0.76). Below that, upgrading React Native is the fix. Above it, the warning comes from a library that ships its own native code: update that library, or rebuild it with NDK r28 or newer.</p>
 <p><strong>Find the library.</strong> Open your release AAB or APK and check each 64-bit <code>.so</code> file's alignment. <code>npx nativekeel</code> does this when a built APK/AAB is in the project, lists the libraries that are not aligned, and flags React Native versions before 0.77 even without a build.</p>
 <div class="cta"><strong>Check your whole app in one command:</strong> <code>npx nativekeel</code><br><span class="meta">Free, runs locally (your code is not uploaded), no account. It reports this and 80 other upgrade, store, crash and security problems.</span></div>
 <h2>Sources</h2>
 <ul><li><a href="https://developer.android.com/guide/practices/page-sizes">Android: support 16 KB page sizes</a></li></ul>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"Google Play 16 KB page size warning in a React Native app","description":"What Google Play's 16 KB memory page size warning means for React Native and Expo apps, the 1 February 2027 deadline, and which version fixes it.","dateModified":"2026-10-08","author":{"@type":"Organization","name":"NativeKeel","url":"https://nativekeel.com"},"mainEntityOfPage":"https://nativekeel.com/fix/google-play-16-kb-page-size"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"Google Play 16 KB page size warning in a React Native app","description":"What Google Play's 16 KB memory page size warning means for React Native and Expo apps, the 1 February 2027 deadline, and which version fixes it.","dateModified":"2026-10-10","author":{"@type":"Organization","name":"NativeKeel","url":"https://nativekeel.com"},"mainEntityOfPage":"https://nativekeel.com/fix/google-play-16-kb-page-size"}</script>
 </main></body>
 </html>

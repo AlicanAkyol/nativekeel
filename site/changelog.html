@@ -40,6 +40,13 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.52</h2><p class="date">10 October 2026</p>
+<ul>
+<li><span class="tag">App Store</span><b>Xcode 27: the UIScene life cycle.</b> Built with the iOS 27 SDK, an app that has not adopted the scene life cycle stops at launch ("UIScene life cycle is required for apps built with this SDK"), and App Store Connect requires that SDK from April 2027. NativeKeel now says whether your app has adopted it and what to do: React Native 0.88 is the first template with it; Expo SDK 57 opts in with <code>ios.enableSceneSupport</code>; SDK 58 has it by default. 767 of 833 iOS apps in our scan have not adopted it yet. <a href="/fix/uiscene-life-cycle-required-xcode-27">What to change</a>.</li>
+<li><span class="tag">Crash</span><b>What breaks after the move.</b> Deep links and universal links that are still handled only in AppDelegate stop arriving. Libraries that read the window from the app delegate crash with "-[AppDelegate window]: unrecognized selector" on the React Native 0.88 template. We reproduced this on that template and sent fixes to <a href="https://github.com/RonRadtke/react-native-blob-util/pull/498">react-native-blob-util</a> and <a href="https://github.com/invertase/react-native-google-mobile-ads/pull/911">react-native-google-mobile-ads</a>. NativeKeel lists the installed packages that do it and the one-line workaround.</li>
+<li><span class="tag">Fix</span><b>Store review checks were not running.</b> Since 0.1.42, a refactor left the account deletion (5.1.1(v)), Sign in with Apple (4.8) and iOS SDK privacy manifest (ITMS-91061) checks out of the report. They run again, and a new test fails if any check stops being called.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.51</h2><p class="date">9 October 2026</p>
 <ul>
 <li><span class="tag">Security</span><b>Recovery phrases and private keys copied to the clipboard.</b> Keyboards with clipboard history and cloud clipboard sync keep a copy, every app the user pastes into receives it, and on Android 9 and older any background app can read it. Reported as medium when a seed phrase, mnemonic, private key or secret key goes to the clipboard and is not cleared again (a timer that clears it after a minute counts as cleared). Found in 8 of 869 open-source apps, almost all crypto wallets. (OWASP MASVS-STORAGE)</li>

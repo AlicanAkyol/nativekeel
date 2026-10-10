@@ -31,7 +31,7 @@ pre{background:var(--code);border:1px solid var(--line);border-radius:10px;paddi
 <body><main>
 <p class="meta"><a href="/">NativeKeel</a> · <a href="/fix/">React Native fixes</a></p>
 <h1>MissingForegroundServiceTypeException</h1>
-<p class="meta">Updated 2026-10-08</p>
+<p class="meta">Updated 2026-10-10</p>
 <p><strong>What it means.</strong> If your app targets Android 14 (API level 34) and starts a foreground service whose type is not declared in the manifest, the system throws <code>MissingForegroundServiceTypeException</code> when the service calls <code>startForeground()</code>. The app crashes at that moment, not at build time.</p>
 <p><strong>How to fix it.</strong> Declare the type on the service and add the matching permission:</p>
 <pre><code>&lt;uses-permission android:name="android.permission.FOREGROUND_SERVICE" /&gt;
@@ -46,6 +46,6 @@ pre{background:var(--code);border:1px solid var(--line);border-radius:10px;paddi
 <div class="cta"><strong>Check your whole app in one command:</strong> <code>npx nativekeel</code><br><span class="meta">Free, runs locally (your code is not uploaded), no account. It reports this and 80 other upgrade, store, crash and security problems.</span></div>
 <h2>Sources</h2>
 <ul><li><a href="https://developer.android.com/about/versions/14/changes/fgs-types-required">Android 14: foreground service types are required</a></li><li><a href="https://notifee.app/react-native/docs/android/foreground-service">Notifee: foreground service</a></li></ul>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"MissingForegroundServiceTypeException in React Native (Android 14)","description":"Why a React Native app crashes with MissingForegroundServiceTypeException after targeting Android 14, and how to declare the foreground service type.","dateModified":"2026-10-08","author":{"@type":"Organization","name":"NativeKeel","url":"https://nativekeel.com"},"mainEntityOfPage":"https://nativekeel.com/fix/missing-foreground-service-type"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"MissingForegroundServiceTypeException in React Native (Android 14)","description":"Why a React Native app crashes with MissingForegroundServiceTypeException after targeting Android 14, and how to declare the foreground service type.","dateModified":"2026-10-10","author":{"@type":"Organization","name":"NativeKeel","url":"https://nativekeel.com"},"mainEntityOfPage":"https://nativekeel.com/fix/missing-foreground-service-type"}</script>
 </main></body>
 </html>

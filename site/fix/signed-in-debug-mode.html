@@ -31,7 +31,7 @@ pre{background:var(--code);border:1px solid var(--line);border-radius:10px;paddi
 <body><main>
 <p class="meta"><a href="/">NativeKeel</a> · <a href="/fix/">React Native fixes</a></p>
 <h1>You uploaded an APK or Android App Bundle that was signed in debug mode</h1>
-<p class="meta">Updated 2026-10-08</p>
+<p class="meta">Updated 2026-10-10</p>
 <p><strong>What it means.</strong> Google Play only accepts uploads signed with your own key. The React Native template signs release builds with the debug key, which is the same public key on every machine:</p>
 <pre><code>release {
     // Caution! In production, you need to generate your own keystore file.
@@ -59,6 +59,6 @@ buildTypes {
 <div class="cta"><strong>Check your whole app in one command:</strong> <code>npx nativekeel</code><br><span class="meta">Free, runs locally (your code is not uploaded), no account. It reports this and 80 other upgrade, store, crash and security problems.</span></div>
 <h2>Sources</h2>
 <ul><li><a href="https://reactnative.dev/docs/signed-apk-android">React Native: publishing to Google Play Store</a></li><li><a href="https://developer.android.com/studio/publish/app-signing">Android: sign your app</a></li></ul>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"Google Play: \"signed in debug mode\" in a React Native app","description":"Why Google Play refuses a React Native release build \"signed in debug mode\", and how to set up release signing without committing your passwords.","dateModified":"2026-10-08","author":{"@type":"Organization","name":"NativeKeel","url":"https://nativekeel.com"},"mainEntityOfPage":"https://nativekeel.com/fix/signed-in-debug-mode"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"Google Play: \"signed in debug mode\" in a React Native app","description":"Why Google Play refuses a React Native release build \"signed in debug mode\", and how to set up release signing without committing your passwords.","dateModified":"2026-10-10","author":{"@type":"Organization","name":"NativeKeel","url":"https://nativekeel.com"},"mainEntityOfPage":"https://nativekeel.com/fix/signed-in-debug-mode"}</script>
 </main></body>
 </html>

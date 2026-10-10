@@ -523,6 +523,9 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
     }
   }
 
+  // App Store / Google Play review rules the code can show.
+  if (!project.isLibrary) for (const f of storeReviewRules(project, now)) add(f);
+
   // Security beyond leaked keys.
   for (const f of [...passwordLeaks(project.root), ...webViewRisks(project.root), ...androidBackup(project.root), ...exportedComponents(project.root), ...plainHttpCalls(project.root), ...cloudRules(project.root, project.deps, now), ...insecureTls(project.root), ...weakCrypto(project.root), ...tokenStorage(project.root), ...reverseEngineering(project.root, project), ...expoConfigSecrets(project.root), ...aiKeysInBundle(project.root, { ...project.devDeps, ...project.deps }), ...clipboardSecrets(project.root), ...deepLinks(project.root, project.deps), ...supabaseRls(project.root), ...(project.isLibrary ? [] : playRestrictedPermissions(project.root, project.deps))]) add(f);
   if (!forcedOffline) {

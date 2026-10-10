@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Xcode 27 "UIScene life cycle is required": React Native fix</title>
+<meta name="description" content="Why a React Native or Expo app stops at launch when built with Xcode 27 and the iOS 27 SDK, the April 2027 App Store deadline, and how to adopt UIScene.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#0b5d55">
+<link rel="canonical" href="https://nativekeel.com/fix/uiscene-life-cycle-required-xcode-27">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="NativeKeel">
+<meta property="og:url" content="https://nativekeel.com/fix/uiscene-life-cycle-required-xcode-27">
+<meta property="og:title" content="Xcode 27 &quot;UIScene life cycle is required&quot;: React Native fix">
+<meta property="og:description" content="Why a React Native or Expo app stops at launch when built with Xcode 27 and the iOS 27 SDK, the April 2027 App Store deadline, and how to adopt UIScene.">
+<meta property="og:image" content="https://nativekeel.com/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://nativekeel.com/og.png">
+<style>:root{--bg:#fbfaf7;--text:#15171b;--muted:#5d6470;--accent:#0b5d55;--line:#e3e1db;--card:#ffffff;--code:#f1efea}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1013;--text:#e9ebef;--muted:#9aa2ad;--accent:#3cc4b4;--line:#262a31;--card:#15181d;--code:#1b1f25}}
+:root[data-theme="dark"]{--bg:#0e1013;--text:#e9ebef;--muted:#9aa2ad;--accent:#3cc4b4;--line:#262a31;--card:#15181d;--code:#1b1f25}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.65 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:760px;margin:0 auto;padding:40px 16px 64px;overflow-wrap:anywhere}
+h1{font-size:28px;line-height:1.25;margin:0 0 6px}h2{font-size:18px;margin:28px 0 6px}a{color:var(--accent)}p,li{color:var(--muted)}strong{color:var(--text)}
+code{font:14px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--code);padding:1px 5px;border-radius:5px}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow-x:auto}pre code{background:none;padding:0;white-space:pre-wrap}
+.cta{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:28px 0}.cta code{font-size:15px}
+.meta{font-size:14px;color:var(--muted)}ul.list li{margin:8px 0}</style>
+</head>
+<body><main>
+<p class="meta"><a href="/">NativeKeel</a> · <a href="/fix/">React Native fixes</a></p>
+<h1>UIScene life cycle is required for apps built with this SDK</h1>
+<p class="meta">Updated 2026-10-10</p>
+<p><strong>What it means.</strong> Built with the iOS 27 SDK (Xcode 27), an app that has not adopted the UIKit scene life cycle stops right at launch:</p>
+<pre><code>Application failed to launch: UIScene life cycle is required for apps built with this SDK.</code></pre>
+<p>Apple announced it in TN3187: from the first major release after iOS 26, building with the latest SDK requires the scene life cycle. The check depends on the SDK you build with, not the user's iOS version. The same app built with Xcode 26 still runs on iOS 27, so the problem only shows up when you move to Xcode 27. App Store Connect requires the iOS 27 SDK for uploads from <strong>April 2027</strong>.</p>
+<p><strong>Have you adopted it?</strong> You have if your <code>Info.plist</code> has a <code>UIApplicationSceneManifest</code> with scene configurations, or your app delegate implements <code>application(_:configurationForConnecting:options:)</code>. A manifest that only sets <code>UIApplicationSupportsMultipleScenes</code> does not count.</p>
+<p><strong>React Native.</strong> 0.88 is the first release whose template adopts it. Its <code>SceneDelegate.swift</code> starts React Native in the window scene, and <code>Info.plist</code> names it in the scene manifest. React Native 0.87 and earlier have no scene support in the template. Upgrade, then copy both from the Upgrade Helper.</p>
+<p><strong>Expo.</strong> On SDK 57, opt in with expo 57.0.23+ and expo-build-properties 57.0.20+:</p>
+<pre><code>["expo-build-properties", { "ios": { "enableSceneSupport": true } }]</code></pre>
+<p>Then run prebuild again. SDK 58 has it by default. SDK 56 and earlier need an upgrade.</p>
+<p><strong>Two things break after the move.</strong></p>
+<ul><li><strong>Deep links and universal links</strong> stop reaching <code>AppDelegate</code>. Forward <code>scene(_:openURLContexts:)</code> and <code>scene(_:continue:)</code> to <code>RCTLinkingManager</code> in <code>SceneDelegate</code>, and pass the connection options to React Native so links that launch the app arrive too. The 0.88 template does both.</li><li><strong>Libraries that read the window from the app delegate crash.</strong> The 0.88 template's <code>AppDelegate</code> has no <code>window</code>. We reproduced <code>-[AppDelegate window]: unrecognized selector sent to instance</code> on that template with react-native-blob-util and react-native-google-mobile-ads, and the same Objective-C call is in about a dozen popular packages, including @react-native-firebase/messaging at launch. Until they are fixed, keep <code>var window: UIWindow?</code> in <code>AppDelegate</code> and set it from <code>SceneDelegate</code>.</li></ul>
+<p><strong>How common it is.</strong> 767 of the 833 iOS apps in our scan of open-source React Native and Expo apps have not adopted it yet. <code>npx nativekeel</code> reports it, the links that still go to <code>AppDelegate</code>, and the installed libraries that read the app delegate's window.</p>
+<div class="cta"><strong>Check your whole app in one command:</strong> <code>npx nativekeel</code><br><span class="meta">Free, runs locally (your code is not uploaded), no account. It reports this and 80 other upgrade, store, crash and security problems.</span></div>
+<h2>Sources</h2>
+<ul><li><a href="https://developer.apple.com/documentation/technotes/tn3187-migrating-to-the-uikit-scene-based-life-cycle">Apple TN3187: Migrating to the UIKit scene-based life cycle</a></li><li><a href="https://developer.apple.com/news/?id=k1mtkt1k">Apple: upcoming App Store requirements (iOS 27 SDK from April 2027)</a></li><li><a href="https://github.com/react-native-community/template/blob/0.88-stable/template/ios/HelloWorld/SceneDelegate.swift">React Native 0.88 template: SceneDelegate.swift</a></li><li><a href="https://github.com/expo/expo/issues/46664#issuecomment-5683396867">Expo: Xcode 27 support for SDK 57</a></li></ul>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"Xcode 27 \"UIScene life cycle is required\": React Native fix","description":"Why a React Native or Expo app stops at launch when built with Xcode 27 and the iOS 27 SDK, the April 2027 App Store deadline, and how to adopt UIScene.","dateModified":"2026-10-10","author":{"@type":"Organization","name":"NativeKeel","url":"https://nativekeel.com"},"mainEntityOfPage":"https://nativekeel.com/fix/uiscene-life-cycle-required-xcode-27"}</script>
+</main></body>
+</html>

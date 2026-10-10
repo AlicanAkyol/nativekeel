@@ -31,3 +31,38 @@ test('iOS SDKs too old for a privacy manifest, named with the React Native packa
   assert.equal(iosSdkPrivacyManifests(makeProject({ 'ios/Podfile.lock': lock('5.19.0') })).length, 0);
   assert.match(iosSdkPrivacyManifests(makeProject({ 'ios/Podfile.lock': 'PODS:\n  - AFNetworking (2.7.0)\n\nDEPENDENCIES:\n' }))[0].detail, /no release has one/);
 });
+
+test('UIScene life cycle: needed to launch when built with the iOS 27 SDK', async () => {
+  const { iosSceneLifecycle } = await import('../src/store-rules.js');
+  const NOW = new Date('2026-10-09T12:00:00Z');
+  const run = (files, project = {}, now = NOW) => iosSceneLifecycle({ root: makeProject({ 'package.json': '{}', ...files }), ...project }, now);
+  const plist = (scene) => `<plist><dict><key>CFBundleExecutable</key><string>App</string>${scene === 'empty' ? '<key>UIApplicationSceneManifest</key><dict><key>UIApplicationSupportsMultipleScenes</key><false/></dict>' : scene ? '<key>UIApplicationSceneManifest</key><dict><key>UISceneConfigurations</key><dict></dict></dict>' : ''}</dict></plist>`;
+  const bare = (scene, delegate, extra = {}) => ({ 'ios/App/Info.plist': plist(scene), 'ios/App/AppDelegate.swift': delegate, ...extra });
+
+  const old = run(bare(false, 'class AppDelegate: RCTAppDelegate {}'), { rnVersion: '0.85.3' });
+  assert.equal(old[0].id, 'ios-uiscene-required');
+  assert.equal(old[0].severity, 'high');
+  assert.match(old[0].detail, /React Native 0\.88 is the first release/);
+  assert.equal(run(bare(false, 'x'), { rnVersion: '0.85.3' }, new Date('2027-04-02'))[0].severity, 'critical', 'after the App Store deadline');
+  assert.deepEqual(run(bare(true, 'class AppDelegate {}'), { rnVersion: '0.88.0' }), [], 'scene manifest present, no URL handlers');
+  assert.equal(run(bare('empty', 'x'), { rnVersion: '0.81.0' })[0].id, 'ios-uiscene-required', 'a manifest without scene configurations (Notesnook)');
+
+  const urls = run(bare(true, 'func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool { RCTLinkingManager.application(app, open: url, options: options) }'), { rnVersion: '0.88.0' });
+  assert.equal(urls[0].id, 'ios-uiscene-url-handlers');
+  assert.deepEqual(
+    run(bare(true, 'func application(_ app: UIApplication, open url: URL) -> Bool { true }', { 'ios/App/SceneDelegate.swift': 'func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {}' }), { rnVersion: '0.88.0' }),
+    [],
+    'forwarded from SceneDelegate',
+  );
+
+  const blob = { deps: { 'react-native-blob-util': '0.25.1' }, rnVersion: '0.88.0' };
+  const crash = run(bare(true, 'class AppDelegate: UIResponder, UIApplicationDelegate {}'), blob);
+  assert.equal(crash[0].id, 'ios-scene-delegate-window', 'the 0.88 template AppDelegate has no window');
+  assert.match(crash[0].detail, /unrecognized selector/);
+  assert.deepEqual(run(bare(true, 'class AppDelegate: UIResponder, UIApplicationDelegate {\n  var window: UIWindow?\n}'), blob), [], 'window kept on the app delegate');
+  assert.match(run(bare(false, 'x'), { ...blob, rnVersion: '0.85.0' })[0].detail, /react-native-blob-util reads the window/, 'a warning before the move');
+  assert.match(run({}, { managed: true, expoVersion: '56.0.0' })[0].detail, /upgrade to SDK 57/);
+  assert.match(run({}, { managed: true, expoVersion: '57.0.25' })[0].detail, /enableSceneSupport/);
+  assert.deepEqual(run({ 'app.json': JSON.stringify({ expo: { plugins: [['expo-build-properties', { ios: { enableSceneSupport: true } }]] } }) }, { managed: true, expoVersion: '57.0.25' }), []);
+  assert.deepEqual(run({}, { managed: true, expoVersion: '58.0.0' }), [], 'default from SDK 58');
+});
