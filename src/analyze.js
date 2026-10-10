@@ -6,7 +6,7 @@ import { scanSecrets, TEST_PATH } from './secrets.js';
 import { nativeChecks } from './native.js';
 import { stabilityChecks } from './stability.js';
 import { performanceChecks } from './performance.js';
-import { vulnerableDependencies, passwordLeaks, webViewRisks, androidBackup, exportedComponents, plainHttpCalls, cloudRules, insecureTls, weakCrypto, tokenStorage, reverseEngineering, expoConfigSecrets, aiKeysInBundle, clipboardSecrets, deepLinks, supabaseRls, playRestrictedPermissions, masvsOf, MASVS_GROUPS } from './security.js';
+import { vulnerableDependencies, passwordLeaks, webViewRisks, androidBackup, exportedComponents, plainHttpCalls, cloudRules, insecureTls, weakCrypto, tokenStorage, reverseEngineering, expoConfigSecrets, aiKeysInBundle, clipboardSecrets, keychainAccessibility, deepLinks, supabaseRls, playRestrictedPermissions, masvsOf, MASVS_GROUPS } from './security.js';
 import { lockedVersions } from './lockfile.js';
 import { storeReviewRules } from './store-rules.js';
 import { expoPinnedNames, movesWithExpoSdk } from './expo-pins.js';
@@ -527,7 +527,7 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
   if (!project.isLibrary) for (const f of storeReviewRules(project, now)) add(f);
 
   // Security beyond leaked keys.
-  for (const f of [...passwordLeaks(project.root), ...webViewRisks(project.root), ...androidBackup(project.root), ...exportedComponents(project.root), ...plainHttpCalls(project.root), ...cloudRules(project.root, project.deps, now), ...insecureTls(project.root), ...weakCrypto(project.root), ...tokenStorage(project.root), ...reverseEngineering(project.root, project), ...expoConfigSecrets(project.root), ...aiKeysInBundle(project.root, { ...project.devDeps, ...project.deps }), ...clipboardSecrets(project.root), ...deepLinks(project.root, project.deps), ...supabaseRls(project.root), ...(project.isLibrary ? [] : playRestrictedPermissions(project.root, project.deps))]) add(f);
+  for (const f of [...passwordLeaks(project.root), ...webViewRisks(project.root), ...androidBackup(project.root), ...exportedComponents(project.root), ...plainHttpCalls(project.root), ...cloudRules(project.root, project.deps, now), ...insecureTls(project.root), ...weakCrypto(project.root), ...tokenStorage(project.root), ...reverseEngineering(project.root, project), ...expoConfigSecrets(project.root), ...aiKeysInBundle(project.root, { ...project.devDeps, ...project.deps }), ...clipboardSecrets(project.root), ...keychainAccessibility(project.root), ...deepLinks(project.root, project.deps), ...supabaseRls(project.root), ...(project.isLibrary ? [] : playRestrictedPermissions(project.root, project.deps))]) add(f);
   if (!forcedOffline) {
     // Exact versions only (installed, else the lockfile): a range would be a guess.
     const locked = lockedVersions(project.root, project.deps);

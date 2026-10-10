@@ -44,7 +44,7 @@ NativeKeel reads source and configuration; it does not run the app, so it cannot
 | Android components other apps can start | Services, receivers and providers exported without a permission in your manifest | Whether the component does anything sensitive with the input it receives |
 | Deep links | Web links without domain verification; the template `myapp://` scheme, especially with OAuth | How your app validates the parameters of a link |
 | Network | Cleartext HTTP, App Transport Security switched off, release builds trusting user-installed certificates, TLS checks turned off in native code | Certificate pinning quality; settings applied by your server or CDN |
-| Data at rest | Session tokens in unencrypted storage, wallet secrets copied to the clipboard, Android backups enabled | What other data you store, and where it goes after it leaves the device |
+| Data at rest | Session tokens in unencrypted storage, keychain items readable while the device is locked, wallet secrets copied to the clipboard, Android backups enabled | What other data you store, and where it goes after it leaves the device |
 | WebViews | File-URL access flags (and whether the WebView shows local content), mixed content | What the loaded page does with the bridge to native code |
 | Backend rules | Firestore rules open to anyone, Supabase tables without row level security (from files in the repository) | Rules deployed from somewhere else; what a policy allows in detail |
 | Weak cryptography | Hardcoded encryption keys, MD5/SHA-1 on passwords, ECB mode, `Math.random` for security values | Protocol design, key management on your servers |

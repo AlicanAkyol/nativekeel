@@ -668,7 +668,7 @@ export const MASVS_GROUPS = {
 
 export function masvsOf(id) {
   if (/^(secret:|env-bundled|crypto-|expo-secret|ai-key-)/.test(id)) return 'CRYPTO';
-  if (/^clipboard-/.test(id)) return 'STORAGE';
+  if (/^(clipboard-|keychain-)/.test(id)) return 'STORAGE';
   if (/^(password-leak|token-unencrypted|android-allow-backup)/.test(id)) return 'STORAGE';
   if (/^(insecure-tls|user-certificates|plain-http|ios-ats|android-cleartext)/.test(id)) return 'NETWORK';
   if (/^(webview-|android-exported|deeplink-)/.test(id)) return 'PLATFORM';
@@ -828,6 +828,60 @@ export function clipboardSecrets(root) {
       title: `A recovery phrase, private key or secret key is copied to the clipboard (${hits[0]}${hits.length > 1 ? ` and ${hits.length - 1} more` : ''})`,
       detail: 'The clipboard is not private storage. Keyboards with clipboard history and cloud clipboard sync (Gboard, Samsung Keyboard, iCloud Universal Clipboard) keep a copy, every app the user pastes into receives it, and on Android 9 and older any background app can read it. If you keep the copy button, clear the clipboard again after about a minute, and on Android 13+ mark the clip as sensitive so it is hidden from the clipboard preview. (OWASP MASVS-STORAGE)',
       fix: { kind: 'security', step: `Clear the clipboard after a short timeout where a recovery phrase or private key is copied (${hits.slice(0, 3).join(', ')}), or remove the copy option.` },
+    },
+  ];
+}
+
+// Keychain items readable while the device is locked (MASVS-STORAGE). Apple deprecated
+// kSecAttrAccessibleAlways and ...AlwaysThisDeviceOnly in iOS 12: "The data in the keychain item
+// can always be accessed regardless of whether the device is locked. Use an accessibility level
+// that provides some user protection, such as kSecAttrAccessibleAfterFirstUnlock." expo-secure-store
+// marks ALWAYS and ALWAYS_THIS_DEVICE_ONLY deprecated too. Library code that only maps the names
+// (react-native-keychain's own table, vendored copies) and test config are not the app's choice.
+const KEYCHAIN_ALWAYS_JS = /\b(?:ACCESSIBLE|SecureStore)\.ALWAYS(?:_THIS_DEVICE_ONLY)?\b|\baccessible\s*:\s*['"]Accessible(?:Always|AlwaysThisDeviceOnly)['"]/;
+const KEYCHAIN_ALWAYS_NATIVE = /\bkSecAttrAccessible\b[^;\n]{0,60}\bkSecAttrAccessibleAlways(?:ThisDeviceOnly)?\b|\bkSecAttrAccessibleAlways(?:ThisDeviceOnly)?\b[^;\n]{0,60}\bkSecAttrAccessible\b/;
+const NOT_APP_CODE = /(?:^|\/)(?:test|tests|__tests__|e2e|config\/test)\/|(?:^|\/)packages\/[^/]*keychain[^/]*\//i;
+
+export function keychainAccessibility(root) {
+  const hits = [];
+  for (const file of jsFiles(root)) {
+    const rel = path.relative(root, file).split(path.sep).join('/');
+    if (NOT_APP_CODE.test(rel)) continue;
+    const text = read(file);
+    if (!text || !/ALWAYS|AccessibleAlways/.test(text)) continue;
+    const code = text.replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' ')).replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+    const m = code.match(KEYCHAIN_ALWAYS_JS);
+    if (m) hits.push(`${rel}:${code.slice(0, m.index).split('\n').length}`);
+  }
+  const iosDir = path.join(root, 'ios');
+  const walk = (dir, depth) => {
+    let entries = [];
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const e of entries) {
+      const p = path.join(dir, e.name);
+      if (e.isDirectory()) {
+        if (depth < 4 && !/^(Pods|build|DerivedData|\..*)$/.test(e.name)) walk(p, depth + 1);
+      } else if (/\.(swift|m|mm)$/.test(e.name)) {
+        const text = read(p);
+        const m = text && text.match(KEYCHAIN_ALWAYS_NATIVE);
+        if (m) hits.push(`${path.relative(root, p).split(path.sep).join('/')}:${text.slice(0, m.index).split('\n').length}`);
+      }
+    }
+  };
+  walk(iosDir, 0);
+  if (!hits.length) return [];
+  return [
+    {
+      id: 'keychain-always-accessible',
+      severity: 'medium',
+      area: 'security',
+      title: `Keychain items stay readable while the device is locked (${hits[0]}${hits.length > 1 ? ` and ${hits.length - 1} more` : ''})`,
+      detail: 'The "Always" accessibility levels (ACCESSIBLE.ALWAYS, SecureStore.ALWAYS, kSecAttrAccessibleAlways and their THIS_DEVICE_ONLY variants) let the item be read whether or not the device is locked, so the keychain gives the data no protection from the device passcode. Apple deprecated them in iOS 12, and expo-secure-store marks them deprecated. Use AFTER_FIRST_UNLOCK (THIS_DEVICE_ONLY) for values background tasks need, and WHEN_UNLOCKED (THIS_DEVICE_ONLY) for everything else. (OWASP MASVS-STORAGE)',
+      fix: { kind: 'security', step: `Change the keychain accessibility at ${hits.slice(0, 3).join(', ')} to AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY (or WHEN_UNLOCKED_THIS_DEVICE_ONLY when no background access is needed).` },
     },
   ];
 }

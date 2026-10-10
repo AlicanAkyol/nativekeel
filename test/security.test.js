@@ -356,3 +356,15 @@ test('wallet secrets copied to the clipboard', async () => {
   assert.equal(run("Clipboard.setString(mnemonic);\ntimer.current = setTimeout(() => { Clipboard.setString(''); }, 60000);").length, 0, 'cleared again after a minute');
   assert.equal(run("// Clipboard.setString(mnemonic);").length, 0, 'comments');
 });
+
+test('keychain items readable while the device is locked', async () => {
+  const { keychainAccessibility } = await import('../src/security.js');
+  const run = (files) => keychainAccessibility(makeProject({ 'package.json': '{}', ...files }));
+  assert.equal(run({ 'src/store.ts': "await Keychain.setGenericPassword('u', pw, { accessible: Keychain.ACCESSIBLE.ALWAYS });" }).length, 1);
+  assert.equal(run({ 'src/keys.ts': 'await SecureStore.setItemAsync(k, v, { keychainAccessible: SecureStore.ALWAYS_THIS_DEVICE_ONLY });' }).length, 1);
+  assert.equal(run({ 'ios/App/Store.swift': 'let q: [String: Any] = [kSecAttrAccessible as String: kSecAttrAccessibleAlways]' }).length, 1);
+  assert.equal(run({ 'src/store.ts': 'await Keychain.setGenericPassword(u, pw, { accessible: Keychain.ACCESSIBLE.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY });' }).length, 0);
+  assert.equal(run({ 'packages/react-native-keychain-9/src/index.ts': 'ACCESSIBLE.ALWAYS' }).length, 0, "a vendored library's own table");
+  assert.equal(run({ 'ios/Lib/SecureStorage.m': '@"AccessibleAlways": (__bridge NSString *)kSecAttrAccessibleAlways,' }).length, 0, 'a name-to-constant table');
+  assert.equal(run({ 'config/test/native.ts': "ACCESSIBLE: { ALWAYS_THIS_DEVICE_ONLY: 'x' }, use(ACCESSIBLE.ALWAYS)" }).length, 0, 'test config');
+});
