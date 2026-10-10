@@ -20,3 +20,36 @@ jobs:
       - run: npm install -g npm@^11.5.1
       - run: npm test
       - run: npm publish --access public
+
+  # Lists the new version in the official MCP Registry (registry.modelcontextprotocol.io).
+  # Ownership is proven with this workflow's OIDC token (namespace io.github.AlicanAkyol)
+  # and the mcpName field in package.json, so no secret is stored. mcp-publisher is pinned
+  # and its checksum verified against the release's published checksums.
+  mcp-registry:
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check server.json matches package.json
+        run: |
+          node -e '
+            const p = require("./package.json"), s = require("./server.json");
+            if (s.name !== p.mcpName || s.version !== p.version || s.packages[0].version !== p.version || s.packages[0].identifier !== p.name) {
+              console.error("server.json does not match package.json"); process.exit(1);
+            }'
+      - name: Wait for the version on npm
+        run: |
+          V=$(node -p "require('./package.json').version")
+          N=$(node -p "require('./package.json').mcpName")
+          for i in $(seq 1 30); do
+            [ "$(npm view "nativekeel@$V" mcpName 2>/dev/null)" = "$N" ] && exit 0
+            sleep 10
+          done
+          echo "nativekeel@$V with mcpName $N is not visible on npm"; exit 1
+      - name: Install mcp-publisher 1.8.1 (checksum verified)
+        run: |
+          curl -fsSL -o mcp-publisher.tar.gz https://github.com/modelcontextprotocol/registry/releases/download/v1.8.1/mcp-publisher_linux_amd64.tar.gz
+          echo "a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc  mcp-publisher.tar.gz" | sha256sum -c -
+          tar xzf mcp-publisher.tar.gz mcp-publisher
+      - run: ./mcp-publisher login github-oidc
+      - run: ./mcp-publisher publish

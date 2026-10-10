@@ -1,0 +1,39 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.AlicanAkyol/nativekeel",
+  "title": "NativeKeel",
+  "description": "React Native and Expo health check: upgrade blockers, store rules, crash risks, security findings",
+  "websiteUrl": "https://nativekeel.com/ai-agents",
+  "repository": {
+    "url": "https://github.com/AlicanAkyol/nativekeel",
+    "source": "github"
+  },
+  "version": "0.1.55",
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "nativekeel",
+      "version": "0.1.55",
+      "runtimeHint": "npx",
+      "transport": {
+        "type": "stdio"
+      },
+      "packageArguments": [
+        {
+          "type": "positional",
+          "value": "mcp"
+        }
+      ],
+      "environmentVariables": [
+        {
+          "name": "NATIVEKEEL_MCP_ROOTS",
+          "description": "Extra folders the server may scan (path-delimited). By default only the folder the client starts it in.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        }
+      ]
+    }
+  ]
+}

@@ -6,7 +6,7 @@ Health check for React Native and Expo apps. One command, no install, no account
 npx nativekeel
 ```
 
-**What's new in 0.1.54:** keychain items readable while the device is locked (deprecated "Always" accessibility levels). **0.1.53:** an MCP server for AI coding agents (`npx nativekeel mcp`: scan, upgrade plan and library checks for Claude Code, Codex and Cursor), and a scanned repository can no longer run a command through its own git config. Recent releases added a *Start here* list in every report, hacking risks mapped to OWASP MASVS, crash and performance checks. Every check is tuned on 850+ open-source React Native and Expo apps, with recently updated ones added every week, to keep false alarms out ([what we found in them](https://dev.to/keel_alican_akyol/we-scanned-470-open-source-react-native-apps-here-is-what-breaks-them-5072)). [All releases →](https://nativekeel.com/changelog)
+**What's new in 0.1.55:** listed in the official MCP Registry (`io.github.AlicanAkyol/nativekeel`). **0.1.54:** keychain items readable while the device is locked (deprecated "Always" accessibility levels). Recent releases added a *Start here* list in every report, hacking risks mapped to OWASP MASVS, crash and performance checks. Every check is tuned on 850+ open-source React Native and Expo apps, with recently updated ones added every week, to keep false alarms out ([what we found in them](https://dev.to/keel_alican_akyol/we-scanned-470-open-source-react-native-apps-here-is-what-breaks-them-5072)). [All releases →](https://nativekeel.com/changelog)
 
 ```
 Summary  4 critical · 5 high · 4 medium · 6 low
@@ -117,6 +117,8 @@ args = ["-y", "nativekeel", "mcp"]
 { "mcpServers": { "nativekeel": { "command": "npx", "args": ["-y", "nativekeel", "mcp"],
   "env": { "NATIVEKEEL_MCP_ROOTS": "/absolute/path/to/your/projects" } } } }
 ```
+
+Also listed in the [official MCP Registry](https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.AlicanAkyol/nativekeel) as `io.github.AlicanAkyol/nativekeel`.
 
 Tools: `scan_project` (findings with `file:line` and fixes), `upgrade_plan` (ordered steps) and `check_library` (latest version, New Architecture support, maintenance, the range that works with a given React Native version, known traps). The server is read-only and only scans folders under the directory it was started in, plus `NATIVEKEEL_MCP_ROOTS` (set it when your client starts servers from another folder). Results never contain source code, and text in the repository that tries to give instructions to the agent is removed. See [SECURITY.md](SECURITY.md#using-nativekeel-from-ai-coding-agents-mcp).
 

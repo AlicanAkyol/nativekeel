@@ -60,3 +60,15 @@ test("the README What's new line keeps its fixed tail when the version changes",
   assert.ok(line, "README has a What's new line");
   for (const part of ['Recent releases added', 'Every check is tuned on', '[All releases →](https://nativekeel.com/changelog)']) assert.ok(line.includes(part), `missing: ${part}`);
 });
+
+test('server.json (MCP Registry) matches package.json', () => {
+  const base = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
+  const pkg = JSON.parse(fs.readFileSync(path.join(base, 'package.json'), 'utf8'));
+  const server = JSON.parse(fs.readFileSync(path.join(base, 'server.json'), 'utf8'));
+  assert.equal(server.name, pkg.mcpName);
+  assert.equal(server.version, pkg.version);
+  assert.equal(server.packages[0].identifier, pkg.name);
+  assert.equal(server.packages[0].version, pkg.version);
+  assert.deepEqual(server.packages[0].packageArguments, [{ type: 'positional', value: 'mcp' }]);
+  assert.ok(server.description.length <= 100, 'the registry allows 100 characters');
+});
