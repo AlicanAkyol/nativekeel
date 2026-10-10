@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { spawnSync } from 'node:child_process';
+import { gitLsFiles } from './git.js';
 import { checkArchive, findBuiltArtifact } from './elf-align.js';
 import { PAGE_SIZE_16K, PLATFORM_MINIMUMS } from './rules.js';
 import { installedVersion as installedVersionOf } from './project.js';
@@ -36,10 +36,8 @@ function findFiles(dir, test, depth = 0, out = []) {
 const minorOf = (v) => (v ? Number(v.split('.')[1]) : null);
 
 function gitTracked(root) {
-  const res = spawnSync('git', ['ls-files'], { cwd: root, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
-  if (res.status !== 0) return null;
   // ls-files paths are relative to the current directory, which is the app root here.
-  return res.stdout.split('\n').filter(Boolean);
+  return gitLsFiles(root);
 }
 
 // Debug-only native libraries that never ship in a release build.

@@ -6,7 +6,7 @@ Health check for React Native and Expo apps. One command, no install, no account
 npx nativekeel
 ```
 
-**What's new in 0.1.52:** Xcode 27's UIScene requirement (apps do not launch without it; App Store uploads need it from April 2027), the deep links and libraries that break after the move, and the store review checks are back (they had stopped running in 0.1.42). **0.1.51:** wallet secrets copied to the clipboard; expo-sqlite's sqlite-vec option is not 16 KB aligned. Recent releases added a *Start here* list in every report, hacking risks mapped to OWASP MASVS, crash and performance checks. Every check is tuned on 850+ open-source React Native and Expo apps, with recently updated ones added every week, to keep false alarms out ([what we found in them](https://dev.to/keel_alican_akyol/we-scanned-470-open-source-react-native-apps-here-is-what-breaks-them-5072)). [All releases →](https://nativekeel.com/changelog)
+**What's new in 0.1.53:** an MCP server for AI coding agents (`npx nativekeel mcp`: scan, upgrade plan and library checks for Claude Code, Codex and Cursor), and a scanned repository can no longer run a command through its own git config. **0.1.52:** Xcode 27's UIScene requirement and the store review checks are back. Recent releases added a *Start here* list in every report, hacking risks mapped to OWASP MASVS, crash and performance checks. Every check is tuned on 850+ open-source React Native and Expo apps, with recently updated ones added every week, to keep false alarms out ([what we found in them](https://dev.to/keel_alican_akyol/we-scanned-470-open-source-react-native-apps-here-is-what-breaks-them-5072)). [All releases →](https://nativekeel.com/changelog)
 
 ```
 Summary  4 critical · 5 high · 4 medium · 6 low
@@ -96,6 +96,30 @@ The report is added to the job summary. With a baseline, only findings that are 
 npx nativekeel --save-baseline .nativekeel-baseline.json   # commit this file
 ```
 
+### Use with AI coding agents (MCP)
+
+Let Claude Code, Codex, Cursor or any MCP client ask NativeKeel what is wrong with a project, how to upgrade it, and which version of a library works with your React Native version, instead of guessing:
+
+```bash
+# Claude Code, from the project folder
+claude mcp add nativekeel -- npx -y nativekeel mcp
+```
+
+```toml
+# Codex: ~/.codex/config.toml
+[mcp_servers.nativekeel]
+command = "npx"
+args = ["-y", "nativekeel", "mcp"]
+```
+
+```json
+// Cursor: .cursor/mcp.json
+{ "mcpServers": { "nativekeel": { "command": "npx", "args": ["-y", "nativekeel", "mcp"],
+  "env": { "NATIVEKEEL_MCP_ROOTS": "/absolute/path/to/your/projects" } } } }
+```
+
+Tools: `scan_project` (findings with `file:line` and fixes), `upgrade_plan` (ordered steps) and `check_library` (latest version, New Architecture support, maintenance, the range that works with a given React Native version, known traps). The server is read-only and only scans folders under the directory it was started in, plus `NATIVEKEEL_MCP_ROOTS` (set it when your client starts servers from another folder). Results never contain source code, and text in the repository that tries to give instructions to the agent is removed. See [SECURITY.md](SECURITY.md#using-nativekeel-from-ai-coding-agents-mcp).
+
 ### Reports for clients
 
 Agencies can put their own name on the HTML report: `npx nativekeel plan --html plan.html --brand "Acme Mobile"`.
@@ -105,6 +129,7 @@ Agencies can put their own name on the HTML report: `npx nativekeel plan --html 
 - **Your code never leaves your machine.** The only requests are package-name lookups on npm and React Native Directory, and one request to npm's advisory endpoint with the names and exact versions of your runtime dependencies (what `npm audit` sends). In Expo projects without `node_modules`, one request to unpkg for the versions your Expo SDK expects (only the `expo` version is sent). `--offline` makes none; a test traps `fetch` to prove it.
 - **Zero dependencies, no install scripts.** Only Node.js built-ins.
 - **Read-only.** It never changes your project.
+- **Safe on untrusted projects.** It never runs project code, and a repository's own git config cannot make the scan run a command.
 - **Secrets are always masked** in every output.
 - **Verifiable releases.** Published with npm provenance from GitHub Actions: `npm audit signatures`.
 

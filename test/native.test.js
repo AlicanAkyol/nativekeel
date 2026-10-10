@@ -411,3 +411,17 @@ test('expo-sqlite options that add 4 KB-aligned prebuilt libraries', () => {
   assert.ok(ids(check(app({ 'android/gradle.properties': 'expo.sqlite.withSQLiteVecExtension=true\n', 'android/app/build.gradle': '' }))).includes('android-16kb-expo-sqlite'));
   assert.ok(!ids(check(app({ 'app.json': JSON.stringify({ expo: { plugins: ['expo-sqlite'] } }) }))).includes('android-16kb-expo-sqlite'), 'default build is aligned');
 });
+
+test('a scanned repository cannot run commands through its own git config (core.fsmonitor)', async () => {
+  const { gitLsFiles } = await import('../src/git.js');
+  const root = makeProject({ 'package.json': '{}', 'a.txt': 'a' });
+  const git = (...args) => spawnSync('git', args, { cwd: root });
+  git('init', '-q');
+  git('add', '-A');
+  const marker = path.join(root, 'fsmonitor-ran');
+  git('config', 'core.fsmonitor', `touch "${marker}"; false`);
+  assert.ok(gitLsFiles(root).includes('a.txt'));
+  assert.equal(fs.existsSync(marker), false, 'the repository fsmonitor hook must not run');
+  spawnSync('git', ['ls-files'], { cwd: root });
+  assert.equal(fs.existsSync(marker), true, 'control: plain git ls-files does run it');
+});

@@ -40,6 +40,13 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.53</h2><p class="date">10 October 2026</p>
+<ul>
+<li><span class="tag">New</span><b>NativeKeel for AI coding agents (MCP).</b> <code>npx nativekeel mcp</code> lets Claude Code, Codex, Cursor and other MCP clients scan a project, get the upgrade plan and check a library against your React Native version, instead of guessing. Read-only, scans only the folders you allow, never returns source code, and removes text in the repository that tries to give the agent instructions. <a href="/ai-agents">Set it up</a>.</li>
+<li><span class="tag">Security</span><b>A scanned repository can no longer run a command through git.</b> NativeKeel runs <code>git ls-files</code> to know which files are committed, and a repository's own <code>.git/config</code> can make that run a program (<code>core.fsmonitor</code>; checked with git 2.50.1). That matters when you scan a project you did not create, such as a zip with its <code>.git</code> folder. Every option that runs a program is now switched off for the scan, and a test plants one and fails if it runs.</li>
+<li><span class="tag">Docs</span><a href="https://github.com/AlicanAkyol/nativekeel/blob/main/SECURITY.md">SECURITY.md</a> now explains how untrusted projects are handled, how the MCP server is isolated, and for each security check what it can and cannot detect.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.52</h2><p class="date">10 October 2026</p>
 <ul>
 <li><span class="tag">App Store</span><b>Xcode 27: the UIScene life cycle.</b> Built with the iOS 27 SDK, an app that has not adopted the scene life cycle stops at launch ("UIScene life cycle is required for apps built with this SDK"), and App Store Connect requires that SDK from April 2027. NativeKeel now says whether your app has adopted it and what to do: React Native 0.88 is the first template with it; Expo SDK 57 opts in with <code>ios.enableSceneSupport</code>; SDK 58 has it by default. 767 of 833 iOS apps in our scan have not adopted it yet. <a href="/fix/uiscene-life-cycle-required-xcode-27">What to change</a>.</li>

@@ -14,7 +14,7 @@ import { compareScans, compareToMarkdown } from '../src/compare.js';
 import { SITE_URL } from '../src/config.js';
 
 const VALUE_FLAGS = new Set(['--html', '--out', '--baseline', '--save-baseline', '--brand', '--sarif', '--markdown', '--fail-on']);
-const COMMANDS = new Set(['scan', 'plan', 'compare', 'help']);
+const COMMANDS = new Set(['scan', 'plan', 'compare', 'mcp', 'help']);
 
 function parseArgs(argv) {
   const flags = {};
@@ -45,6 +45,7 @@ Usage
   npx nativekeel [path]          Scan an app and print the report
   npx nativekeel plan [path]     Write a step-by-step upgrade plan
   npx nativekeel compare <before.json> <after.json>
+  npx nativekeel mcp             Run as an MCP server for AI coding agents (stdio)
                                  What got fixed and what is new between two scans
 
 Scan options
@@ -100,6 +101,14 @@ async function main() {
   }
   if (command === 'help' || flags.h || flags.help) {
     console.log(HELP);
+    return 0;
+  }
+
+  if (command === 'mcp') {
+    // stdout belongs to the protocol from here on; anything else goes to stderr.
+    const { serve } = await import('../src/mcp.js');
+    console.log = (...a) => process.stderr.write(`${a.join(' ')}\n`);
+    await serve({ version: packageVersion() });
     return 0;
   }
 

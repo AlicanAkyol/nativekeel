@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>React Native MCP server for AI coding agents · NativeKeel</title>
+<meta name="description" content="Give Claude Code, Codex and Cursor ground truth on React Native and Expo projects: scans, upgrade plans and library compatibility over MCP. Read-only.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#0b5d55">
+<link rel="canonical" href="https://nativekeel.com/ai-agents">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="NativeKeel">
+<meta property="og:url" content="https://nativekeel.com/ai-agents">
+<meta property="og:title" content="React Native MCP server for AI coding agents · NativeKeel">
+<meta property="og:description" content="Give Claude Code, Codex and Cursor ground truth on React Native and Expo projects: scans, upgrade plans and library compatibility over MCP. Read-only.">
+<meta property="og:image" content="https://nativekeel.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="NativeKeel: npx nativekeel, a free health check for React Native and Expo apps">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="React Native MCP server for AI coding agents · NativeKeel">
+<meta name="twitter:description" content="Give Claude Code, Codex and Cursor ground truth on React Native and Expo projects: scans, upgrade plans and library compatibility over MCP. Read-only.">
+<meta name="twitter:image" content="https://nativekeel.com/og.png">
+<style>
+:root{
+  --bg:#fbfaf7;--surface:#ffffff;--text:#15171b;--muted:#5d6470;--line:#e4e2dc;
+  --accent:#0b5d55;--accent-ink:#ffffff;--accent-soft:#e3f1ee;--red:#c62828;--amber:#b26a00;
+  --code-bg:#12151a;--code-text:#d9dee6;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--bg:#0e1013;--surface:#161a1f;--text:#e9ebef;--muted:#9aa2ad;--line:#262b32;--accent:#3cc4b4;--accent-ink:#06201d;--accent-soft:#12302c;--red:#ff6b6b;--amber:#f0a73a;--code-bg:#090b0e}
+}
+:root[data-theme="dark"]{--bg:#0e1013;--surface:#161a1f;--text:#e9ebef;--muted:#9aa2ad;--line:#262b32;--accent:#3cc4b4;--accent-ink:#06201d;--accent-soft:#12302c;--red:#ff6b6b;--amber:#f0a73a;--code-bg:#090b0e}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:17px/1.7 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+.wrap{max-width:760px;margin:0 auto;padding:0 16px}
+header.top{display:flex;align-items:center;justify-content:space-between;padding:18px 0;max-width:1040px;margin:0 auto;padding-left:16px;padding-right:16px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;color:var(--text);text-decoration:none}
+.logo svg{width:28px;height:28px}
+header.top a.back{color:var(--muted);text-decoration:none;font-size:15px}
+.eyebrow{font:600 13px ui-monospace,SFMono-Regular,Menlo,monospace;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin:40px 0 8px}
+h1{font-size:clamp(30px,4.6vw,42px);line-height:1.15;letter-spacing:-.02em;margin:0 0 16px}
+.lead{font-size:20px;color:var(--muted);margin:0 0 28px}
+h2{font-size:24px;letter-spacing:-.01em;margin:48px 0 8px}
+h3{font-size:18px;margin:28px 0 6px}
+p{margin:0 0 16px}
+.facts{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:8px 0 32px}
+.fact{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px}
+.fact b{display:block;font-size:24px;line-height:1.2}
+.fact span{font-size:13px;color:var(--muted);line-height:1.4;display:block;margin-top:4px}
+.before-after{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:8px 0 24px}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px 18px;font-size:15px}
+.box h4{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.box ul{margin:0;padding-left:18px}
+pre{background:var(--code-bg);color:var(--code-text);border-radius:10px;padding:14px 16px;overflow-x:auto;font:13.5px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;margin:0 0 18px}
+code{font:14px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--accent-soft);padding:1px 5px;border-radius:5px;overflow-wrap:anywhere}
+pre code{background:none;padding:0;font-size:inherit}
+.callout{border-left:4px solid var(--accent);background:var(--surface);border-radius:0 10px 10px 0;padding:14px 18px;margin:0 0 20px;font-size:16px}
+.callout.warn{border-left-color:var(--amber)}
+.step{border-top:1px solid var(--line);padding-top:8px}
+.tag{display:inline-block;font:600 12px ui-monospace,monospace;text-transform:uppercase;letter-spacing:.05em;padding:2px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);margin-right:6px}
+.tag.red{background:color-mix(in srgb,var(--red) 14%,transparent);color:var(--red)}
+.tag.amber{background:color-mix(in srgb,var(--amber) 16%,transparent);color:var(--amber)}
+table{width:100%;border-collapse:collapse;font-size:15px;margin:0 0 24px}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+td.ok{color:var(--accent);font-weight:600;white-space:nowrap}
+.cta{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:24px;margin:48px 0}
+.cta h2{margin-top:0}
+.btn{display:inline-block;text-decoration:none;font-weight:600;padding:11px 16px;border-radius:9px;background:var(--accent);color:var(--accent-ink);margin:6px 8px 0 0}
+.btn.ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
+footer{border-top:1px solid var(--line);margin-top:56px;padding:24px 0 40px;color:var(--muted);font-size:14px}
+@media (max-width:680px){.facts{grid-template-columns:repeat(2,1fr)}.before-after{grid-template-columns:1fr}body{font-size:16px}.lead{font-size:18px}}
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="logo" href="/">
+    <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="var(--accent)"/><path d="M16 6v16M9 22h14M11 26h10" stroke="var(--accent-ink)" stroke-width="3" stroke-linecap="round"/></svg>
+    NativeKeel
+  </a>
+  <a class="back" href="/">← Home</a>
+</header>
+
+<main class="wrap">
+  <p class="eyebrow">For AI coding agents</p>
+  <h1>NativeKeel MCP: React Native ground truth for your AI agent</h1>
+  <p class="lead">AI agents lose hours on React Native upgrades: native build errors, library versions that do not match your React Native version, New Architecture blockers, store rules that changed last month. NativeKeel already knows the answers. Over the Model Context Protocol, Claude Code, Codex, Cursor and other agents can ask it instead of guessing.</p>
+
+  <h2>Set it up</h2>
+<pre><code># Claude Code, from the project folder
+claude mcp add nativekeel -- npx -y nativekeel mcp</code></pre>
+<pre><code># Codex: ~/.codex/config.toml
+[mcp_servers.nativekeel]
+command = "npx"
+args = ["-y", "nativekeel", "mcp"]</code></pre>
+<pre><code>// Cursor: .cursor/mcp.json
+{ "mcpServers": { "nativekeel": { "command": "npx", "args": ["-y", "nativekeel", "mcp"],
+  "env": { "NATIVEKEEL_MCP_ROOTS": "/absolute/path/to/your/projects" } } } }</code></pre>
+
+  <h2>What the agent can ask</h2>
+  <table>
+    <tr><th>Tool</th><th>Answers</th></tr>
+    <tr><td><code>scan_project</code></td><td>What is wrong with this project: upgrade blockers, New Architecture, Google Play and App Store rules (target SDK, 16 KB pages, Xcode 27 UIScene, privacy manifests), crash risks, OWASP MASVS security findings. Each with <code>file:line</code> and the fix.</td></tr>
+    <tr><td><code>upgrade_plan</code></td><td>The order to do it in: phases, the reason for each, concrete steps.</td></tr>
+    <tr><td><code>check_library</code></td><td>Before adding or upgrading a package: latest version, New Architecture support, maintenance status, the range that works with your React Native version, replacements and known traps.</td></tr>
+  </table>
+
+  <h2>Built for untrusted code</h2>
+  <p>An agent reads what a tool returns, so a malicious repository could try to use the tool to pass instructions to the agent. The server is designed against that:</p>
+  <ul>
+    <li><strong>Read-only.</strong> No tool writes files, runs commands or executes project code.</li>
+    <li><strong>Only your folders.</strong> It scans folders under the directory it was started in (plus <code>NATIVEKEEL_MCP_ROOTS</code>), with symlinks resolved.</li>
+    <li><strong>No source code in results.</strong> Findings point to <code>file:line</code>; file contents are never returned.</li>
+    <li><strong>Cleaned text.</strong> Control, zero-width and bidi characters are removed; text that reads like instructions to an AI agent is replaced and reported.</li>
+    <li><strong>git cannot be turned against you.</strong> A repository's own git config cannot make the scan run a program.</li>
+    <li><strong>No dependencies</strong>, published with npm provenance.</li>
+  </ul>
+  <p>Details: <a href="https://github.com/AlicanAkyol/nativekeel/blob/main/SECURITY.md">SECURITY.md</a>.</p>
+
+  <div class="cta">
+    <h2>Prefer the terminal?</h2>
+<pre><code>npx nativekeel</code></pre>
+    <a class="btn" href="sample-report.html">See a sample report</a><a class="btn ghost" href="/changelog">What's new</a>
+  </div>
+
+  <footer><a href="/">NativeKeel</a> · open source, runs on your machine</footer>
+</main>
+</body>
+</html>

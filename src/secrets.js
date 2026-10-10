@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { spawnSync } from 'node:child_process';
+import { gitLsFiles } from './git.js';
 
 const SKIP_DIRS = new Set(['node_modules', '.git', 'Pods', 'build', '.gradle', 'DerivedData', '.expo', 'dist', 'coverage']);
 const EXTENSIONS = new Set(['.js', '.jsx', '.ts', '.tsx', '.json', '.plist', '.xml', '.gradle', '.properties', '.env', '.m', '.mm', '.swift', '.kt', '.java']);
@@ -101,8 +101,8 @@ function* walk(dir) {
 }
 
 function gitTrackedFiles(root) {
-  const res = spawnSync('git', ['ls-files'], { cwd: root, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
-  return res.status === 0 ? new Set(res.stdout.split('\n')) : null;
+  const files = gitLsFiles(root);
+  return files ? new Set(files) : null;
 }
 
 export function scanSecrets(root) {

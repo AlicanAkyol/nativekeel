@@ -34,3 +34,22 @@ test('every exported check is actually called (storeReviewRules was imported but
   }
   assert.deepEqual(missing, []);
 });
+
+test('no hidden bidi or zero-width characters in our own code (Trojan Source)', () => {
+  const base = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
+  const bad = [];
+  for (const dir of ['bin', 'src', 'test', 'scripts']) {
+    const walk = (d) => {
+      for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+        const p = path.join(d, e.name);
+        if (e.isDirectory()) walk(p);
+        else if (/\.(m?js|json)$/.test(e.name)) {
+          const text = fs.readFileSync(p, 'utf8');
+          if (/[\u200b-\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069\ufeff]/.test(text)) bad.push(path.relative(base, p));
+        }
+      }
+    };
+    if (fs.existsSync(path.join(base, dir))) walk(path.join(base, dir));
+  }
+  assert.deepEqual(bad, []);
+});
