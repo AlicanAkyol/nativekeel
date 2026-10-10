@@ -53,3 +53,10 @@ test('no hidden bidi or zero-width characters in our own code (Trojan Source)', 
   }
   assert.deepEqual(bad, []);
 });
+
+test("the README What's new line keeps its fixed tail when the version changes", () => {
+  const readme = fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'README.md'), 'utf8');
+  const line = readme.split('\n').find((l) => l.startsWith("**What's new in "));
+  assert.ok(line, "README has a What's new line");
+  for (const part of ['Recent releases added', 'Every check is tuned on', '[All releases →](https://nativekeel.com/changelog)']) assert.ok(line.includes(part), `missing: ${part}`);
+});
