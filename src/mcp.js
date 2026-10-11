@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import readline from 'node:readline';
 import { loadProject } from './project.js';
@@ -86,7 +87,13 @@ export function allowedRoots(env = process.env, cwd = process.cwd()) {
   };
   // Some clients (Claude Desktop on macOS) start servers in the filesystem root. Taking that as
   // the allowed folder would allow every folder, so it only counts when named explicitly.
-  const start = real(cwd);
+  let start = real(cwd);
+  // Codex starts plugin servers inside the plugin's own folder (PLUGIN_ROOT) rather than the
+  // workspace, so the start folder says nothing about which project is open. There the user's
+  // home folder is the boundary instead; the tools stay read-only and return no source code.
+  const plugin = env.PLUGIN_ROOT && real(env.PLUGIN_ROOT);
+  // NATIVEKEEL_MCP_ROOTS, when set, replaces that boundary.
+  if (start && plugin && (start === plugin || start.startsWith(plugin + path.sep))) start = extra.length ? null : real(os.homedir());
   const startRoot = start && path.parse(start).root === start ? null : start;
   return [startRoot, ...extra.map(real)].filter(Boolean);
 }

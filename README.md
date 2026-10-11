@@ -6,7 +6,7 @@ Health check for React Native and Expo apps. One command, no install, no account
 npx nativekeel
 ```
 
-**What's new in 0.1.62:** `npx nativekeel verify` and the `verify_upgrade` MCP tool: after an upgrade, what got fixed and what is new compared with the last commit; exits 1 on new critical or high findings. **0.1.61:** `npx nativekeel explain "<error>"` and the `explain_error` MCP tool: what a build, launch, crash or store-review error means, the fix, and where your project is affected. **0.1.59:** the upgrade plan lists what changes in the next React Native and Expo versions in your own code. **0.1.57:** a Claude Code plugin (`claude plugin marketplace add AlicanAkyol/nativekeel`) that adds the MCP server and tells Claude when to use it, one-click install for Cursor and VS Code. **0.1.56:** warns before you run a project with planted malware (a VS Code task that runs on folder open, code hidden after a long run of spaces in babel.config.js, JavaScript disguised as a font), the trick behind fake job tests sent to developers. Found in 4 open-source repositories during our weekly scan. **0.1.55:** listed in the official MCP Registry (`io.github.AlicanAkyol/nativekeel`). Recent releases added a *Start here* list in every report, hacking risks mapped to OWASP MASVS, crash and performance checks. Every check is tuned on 850+ open-source React Native and Expo apps, with recently updated ones added every week, to keep false alarms out ([what we found in them](https://dev.to/keel_alican_akyol/we-scanned-470-open-source-react-native-apps-here-is-what-breaks-them-5072)). [All releases →](https://nativekeel.com/changelog)
+**What's new in 0.1.63:** a Codex plugin (`codex plugin marketplace add AlicanAkyol/nativekeel`) with the MCP server and the same skill as the Claude Code plugin. **0.1.62:** `npx nativekeel verify` and the `verify_upgrade` MCP tool: after an upgrade, what got fixed and what is new compared with the last commit; exits 1 on new critical or high findings. **0.1.61:** `npx nativekeel explain "<error>"` and the `explain_error` MCP tool: what a build, launch, crash or store-review error means, the fix, and where your project is affected. **0.1.59:** the upgrade plan lists what changes in the next React Native and Expo versions in your own code. **0.1.57:** a Claude Code plugin (`claude plugin marketplace add AlicanAkyol/nativekeel`) that adds the MCP server and tells Claude when to use it, one-click install for Cursor and VS Code. **0.1.56:** warns before you run a project with planted malware (a VS Code task that runs on folder open, code hidden after a long run of spaces in babel.config.js, JavaScript disguised as a font), the trick behind fake job tests sent to developers. Found in 4 open-source repositories during our weekly scan. **0.1.55:** listed in the official MCP Registry (`io.github.AlicanAkyol/nativekeel`). Recent releases added a *Start here* list in every report, hacking risks mapped to OWASP MASVS, crash and performance checks. Every check is tuned on 850+ open-source React Native and Expo apps, with recently updated ones added every week, to keep false alarms out ([what we found in them](https://dev.to/keel_alican_akyol/we-scanned-470-open-source-react-native-apps-here-is-what-breaks-them-5072)). [All releases →](https://nativekeel.com/changelog)
 
 ```
 Summary  4 critical · 5 high · 4 medium · 7 low
@@ -111,7 +111,14 @@ claude plugin install nativekeel@nativekeel
 
 Or the MCP server alone: `claude mcp add nativekeel -- npx -y nativekeel@latest mcp`
 
-**Codex** (`~/.codex/config.toml`):
+**Codex** (plugin: the MCP server plus the same skill):
+
+```bash
+codex plugin marketplace add AlicanAkyol/nativekeel
+codex plugin add nativekeel@nativekeel
+```
+
+Or only the MCP server, in `~/.codex/config.toml`:
 
 ```toml
 [mcp_servers.nativekeel]

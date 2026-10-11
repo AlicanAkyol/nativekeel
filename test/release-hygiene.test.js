@@ -96,3 +96,17 @@ test('Claude Code plugin runs a locked, published NativeKeel version', () => {
   const skill = fs.readFileSync(path.join(dir, 'skills/react-native-health/SKILL.md'), 'utf8');
   for (const tool of ['scan_project', 'upgrade_plan', 'check_library']) assert.ok(skill.includes(tool), `skill mentions ${tool}`);
 });
+
+test('Codex plugin matches the Claude plugin', () => {
+  const base = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
+  const read = (f) => fs.readFileSync(path.join(base, f), 'utf8');
+  const claude = JSON.parse(read('plugins/nativekeel/.claude-plugin/plugin.json'));
+  const codex = JSON.parse(read('plugins/codex/nativekeel/plugin.json'));
+  assert.equal(codex.name, claude.name);
+  assert.equal(codex.version, claude.version, 'scripts/update-plugin.mjs moves both');
+  assert.deepEqual(JSON.parse(read('plugins/codex/nativekeel/mcp.json')).mcpServers.nativekeel, { type: 'stdio', command: 'npx', args: ['-y', `nativekeel@${claude.version}`, 'mcp'] });
+  assert.equal(read('plugins/codex/nativekeel/skills/react-native-health/SKILL.md'), read('plugins/nativekeel/skills/react-native-health/SKILL.md'), 'the two skill copies must be identical');
+  const market = JSON.parse(read('.agents/plugins/marketplace.json'));
+  assert.equal(market.plugins[0].source.path, './plugins/codex/nativekeel');
+  for (const f of ['README.md', 'LICENSE']) assert.ok(fs.existsSync(path.join(base, 'plugins/codex/nativekeel', f)), f);
+});

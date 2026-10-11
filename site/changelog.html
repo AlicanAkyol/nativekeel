@@ -40,6 +40,12 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.63</h2><p class="date">11 October 2026</p>
+<ul>
+<li><span class="tag">AI agents</span><b>Codex plugin.</b> <code>codex plugin marketplace add AlicanAkyol/nativekeel</code>, then <code>codex plugin add nativekeel@nativekeel</code>. It adds the MCP server, pinned to the release, and the same skill as the Claude Code plugin, so Codex checks the project before upgrades and library changes, explains errors and verifies the upgrade before you commit. Built on the open Agent Plugins format and installed with Codex CLI 0.162.</li>
+<li><span class="tag">Security</span><b>Folder boundary for servers started inside a plugin.</b> Codex starts plugin servers in the plugin's own folder, which says nothing about the project you have open. There NativeKeel uses your home folder as the boundary, or only the folders in <code>NATIVEKEEL_MCP_ROOTS</code> when you set it.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.62</h2><p class="date">11 October 2026</p>
 <ul>
 <li><span class="tag">New</span><b>Check an upgrade before you commit it.</b> <code>npx nativekeel verify</code> compares the project as committed (HEAD, or <code>--base</code> any branch, tag or commit) with your working tree: what got fixed, what is new, and how React Native, Expo and the dependencies moved. It exits with 1 when the change adds a critical or high finding, so it works as a pre-commit or CI check. AI agents get the same as the <code>verify_upgrade</code> MCP tool, and the Claude Code plugin tells Claude to run it after an upgrade. The committed version is unpacked with <code>git archive</code> into a temporary folder outside the project and deleted afterwards; revisions that look like options or ranges are refused, and the repository's own git config cannot make it run anything.</li>

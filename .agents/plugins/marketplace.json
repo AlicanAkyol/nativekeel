@@ -1,0 +1,20 @@
+{
+  "name": "nativekeel",
+  "interface": {
+    "displayName": "NativeKeel"
+  },
+  "plugins": [
+    {
+      "name": "nativekeel",
+      "source": {
+        "source": "local",
+        "path": "./plugins/codex/nativekeel"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Coding"
+    }
+  ]
+}

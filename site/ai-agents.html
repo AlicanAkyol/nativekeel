@@ -97,6 +97,10 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding:24px 0 40px;colo
 claude plugin install nativekeel@nativekeel</code></pre>
   <p>Or only the MCP server: <code>claude mcp add nativekeel -- npx -y nativekeel@latest mcp</code></p>
   <h3>Codex</h3>
+  <p>The plugin adds the MCP server and the same skill:</p>
+<pre><code>codex plugin marketplace add AlicanAkyol/nativekeel
+codex plugin add nativekeel@nativekeel</code></pre>
+  <p>Or only the MCP server:</p>
 <pre><code># ~/.codex/config.toml
 [mcp_servers.nativekeel]
 command = "npx"

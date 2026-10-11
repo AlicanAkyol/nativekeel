@@ -103,3 +103,12 @@ test('MCP: explain_error explains, points into the project, never echoes the inp
   assert.match(none.next, /scan_project/);
   assert.equal((await call(ctxFor(root), 'explain_error', { error: '' })).result.isError, true);
 });
+
+test('MCP: a server started inside a plugin folder (Codex) uses the home folder as the boundary', () => {
+  const pluginRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'nk-plugin-'));
+  const roots = allowedRoots({ PLUGIN_ROOT: pluginRoot }, pluginRoot);
+  assert.deepEqual(roots, [fs.realpathSync(os.homedir())]);
+  assert.deepEqual(allowedRoots({ PLUGIN_ROOT: pluginRoot }, os.tmpdir()), [fs.realpathSync(os.tmpdir())], 'only when started inside the plugin');
+  const project = fs.mkdtempSync(path.join(os.tmpdir(), 'nk-proj-'));
+  assert.deepEqual(allowedRoots({ PLUGIN_ROOT: pluginRoot, NATIVEKEEL_MCP_ROOTS: project }, pluginRoot), [fs.realpathSync(project)], 'NATIVEKEEL_MCP_ROOTS narrows it');
+});

@@ -19,6 +19,17 @@ const edit = (file, fn) => {
   fs.writeFileSync(p, JSON.stringify(json, null, 2) + '\n');
 };
 edit('.claude-plugin/plugin.json', (j) => (j.version = version));
+// The Codex plugin (Agent Plugins format) has no lockfile install, so it pins npx to the version.
+const codex = path.join(root, 'plugins', 'codex', 'nativekeel');
+const editCodex = (file, fn) => {
+  const p = path.join(codex, file);
+  const json = JSON.parse(fs.readFileSync(p, 'utf8'));
+  fn(json);
+  fs.writeFileSync(p, JSON.stringify(json, null, 2) + '\n');
+};
+editCodex('plugin.json', (j) => (j.version = version));
+editCodex('mcp.json', (j) => (j.mcpServers.nativekeel.args = ['-y', `nativekeel@${version}`, 'mcp']));
+fs.copyFileSync(path.join(dir, 'skills/react-native-health/SKILL.md'), path.join(codex, 'skills/react-native-health/SKILL.md'));
 edit('package.json', (j) => (j.dependencies = { nativekeel: version }));
 fs.rmSync(path.join(dir, 'package-lock.json'), { force: true });
 execFileSync('npm', ['install', '--package-lock-only', '--ignore-scripts', '--no-audit', '--no-fund'], { cwd: dir, stdio: 'inherit' });

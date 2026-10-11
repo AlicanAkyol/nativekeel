@@ -84,6 +84,7 @@ jobs:
           git diff --quiet && exit 0
           git config user.name "Alican Akyol"
           git config user.email "11759370+AlicanAkyol@users.noreply.github.com"
-          git commit -am "Claude Code plugin: run nativekeel@$(node -p "require('./package.json').version")"
+          git add -A plugins
+          git commit -m "Claude Code and Codex plugins: run nativekeel@$(node -p "require('./package.json').version")"
           git pull --rebase origin main
           git push origin HEAD:main

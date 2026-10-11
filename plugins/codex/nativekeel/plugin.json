@@ -1,0 +1,22 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "nativekeel",
+  "version": "0.1.62",
+  "description": "React Native and Expo health check for coding agents: upgrade blockers, store rules (target SDK, 16 KB pages, Xcode 27 UIScene, privacy manifests), crash risks, OWASP MASVS security findings, planted malware, error explanations and upgrade verification.",
+  "author": {
+    "name": "Alican Akyol",
+    "url": "https://nativekeel.com"
+  },
+  "homepage": "https://nativekeel.com/ai-agents",
+  "repository": "https://github.com/AlicanAkyol/nativekeel",
+  "license": "MIT",
+  "keywords": [
+    "react-native",
+    "expo",
+    "upgrade",
+    "mobile-security",
+    "app-store",
+    "google-play",
+    "mcp"
+  ]
+}
