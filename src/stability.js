@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { upcomingFinding } from './upcoming.js';
 import path from 'node:path';
 import { cleanVersion, findPackageDir, installedVersion, versionFromSpec } from './project.js';
 import { filesImportingWith } from './usage.js';
@@ -173,6 +174,7 @@ export function stabilityChecks(project) {
 
   for (const f of iosUsageDescriptions(project)) add(f);
   for (const f of removedCoreImports(project)) add(f);
+  if (!project.isLibrary) for (const f of upcomingFinding(project)) add(f);
   if (!project.isLibrary) for (const f of releaseDevServer(project)) add(f);
   return findings;
 }

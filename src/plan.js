@@ -560,6 +560,21 @@ export function buildPlan(result) {
     phases.push({ title: `Upgrade Expo SDK ${expo.from} → ${expo.to}`, why: 'Expo only supports one SDK step at a time reliably.', steps });
   }
 
+  const upcoming = byKind('upcoming')[0];
+  if (upcoming) {
+    const order = { removed: 0, tooling: 1, behavior: 2 };
+    const changes = [...upcoming.changes].sort((a, b) => order[a.kind] - order[b.kind]);
+    const versions = [...new Set(changes.map((c) => c.version))];
+    const prerelease = versions.filter((v) => /beta|release candidate/.test(v));
+    const steps = changes.map((c) => `${c.kind === 'behavior' ? 'Test: ' : ''}**${c.title}** (${c.hits.join(', ')}). ${c.action} [release notes](${c.source})`);
+    if (prerelease.length) steps.push(`${prerelease.join(' and ')} ${prerelease.length === 1 ? 'is' : 'are'} not final yet: these come from the pre-release notes, so prepare now and check the final release notes when you move.`);
+    phases.push({
+      title: `What changes in ${versions.join(' and ')} for this app`,
+      why: 'Release notes list everything; these are the changes that touch this app\'s own code and settings, so you can fix them in the same commit as the upgrade instead of finding them in a crash report.',
+      steps,
+    });
+  }
+
   if (jsAbandoned.length) {
     phases.push({
       title: 'Plan replacements for abandoned JavaScript packages',
