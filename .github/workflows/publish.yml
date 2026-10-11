@@ -53,3 +53,37 @@ jobs:
           tar xzf mcp-publisher.tar.gz mcp-publisher
       - run: ./mcp-publisher login github-oidc
       - run: ./mcp-publisher publish
+
+  # Points the Claude Code plugin (plugins/nativekeel) at the version just published. Its
+  # package-lock.json carries the npm tarball's integrity hash, which exists only after publish,
+  # so this runs here and commits the change; Anthropic's directory picks it up from main.
+  claude-plugin:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - name: Wait for the version on npm
+        run: |
+          V=$(node -p "require('./package.json').version")
+          for i in $(seq 1 30); do
+            [ "$(npm view "nativekeel@$V" version 2>/dev/null)" = "$V" ] && exit 0
+            sleep 10
+          done
+          echo "nativekeel@$V is not visible on npm"; exit 1
+      - run: node scripts/update-plugin.mjs
+      - name: Commit
+        run: |
+          git diff --quiet && exit 0
+          git config user.name "Alican Akyol"
+          git config user.email "11759370+AlicanAkyol@users.noreply.github.com"
+          git commit -am "Claude Code plugin: run nativekeel@$(node -p "require('./package.json').version")"
+          git pull --rebase origin main
+          git push origin HEAD:main

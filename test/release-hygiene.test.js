@@ -73,19 +73,26 @@ test('server.json (MCP Registry) matches package.json', () => {
   assert.ok(server.description.length <= 100, 'the registry allows 100 characters');
 });
 
-test('Claude Code plugin matches package.json and runs the MCP server', () => {
+test('Claude Code plugin runs a locked, published NativeKeel version', () => {
   const base = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
   const pkg = JSON.parse(fs.readFileSync(path.join(base, 'package.json'), 'utf8'));
   const market = JSON.parse(fs.readFileSync(path.join(base, '.claude-plugin/marketplace.json'), 'utf8'));
   const entry = market.plugins.find((p) => p.name === 'nativekeel');
   const dir = path.join(base, entry.source);
-  const plugin = JSON.parse(fs.readFileSync(path.join(dir, '.claude-plugin/plugin.json'), 'utf8'));
+  const read = (f) => JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'));
+  const plugin = read('.claude-plugin/plugin.json');
   assert.equal(plugin.name, entry.name, 'entry name and manifest name must match');
-  assert.equal(plugin.version, pkg.version, 'bump plugins/nativekeel/.claude-plugin/plugin.json with each release');
-  const mcp = JSON.parse(fs.readFileSync(path.join(dir, '.mcp.json'), 'utf8'));
-  // The Claude directory blocks unpinned launchers (npx pkg@latest): pin to this release.
-  assert.deepEqual(mcp.mcpServers.nativekeel.args, ['-y', `${pkg.name}@${pkg.version}`, 'mcp']);
-  assert.ok(fs.existsSync(path.join(dir, 'README.md')) && fs.existsSync(path.join(dir, 'LICENSE')), 'the directory requires a README and a LICENSE in the plugin folder');
+  // CI (publish.yml, claude-plugin job) moves the plugin to each release after npm publish,
+  // because the lockfile needs the published tarball's hash. Until then it runs the previous one.
+  const [a, b] = [plugin.version, pkg.version].map((v) => v.split('.').map(Number));
+  assert.ok(a[0] < b[0] || (a[0] === b[0] && (a[1] < b[1] || (a[1] === b[1] && a[2] <= b[2]))), 'plugin version is not ahead of the package');
+  assert.deepEqual(read('package.json').dependencies, { nativekeel: plugin.version });
+  const locked = read('package-lock.json').packages['node_modules/nativekeel'];
+  assert.equal(locked.version, plugin.version);
+  assert.match(locked.integrity, /^sha512-/);
+  assert.equal(locked.resolved, `https://registry.npmjs.org/nativekeel/-/nativekeel-${plugin.version}.tgz`);
+  assert.deepEqual(read('.mcp.json').mcpServers.nativekeel, { command: 'node', args: ['${CLAUDE_PLUGIN_ROOT}/node_modules/nativekeel/bin/nativekeel.js', 'mcp'] });
+  for (const f of ['README.md', 'LICENSE', '.claude-plugin/icon.png']) assert.ok(fs.existsSync(path.join(dir, f)), `${f} is required by the directory`);
   const skill = fs.readFileSync(path.join(dir, 'skills/react-native-health/SKILL.md'), 'utf8');
   for (const tool of ['scan_project', 'upgrade_plan', 'check_library']) assert.ok(skill.includes(tool), `skill mentions ${tool}`);
 });

@@ -12,7 +12,7 @@ NativeKeel checks React Native and Expo projects before you change them. With th
 
 ## What it runs, reads and sends
 
-- **Runs**: `npx -y nativekeel@<version> mcp`, the open-source [nativekeel](https://www.npmjs.com/package/nativekeel) package from npm, pinned to an exact version and published with npm provenance from [GitHub Actions](https://github.com/AlicanAkyol/nativekeel/actions). It has no dependencies.
+- **Runs**: the open-source [nativekeel](https://www.npmjs.com/package/nativekeel) package from npm, with `node`. The plugin's `package-lock.json` pins one exact version with its integrity hash; Claude Code installs it when you install the plugin, without running install scripts, and the MCP server starts from that copy (`node ${CLAUDE_PLUGIN_ROOT}/node_modules/nativekeel/bin/nativekeel.js mcp`). The package has no dependencies and is published with npm provenance from [GitHub Actions](https://github.com/AlicanAkyol/nativekeel/actions). Requires Node.js 20 or newer.
 - **Reads**: files in the project folder you ask about, only under the folder Claude Code was started in (plus folders listed in `NATIVEKEEL_MCP_ROOTS`). It never writes files, never runs code from the project, and never returns source code to Claude. The only program it starts is `git ls-files`, with every git option that could run a program switched off.
 - **Sends**: package names and versions from `package.json` to `registry.npmjs.org` (latest versions and known vulnerabilities), `reactnative.directory` (New Architecture and maintenance status) and `unpkg.com` (the package versions an Expo SDK expects). No source code, file contents, secrets or personal data leave your machine, and there is no telemetry. Pass `offline: true` to skip these requests.
 

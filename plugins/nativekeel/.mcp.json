@@ -1,12 +1,8 @@
 {
   "mcpServers": {
     "nativekeel": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "nativekeel@0.1.60",
-        "mcp"
-      ]
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/node_modules/nativekeel/bin/nativekeel.js", "mcp"]
     }
   }
 }
