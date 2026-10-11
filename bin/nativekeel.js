@@ -13,8 +13,8 @@ import { applyBaseline, saveBaseline } from '../src/baseline.js';
 import { compareScans, compareToMarkdown } from '../src/compare.js';
 import { SITE_URL } from '../src/config.js';
 
-const VALUE_FLAGS = new Set(['--html', '--out', '--baseline', '--save-baseline', '--brand', '--sarif', '--markdown', '--fail-on', '--path']);
-const COMMANDS = new Set(['scan', 'plan', 'compare', 'explain', 'mcp', 'help']);
+const VALUE_FLAGS = new Set(['--html', '--out', '--baseline', '--save-baseline', '--brand', '--sarif', '--markdown', '--fail-on', '--path', '--base']);
+const COMMANDS = new Set(['scan', 'plan', 'compare', 'explain', 'verify', 'mcp', 'help']);
 
 function parseArgs(argv) {
   const flags = {};
@@ -49,6 +49,10 @@ Usage
   npx nativekeel explain "<error>" [--path <app>]
                                  What a build, launch or store error means and the
                                  fix (or pipe a log in: ... | npx nativekeel explain)
+  npx nativekeel verify [path] [--base <rev>]
+                                 After an upgrade: what got fixed and what is new
+                                 compared with the last commit (exit 1 on new
+                                 critical/high findings)
   npx nativekeel mcp             Run as an MCP server for AI coding agents (stdio)
 
 Scan options
@@ -140,6 +144,24 @@ async function main() {
       if (e.page) console.log(`\nMore: ${e.page}`);
     }
     return 0;
+  }
+
+  if (command === 'verify') {
+    const { verifyUpgrade } = await import('../src/verify.js');
+    let r;
+    try {
+      r = await verifyUpgrade(path.resolve(positional[0] || '.'), { base: flags.base || 'HEAD', offline: !flags.online });
+    } catch (e) {
+      return fail(e.message);
+    }
+    if (flags.json) {
+      console.log(JSON.stringify({ base: r.base, commit: r.commit, ok: r.ok, fixed: r.diff.fixed, added: r.diff.added, versions: r.diff.versions, counts: r.diff.counts, notes: r.notes }, null, 2));
+    } else {
+      console.log(compareToMarkdown({ ...r.diff, dates: [`${r.base} (${r.commit.slice(0, 7)})`, 'working tree'] }, { title: `Compared with ${r.base}` }).replace(/^(\d|\w).*→.*$/m, `${r.base} (${r.commit.slice(0, 7)}) → working tree`));
+      for (const n of r.notes) console.log(`Note: ${n}`);
+      console.log(r.ok ? 'No new critical or high findings.' : `${r.newSerious.length} new critical or high finding(s).`);
+    }
+    return r.ok ? 0 : 1;
   }
 
   if (command === 'compare') {

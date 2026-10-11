@@ -8,6 +8,7 @@ import { createRegistry } from './registry.js';
 import { COMPAT, bestRange } from './compat.js';
 import { REPLACEMENTS, PACKAGE_NOTES } from './rules.js';
 import { explainError, relatedFindings } from './errors.js';
+import { verifyUpgrade } from './verify.js';
 
 // NativeKeel as an MCP server (stdio, JSON-RPC 2.0, one message per line), with no
 // dependencies. AI coding agents call it to learn what is wrong with a React Native / Expo
@@ -198,6 +199,23 @@ async function errorTool(args, ctx) {
   };
 }
 
+async function verifyTool(args, ctx) {
+  const root = resolveTarget(args.path, ctx.roots);
+  const r = await verifyUpgrade(root, { base: typeof args.base === 'string' && args.base ? args.base : 'HEAD', offline: args.offline !== false, analyzeOptions: ctx.analyzeOptions || {} });
+  const brief = (f) => ({ id: f.id, severity: f.severity, title: f.title, fix: f.fix && f.fix.step ? f.fix.step : undefined });
+  return {
+    base: r.base,
+    commit: r.commit,
+    ok: r.ok,
+    verdict: r.ok ? 'No new critical or high findings compared with the base.' : `${r.newSerious.length} new critical or high finding(s): fix them before you commit.`,
+    versions: r.diff.versions,
+    counts: r.diff.counts,
+    fixed: r.diff.fixed.slice(0, MAX_FINDINGS).map(brief),
+    added: r.diff.added.slice(0, MAX_FINDINGS).map(brief),
+    notes: r.notes,
+  };
+}
+
 export const TOOLS = [
   {
     name: 'scan_project',
@@ -256,6 +274,22 @@ export const TOOLS = [
       additionalProperties: false,
     },
     run: errorTool,
+  },
+  {
+    name: 'verify_upgrade',
+    description:
+      'Check a change before committing it: compares the React Native or Expo project as committed at a git revision (default HEAD) with the working tree, and lists what got fixed, what is new and how versions moved. Call it after an upgrade or a dependency change. Read-only: the committed version is unpacked into a temporary folder outside the project and deleted.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        path: { type: 'string', description: 'Project folder (inside a git repository).' },
+        base: { type: 'string', description: 'Git revision to compare with: HEAD (default), HEAD~1, a branch, tag or commit SHA.' },
+        offline: { type: 'boolean', description: 'Default true: both sides are scanned without network requests.' },
+      },
+      required: ['path'],
+      additionalProperties: false,
+    },
+    run: verifyTool,
   },
 ];
 

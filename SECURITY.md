@@ -24,7 +24,7 @@ A repository can contain anything, including files written to attack the tools t
 
 `npx nativekeel mcp` serves the scan, the upgrade plan and library lookups to agents over the Model Context Protocol. An agent reads what the server returns, so a malicious repository could try to use NativeKeel to pass instructions to the agent. The server is built against that:
 
-- **Read-only tools.** None writes files, runs commands or executes project code.
+- **Read-only tools.** None writes to the project, runs project code, or runs commands other than `git ls-files`, and for `verify_upgrade` `git rev-parse` and `git archive` (all with the options that could run a program switched off) and `tar` to unpack the committed version into a temporary folder outside the project, deleted afterwards. Revisions that look like options or ranges are refused.
 - **Only allowed folders.** The agent can scan folders under the directory it started the server in, plus any you list in `NATIVEKEEL_MCP_ROOTS`. Paths are resolved with symlinks followed, so a link inside the project cannot point the scan elsewhere.
 - **No source code in results.** Findings carry `file:line` references, never file contents.
 - **Every string is cleaned.** Control characters, ANSI escapes, zero-width and bidi-override characters (the "Trojan Source" trick) are removed and lengths are capped. Text that reads like instructions to an AI agent ("ignore previous instructions", fake `<system>` tags, `curl … | sh`, requests to send secrets) is replaced with a marker, and the result lists where it was removed.
