@@ -100,7 +100,7 @@ claude plugin install nativekeel@nativekeel</code></pre>
   <p>The plugin adds the MCP server and the same skill:</p>
 <pre><code>codex plugin marketplace add AlicanAkyol/nativekeel
 codex plugin add nativekeel@nativekeel</code></pre>
-  <p>When using the plugin, configure <code>NATIVEKEEL_MCP_ROOTS</code> in the server environment with the absolute project path. Use the workspace root for a monorepo. The plugin does not automatically allow the home folder.</p>
+  <p>Codex starts plugin servers in the plugin's own folder, so the plugin uses your home folder as the boundary. To narrow it to one project, configure the server yourself in <code>~/.codex/config.toml</code> (below) with <code>NATIVEKEEL_MCP_ROOTS</code> in its <code>env</code>.</p>
   <p>Or only the MCP server:</p>
 <pre><code># ~/.codex/config.toml
 [mcp_servers.nativekeel]

@@ -40,6 +40,11 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.67</h2><p class="date">11 October 2026</p>
+<ul>
+<li><span class="tag">Fix</span><b>The Codex plugin can scan projects again.</b> Since 0.1.64, a server started inside a plugin folder needed <code>NATIVEKEEL_MCP_ROOTS</code>, but Codex does not let users set environment variables for a plugin's server, so every scan from the plugin was refused. Codex starts plugin servers in the plugin's own folder, which says nothing about the open project, so the boundary there is your home folder again. To limit it to one project, configure the server yourself in <code>~/.codex/config.toml</code> with <code>NATIVEKEEL_MCP_ROOTS</code>. The tools stay read-only, never run project code and never return source code. Claude Code is not affected: it starts the server in the project folder.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.66</h2><p class="date">11 October 2026</p>
 <p>Six native Android checks trace archive entry paths into file writes and incoming Intent fields into launches, WebViews, local SQL and file reads/writes. An explicit exported manifest entry and matching Java/Kotlin class are required for Intent findings; literal Gradle namespaces are supported. Reports state the attacker prerequisites, Android 14/16 protections and verification steps. Guarded or complex flows are unresolved, not marked safe.</p>
 <p>270 tests pass. A read-only pass over 922 repositories produced no new matching findings; this is scope calibration, not a security certificate. No app or malicious sample was run. <a href="security.html">Coverage and limits →</a></p></div>

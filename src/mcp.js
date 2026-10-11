@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import readline from 'node:readline';
 import { securityOnly } from './security-review.js';
@@ -93,10 +94,13 @@ export function allowedRoots(env = process.env, cwd = process.cwd()) {
   // Some clients (Claude Desktop on macOS) start servers in the filesystem root. Taking that as
   // the allowed folder would allow every folder, so it only counts when named explicitly.
   let start = real(cwd);
-  // A plugin install folder is not the workspace. Require explicit roots there, rather
-  // than silently granting read access to every project under the user's home folder.
+  // Codex starts plugin servers inside the plugin's own folder (PLUGIN_ROOT), which says nothing
+  // about the open project, and it does not let users set environment variables for a plugin's
+  // server. Requiring NATIVEKEEL_MCP_ROOTS there made the plugin unusable, so the boundary is the
+  // user's home folder instead; NATIVEKEEL_MCP_ROOTS, when set (config.toml servers can), replaces
+  // it. The tools stay read-only, never run project code and never return source code.
   const plugin = env.PLUGIN_ROOT && real(env.PLUGIN_ROOT);
-  if (start && plugin && (start === plugin || start.startsWith(plugin + path.sep))) start = null;
+  if (start && plugin && (start === plugin || start.startsWith(plugin + path.sep))) start = extra.length ? null : real(os.homedir());
   const startRoot = start && path.parse(start).root === start ? null : start;
   return [startRoot, ...extra.map(real)].filter(Boolean);
 }
