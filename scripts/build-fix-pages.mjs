@@ -240,7 +240,7 @@ The app supports account creation but does not include an option to initiate acc
   {
     slug: 'app-store-sign-in-with-apple-4-8',
     error: 'Guideline 4.8 - Design - Login Services',
-    title: 'App Store rejection 4.8 (Login Services): Sign in with Apple in a React Native app',
+    title: 'App Store 4.8: Sign in with Apple in React Native',
     description: 'Why iOS apps with Google or Facebook login are rejected under App Store guideline 4.8, exceptions, and how to add Sign in with Apple in React Native and Expo.',
     body: `
 **What the guideline says.** Apps that use a third-party or social login (Google, Facebook, Log in with X and others) to set up or authenticate the user's primary account must also offer an equivalent login that:
