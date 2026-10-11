@@ -111,12 +111,12 @@ args = ["-y", "nativekeel@latest", "mcp"]</code></pre>
   <table>
     <tr><th></th><th>With the NativeKeel plugin</th><th>Without</th></tr>
     <tr><td>How it worked</td><td>Loaded the skill on its own, called <code>upgrade_plan</code> and <code>scan_project</code></td><td>Read files, searched the web</td></tr>
-    <tr><td>Turns</td><td>7</td><td>16</td></tr>
+    <tr><td>Turns · cost</td><td>9 · $0.34</td><td>16 · $0.63</td></tr>
     <tr><td>Xcode 27 / UIScene</td><td>Found, with the exact package versions</td><td>Found</td></tr>
     <tr><td>Missing account deletion (App Store 5.1.1(v), Google Play)</td><td>Found: it blocks the next release</td><td>Missed</td></tr>
-    <tr><td>Expo SDK 58 release-note changes (R8 on by default)</td><td>Not covered</td><td>Found</td></tr>
+    <tr><td>Expo SDK 58 changes (R8 on by default in release builds)</td><td>Found, and checked that the app's release scripts are affected</td><td>Found</td></tr>
   </table>
-  <p>One app, one run each, so read it as an example rather than a benchmark. The last row is on our list: upgrade plans will include what changes in the target version.</p>
+  <p>One app, one run each, so read it as an example rather than a benchmark. The first run (NativeKeel 0.1.57) missed the SDK 58 changes, which the agent without NativeKeel found on the web; 0.1.59 added them, and the table shows the run after that.</p>
 
   <h2>What the agent can ask</h2>
   <table>
