@@ -90,20 +90,38 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding:24px 0 40px;colo
   <p class="lead">AI agents lose hours on React Native upgrades: native build errors, library versions that do not match your React Native version, New Architecture blockers, store rules that changed last month. NativeKeel already knows the answers. Over the Model Context Protocol, Claude Code, Codex, Cursor and other agents can ask it instead of guessing.</p>
 
   <h2>Set it up</h2>
-<pre><code># Claude Code, from the project folder
-claude mcp add nativekeel -- npx -y nativekeel mcp</code></pre>
-<pre><code># Codex: ~/.codex/config.toml
+  <p><a class="btn" href="https://cursor.com/install-mcp?name=nativekeel&amp;config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsIm5hdGl2ZWtlZWxAbGF0ZXN0IiwibWNwIl0sImVudiI6eyJOQVRJVkVLRUVMX01DUF9ST09UUyI6IiR7d29ya3NwYWNlRm9sZGVyfSJ9fQ%3D%3D">Install in Cursor</a><a class="btn" href="https://vscode.dev/redirect/mcp/install?name=nativekeel&amp;config=%7B%22name%22%3A%22nativekeel%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22nativekeel%40latest%22%2C%22mcp%22%5D%2C%22env%22%3A%7B%22NATIVEKEEL_MCP_ROOTS%22%3A%22%24%7BworkspaceFolder%7D%22%7D%7D">Install in VS Code</a></p>
+  <h3>Claude Code</h3>
+  <p>The plugin adds the MCP server and a skill that tells Claude when to use it, so you do not have to ask:</p>
+<pre><code>claude plugin marketplace add AlicanAkyol/nativekeel
+claude plugin install nativekeel@nativekeel</code></pre>
+  <p>Or only the MCP server: <code>claude mcp add nativekeel -- npx -y nativekeel@latest mcp</code></p>
+  <h3>Codex</h3>
+<pre><code># ~/.codex/config.toml
 [mcp_servers.nativekeel]
 command = "npx"
-args = ["-y", "nativekeel", "mcp"]</code></pre>
-<pre><code>// Cursor: .cursor/mcp.json
-{ "mcpServers": { "nativekeel": { "command": "npx", "args": ["-y", "nativekeel", "mcp"],
-  "env": { "NATIVEKEEL_MCP_ROOTS": "/absolute/path/to/your/projects" } } } }</code></pre>
+args = ["-y", "nativekeel@latest", "mcp"]</code></pre>
+  <h3>Any agent, no MCP needed</h3>
+  <p>Add one line to your project's <code>AGENTS.md</code> or <code>CLAUDE.md</code>:</p>
+<pre><code>Before upgrading React Native or Expo, adding a native library, or preparing a store release, run `npx -y nativekeel@latest --json` and fix the critical and high findings first.</code></pre>
+  <p>Also listed in the <a href="https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.AlicanAkyol/nativekeel">official MCP Registry</a> as <code>io.github.AlicanAkyol/nativekeel</code>.</p>
+
+  <h2>What changes, on one real app</h2>
+  <p>We asked Claude Code the same question in an open-source Expo SDK 57 app, without naming NativeKeel: <em>"I want to upgrade this app to the latest React Native. What will break and what should I do first?"</em></p>
+  <table>
+    <tr><th></th><th>With the NativeKeel plugin</th><th>Without</th></tr>
+    <tr><td>How it worked</td><td>Loaded the skill on its own, called <code>upgrade_plan</code> and <code>scan_project</code></td><td>Read files, searched the web</td></tr>
+    <tr><td>Turns</td><td>7</td><td>16</td></tr>
+    <tr><td>Xcode 27 / UIScene</td><td>Found, with the exact package versions</td><td>Found</td></tr>
+    <tr><td>Missing account deletion (App Store 5.1.1(v), Google Play)</td><td>Found: it blocks the next release</td><td>Missed</td></tr>
+    <tr><td>Expo SDK 58 release-note changes (R8 on by default)</td><td>Not covered</td><td>Found</td></tr>
+  </table>
+  <p>One app, one run each, so read it as an example rather than a benchmark. The last row is on our list: upgrade plans will include what changes in the target version.</p>
 
   <h2>What the agent can ask</h2>
   <table>
     <tr><th>Tool</th><th>Answers</th></tr>
-    <tr><td><code>scan_project</code></td><td>What is wrong with this project: upgrade blockers, New Architecture, Google Play and App Store rules (target SDK, 16 KB pages, Xcode 27 UIScene, privacy manifests), crash risks, OWASP MASVS security findings. Each with <code>file:line</code> and the fix.</td></tr>
+    <tr><td><code>scan_project</code></td><td>What is wrong with this project: upgrade blockers, New Architecture, Google Play and App Store rules (target SDK, 16 KB pages, Xcode 27 UIScene, privacy manifests), crash risks, OWASP MASVS security findings, and malware planted in the project. Each with <code>file:line</code> and the fix.</td></tr>
     <tr><td><code>upgrade_plan</code></td><td>The order to do it in: phases, the reason for each, concrete steps.</td></tr>
     <tr><td><code>check_library</code></td><td>Before adding or upgrading a package: latest version, New Architecture support, maintenance status, the range that works with your React Native version, replacements and known traps.</td></tr>
   </table>
@@ -112,7 +130,8 @@ args = ["-y", "nativekeel", "mcp"]</code></pre>
   <p>An agent reads what a tool returns, so a malicious repository could try to use the tool to pass instructions to the agent. The server is designed against that:</p>
   <ul>
     <li><strong>Read-only.</strong> No tool writes files, runs commands or executes project code.</li>
-    <li><strong>Only your folders.</strong> It scans folders under the directory it was started in (plus <code>NATIVEKEEL_MCP_ROOTS</code>), with symlinks resolved.</li>
+    <li><strong>Warns before the agent runs a project.</strong> If the project hides malware (a VS Code task that runs on folder open, code hidden after a long run of spaces in <code>babel.config.js</code>, JavaScript saved as a font), the result tells the agent not to install, start or build it.</li>
+    <li><strong>Only your folders.</strong> It scans folders under the directory it was started in (plus <code>NATIVEKEEL_MCP_ROOTS</code>), with symlinks resolved. A server started in the filesystem root allows nothing until you name a folder.</li>
     <li><strong>No source code in results.</strong> Findings point to <code>file:line</code>; file contents are never returned.</li>
     <li><strong>Cleaned text.</strong> Control, zero-width and bidi characters are removed; text that reads like instructions to an AI agent is replaced and reported.</li>
     <li><strong>git cannot be turned against you.</strong> A repository's own git config cannot make the scan run a program.</li>

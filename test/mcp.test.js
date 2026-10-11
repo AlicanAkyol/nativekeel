@@ -81,3 +81,11 @@ test('MCP: a project with planted malware gets a stop warning', async () => {
   const clean = makeProject({ 'package.json': { name: 'app', dependencies: { 'react-native': '0.80.0' } } });
   assert.equal((await call(ctxFor(clean), 'scan_project', { path: clean, offline: true })).result.structuredContent.warning, undefined);
 });
+
+test('MCP: a server started in the filesystem root does not allow every folder', () => {
+  const root = makeProject({ 'package.json': '{}' });
+  const fsRoot = path.parse(root).root;
+  assert.deepEqual(allowedRoots({}, fsRoot), []);
+  assert.throws(() => resolveTarget(root, allowedRoots({}, fsRoot)), /outside/);
+  assert.equal(resolveTarget(root, allowedRoots({ NATIVEKEEL_MCP_ROOTS: root }, fsRoot)), fs.realpathSync(root));
+});

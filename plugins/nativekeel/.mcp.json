@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "nativekeel": {
+      "command": "npx",
+      "args": ["-y", "nativekeel@latest", "mcp"]
+    }
+  }
+}

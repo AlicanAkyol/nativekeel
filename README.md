@@ -6,7 +6,7 @@ Health check for React Native and Expo apps. One command, no install, no account
 npx nativekeel
 ```
 
-**What's new in 0.1.56:** warns before you run a project with planted malware (a VS Code task that runs on folder open, code hidden after a long run of spaces in babel.config.js, JavaScript disguised as a font), the trick behind fake job tests sent to developers. Found in 4 open-source repositories during our weekly scan. **0.1.55:** listed in the official MCP Registry (`io.github.AlicanAkyol/nativekeel`). Recent releases added a *Start here* list in every report, hacking risks mapped to OWASP MASVS, crash and performance checks. Every check is tuned on 850+ open-source React Native and Expo apps, with recently updated ones added every week, to keep false alarms out ([what we found in them](https://dev.to/keel_alican_akyol/we-scanned-470-open-source-react-native-apps-here-is-what-breaks-them-5072)). [All releases →](https://nativekeel.com/changelog)
+**What's new in 0.1.57:** a Claude Code plugin (`claude plugin marketplace add AlicanAkyol/nativekeel`) that adds the MCP server and tells Claude when to use it, one-click install for Cursor and VS Code. **0.1.56:** warns before you run a project with planted malware (a VS Code task that runs on folder open, code hidden after a long run of spaces in babel.config.js, JavaScript disguised as a font), the trick behind fake job tests sent to developers. Found in 4 open-source repositories during our weekly scan. **0.1.55:** listed in the official MCP Registry (`io.github.AlicanAkyol/nativekeel`). Recent releases added a *Start here* list in every report, hacking risks mapped to OWASP MASVS, crash and performance checks. Every check is tuned on 850+ open-source React Native and Expo apps, with recently updated ones added every week, to keep false alarms out ([what we found in them](https://dev.to/keel_alican_akyol/we-scanned-470-open-source-react-native-apps-here-is-what-breaks-them-5072)). [All releases →](https://nativekeel.com/changelog)
 
 ```
 Summary  4 critical · 5 high · 4 medium · 6 low
@@ -98,24 +98,31 @@ npx nativekeel --save-baseline .nativekeel-baseline.json   # commit this file
 
 ### Use with AI coding agents (MCP)
 
-Let Claude Code, Codex, Cursor or any MCP client ask NativeKeel what is wrong with a project, how to upgrade it, and which version of a library works with your React Native version, instead of guessing:
+Let Claude Code, Codex, Cursor, VS Code or any MCP client ask NativeKeel what is wrong with a project, how to upgrade it, and which version of a library works with your React Native version, instead of guessing. With it installed, the agent checks the project before it upgrades React Native or Expo, adds a native library, prepares a store release, or runs a project you did not write.
+
+[![Install in Cursor](https://img.shields.io/badge/Cursor-Install_NativeKeel-black?logo=cursor)](https://cursor.com/install-mcp?name=nativekeel&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsIm5hdGl2ZWtlZWxAbGF0ZXN0IiwibWNwIl0sImVudiI6eyJOQVRJVkVLRUVMX01DUF9ST09UUyI6IiR7d29ya3NwYWNlRm9sZGVyfSJ9fQ%3D%3D) [![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_NativeKeel-0098FF?logo=visualstudiocode)](https://vscode.dev/redirect/mcp/install?name=nativekeel&config=%7B%22name%22%3A%22nativekeel%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22nativekeel%40latest%22%2C%22mcp%22%5D%2C%22env%22%3A%7B%22NATIVEKEEL_MCP_ROOTS%22%3A%22%24%7BworkspaceFolder%7D%22%7D%7D)
+
+**Claude Code** (plugin: the MCP server plus a skill that tells Claude when to use it):
 
 ```bash
-# Claude Code, from the project folder
-claude mcp add nativekeel -- npx -y nativekeel mcp
+claude plugin marketplace add AlicanAkyol/nativekeel
+claude plugin install nativekeel@nativekeel
 ```
+
+Or the MCP server alone: `claude mcp add nativekeel -- npx -y nativekeel@latest mcp`
+
+**Codex** (`~/.codex/config.toml`):
 
 ```toml
-# Codex: ~/.codex/config.toml
 [mcp_servers.nativekeel]
 command = "npx"
-args = ["-y", "nativekeel", "mcp"]
+args = ["-y", "nativekeel@latest", "mcp"]
 ```
 
-```json
-// Cursor: .cursor/mcp.json
-{ "mcpServers": { "nativekeel": { "command": "npx", "args": ["-y", "nativekeel", "mcp"],
-  "env": { "NATIVEKEEL_MCP_ROOTS": "/absolute/path/to/your/projects" } } } }
+**Any other agent**, no MCP needed: add this line to your project's `AGENTS.md` or `CLAUDE.md`:
+
+```markdown
+Before upgrading React Native or Expo, adding a native library, or preparing a store release, run `npx -y nativekeel@latest --json` and fix the critical and high findings first.
 ```
 
 Also listed in the [official MCP Registry](https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.AlicanAkyol/nativekeel) as `io.github.AlicanAkyol/nativekeel`.

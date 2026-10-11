@@ -75,13 +75,18 @@ export function cleanTree(value, flagged, where = '$') {
 // (path-delimited). A scan target must resolve, symlinks followed, inside one of them.
 export function allowedRoots(env = process.env, cwd = process.cwd()) {
   const extra = (env.NATIVEKEEL_MCP_ROOTS || '').split(path.delimiter).filter(Boolean);
-  return [cwd, ...extra].map((r) => {
+  const real = (r) => {
     try {
       return fs.realpathSync(path.resolve(r));
     } catch {
       return null;
     }
-  }).filter(Boolean);
+  };
+  // Some clients (Claude Desktop on macOS) start servers in the filesystem root. Taking that as
+  // the allowed folder would allow every folder, so it only counts when named explicitly.
+  const start = real(cwd);
+  const startRoot = start && path.parse(start).root === start ? null : start;
+  return [startRoot, ...extra.map(real)].filter(Boolean);
 }
 
 export function resolveTarget(input, roots) {

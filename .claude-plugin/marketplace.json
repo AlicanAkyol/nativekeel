@@ -1,0 +1,12 @@
+{
+  "name": "nativekeel",
+  "description": "NativeKeel: React Native and Expo health checks for AI coding agents",
+  "owner": { "name": "Alican Akyol", "url": "https://nativekeel.com" },
+  "plugins": [
+    {
+      "name": "nativekeel",
+      "source": "./plugins/nativekeel",
+      "description": "Checks a React Native or Expo project before an upgrade, a new library or a store release: upgrade blockers, Google Play and App Store rules, crash risks, security findings and planted malware. Read-only MCP server plus a skill that tells Claude when to use it."
+    }
+  ]
+}

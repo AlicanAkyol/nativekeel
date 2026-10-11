@@ -1,0 +1,37 @@
+# NativeKeel
+
+> Free, open-source health check for React Native and Expo apps (`npx nativekeel`), also available as an MCP server for AI coding agents. It reports what will break an upgrade or a store release, with file:line references and fixes: New Architecture and library compatibility, Google Play and App Store rules (target SDK, 16 KB page size, Xcode 27 UIScene life cycle, privacy manifests, account deletion), crash risks, OWASP MASVS security findings, leaked secrets and malware planted in a project. It reads the project and never runs its code. Runs locally; no account, no upload.
+
+## Use it
+
+- CLI: `npx nativekeel` in the project folder; `npx nativekeel plan` for an ordered upgrade plan; `--json` for machine-readable output.
+- Claude Code plugin: `claude plugin marketplace add AlicanAkyol/nativekeel` then `claude plugin install nativekeel@nativekeel`.
+- MCP server (Claude Code, Codex, Cursor, VS Code): `npx -y nativekeel@latest mcp`. Tools: `scan_project`, `upgrade_plan`, `check_library`. Official MCP Registry name: `io.github.AlicanAkyol/nativekeel`.
+- Any agent: add to AGENTS.md: "Before upgrading React Native or Expo, adding a native library, or preparing a store release, run `npx -y nativekeel@latest --json` and fix the critical and high findings first."
+
+## Pages
+
+- [AI coding agents (MCP)](https://nativekeel.com/ai-agents): setup for Claude Code, Codex, Cursor and VS Code; security design.
+- [Sample report](https://nativekeel.com/sample-report.html): what a scan returns.
+- [AI provider keys in React Native apps](https://nativekeel.com/ai-keys): why EXPO_PUBLIC_ and react-native-config keys ship in the bundle.
+- [What's new](https://nativekeel.com/changelog): every release.
+- [Source and security model](https://github.com/AlicanAkyol/nativekeel): README and SECURITY.md.
+
+## Fixes for common React Native and Expo errors
+
+- [android:exported needs to be explicitly specified (React Native, targetSdk 31+)](https://nativekeel.com/fix/android-exported): Why a React Native build fails with "android:exported needs to be explicitly specified" after raising targetSdk, and how to fix every component at once.
+- [App Store rejection 5.1.1(v): account deletion in a React Native app](https://nativekeel.com/fix/app-store-account-deletion-5-1-1-v): Why Apple rejects React Native and Expo apps under guideline 5.1.1(v), what counts as account deletion, and what Google Play asks for as well.
+- [App Store rejection 4.8 (Login Services): Sign in with Apple in a React Native app](https://nativekeel.com/fix/app-store-sign-in-with-apple-4-8): Why an iOS app with Google or Facebook login is rejected under App Store guideline 4.8, the exceptions, and how to add Sign in with Apple in React Native and Expo.
+- [Expo: "The following packages should be updated for best compatibility"](https://nativekeel.com/fix/expo-packages-should-be-updated): What Expo's "packages should be updated for best compatibility with the installed expo version" warning means, when it causes crashes, and the one-command fix.
+- [Google Play 16 KB page size warning in a React Native app](https://nativekeel.com/fix/google-play-16-kb-page-size): What Google Play's 16 KB memory page size warning means for React Native and Expo apps, the 1 February 2027 deadline, and which version fixes it.
+- [Google Play: "must target at least API level" in a React Native app](https://nativekeel.com/fix/google-play-target-api-level): What Google Play's target API level error means for React Native and Expo apps in 2026, the deadlines, and what usually breaks when you raise targetSdk.
+- [ImageBackground and SafeAreaView are deprecated in React Native: how to migrate](https://nativekeel.com/fix/imagebackground-safeareaview-deprecated): React Native 0.87 deprecated ImageBackground (and 0.81 SafeAreaView). Why SafeAreaView already misbehaves on Android 15, and drop-in replacements for both.
+- [ITMS-91061: Missing privacy manifest in a React Native app](https://nativekeel.com/fix/itms-91061-missing-privacy-manifest): What App Store Connect's ITMS-91061 "Missing privacy manifest" means for React Native and Expo apps, which pods cause it, and which package to update.
+- [MissingForegroundServiceTypeException in React Native (Android 14)](https://nativekeel.com/fix/missing-foreground-service-type): Why a React Native app crashes with MissingForegroundServiceTypeException after targeting Android 14, and how to declare the foreground service type.
+- [Google Play: "signed in debug mode" in a React Native app](https://nativekeel.com/fix/signed-in-debug-mode): Why Google Play refuses a React Native release build "signed in debug mode", and how to set up release signing without committing your passwords.
+- [Supabase tables without row level security in a React Native app](https://nativekeel.com/fix/supabase-rls-disabled): Why a Supabase table without row level security is readable by anyone who has your React Native or Expo app, and how to enable RLS with policies.
+- [Xcode 27 "UIScene life cycle is required": React Native fix](https://nativekeel.com/fix/uiscene-life-cycle-required-xcode-27): Why a React Native or Expo app stops at launch when built with Xcode 27 and the iOS 27 SDK, the April 2027 App Store deadline, and how to adopt UIScene.
+
+## Services
+
+- [Fixed-price React Native and Expo upgrades](https://nativekeel.com/#services) by the maintainer, for teams that prefer not to do it themselves.

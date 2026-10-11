@@ -72,3 +72,18 @@ test('server.json (MCP Registry) matches package.json', () => {
   assert.deepEqual(server.packages[0].packageArguments, [{ type: 'positional', value: 'mcp' }]);
   assert.ok(server.description.length <= 100, 'the registry allows 100 characters');
 });
+
+test('Claude Code plugin matches package.json and runs the MCP server', () => {
+  const base = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
+  const pkg = JSON.parse(fs.readFileSync(path.join(base, 'package.json'), 'utf8'));
+  const market = JSON.parse(fs.readFileSync(path.join(base, '.claude-plugin/marketplace.json'), 'utf8'));
+  const entry = market.plugins.find((p) => p.name === 'nativekeel');
+  const dir = path.join(base, entry.source);
+  const plugin = JSON.parse(fs.readFileSync(path.join(dir, '.claude-plugin/plugin.json'), 'utf8'));
+  assert.equal(plugin.name, entry.name, 'entry name and manifest name must match');
+  assert.equal(plugin.version, pkg.version, 'bump plugins/nativekeel/.claude-plugin/plugin.json with each release');
+  const mcp = JSON.parse(fs.readFileSync(path.join(dir, '.mcp.json'), 'utf8'));
+  assert.deepEqual(mcp.mcpServers.nativekeel.args, ['-y', `${pkg.name}@latest`, 'mcp']);
+  const skill = fs.readFileSync(path.join(dir, 'skills/react-native-health/SKILL.md'), 'utf8');
+  for (const tool of ['scan_project', 'upgrade_plan', 'check_library']) assert.ok(skill.includes(tool), `skill mentions ${tool}`);
+});
