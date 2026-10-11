@@ -11,10 +11,11 @@ import { markdownReport } from '../src/report-md.js';
 import { buildPlan, planToMarkdown } from '../src/plan.js';
 import { applyBaseline, saveBaseline } from '../src/baseline.js';
 import { compareScans, compareToMarkdown } from '../src/compare.js';
+import { securityOnly } from '../src/security-review.js';
 import { SITE_URL } from '../src/config.js';
 
 const VALUE_FLAGS = new Set(['--html', '--out', '--baseline', '--save-baseline', '--brand', '--sarif', '--markdown', '--fail-on', '--path', '--base']);
-const COMMANDS = new Set(['scan', 'plan', 'compare', 'explain', 'verify', 'mcp', 'help']);
+const COMMANDS = new Set(['scan', 'security', 'plan', 'compare', 'explain', 'verify', 'mcp', 'help']);
 
 function parseArgs(argv) {
   const flags = {};
@@ -43,6 +44,7 @@ const HELP = `NativeKeel: health check for React Native and Expo apps
 
 Usage
   npx nativekeel [path]          Scan an app and print the report
+  npx nativekeel security [path]  Review data theft, account access and code execution risks
   npx nativekeel plan [path]     Write a step-by-step upgrade plan
   npx nativekeel compare <before.json> <after.json>
                                  What got fixed and what is new between two scans
@@ -195,6 +197,7 @@ async function main() {
   const failOn = flags['fail-on'] || 'critical';
   if (!['critical', 'high', 'medium', 'low', 'never'].includes(failOn)) fail('--fail-on must be one of critical, high, medium, low, never');
   let result = await runScan(root, flags);
+  if (command === 'security') result = securityOnly(result);
   if (flags['save-baseline']) {
     const count = saveBaseline(flags['save-baseline'], result);
     process.stderr.write(`Baseline saved with ${count} known findings: ${path.resolve(flags['save-baseline'])}\n`);
@@ -207,6 +210,7 @@ async function main() {
     }
   }
 
+  if (command === 'security') result = securityOnly(result);
   if (flags.html) write(flags.html, htmlReport(result, { brand }));
   if (flags.markdown) write(flags.markdown, markdownReport(result, { verbose: !!flags.verbose }));
   if (flags.sarif) write(flags.sarif, `${JSON.stringify(sarifReport(result, { version: packageVersion() }), null, 2)}\n`);

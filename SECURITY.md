@@ -76,3 +76,7 @@ Secret values appear only masked. SARIF output carries the same information for 
 ## Reporting a vulnerability
 
 Email **hello@nativekeel.com** with the subject `SECURITY`. Please do not open a public issue. You will get a reply within two business days, and a fix or a plan within seven.
+
+## Focused mobile security review
+
+`nativekeel security` / MCP `security_audit` include existing security checks plus eight bounded flow/configuration checks. New findings distinguish static evidence from attacker prerequisites and provide verification steps. No live service is probed. Read [the 0.1.65 method and limitations](docs/mobile-security-0.1.65.md); zero findings or MASVS counts are not security certification.

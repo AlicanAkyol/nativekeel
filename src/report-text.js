@@ -22,7 +22,7 @@ export function textReport(result, { color = true, verbose = false } = {}) {
   const arch = (v) => (v === true ? c.green('on') : v === false ? c.red('off') : defaultOn ? c.gray('on (default)') : c.red('off (default)'));
 
   out.push('');
-  out.push(`${c.bold('NativeKeel health report')}  ${p.name || ''}`);
+  out.push(`${c.bold(result.focus === 'security' ? 'NativeKeel security report' : 'NativeKeel health report')}  ${p.name || ''}`);
   if (p.reactNative) out.push(`React Native ${p.reactNative}${result.latest.reactNative ? c.gray(` (latest ${result.latest.reactNative})`) : ''}`);
   if (p.expo) out.push(`Expo SDK ${p.expo.split('.')[0]}${p.managed ? ' (managed)' : ''}${result.latest.expo ? c.gray(` (latest SDK ${result.latest.expo.split('.')[0]})`) : ''}`);
   out.push(`New Architecture  android: ${arch(p.newArch.android)}  ios: ${arch(p.newArch.ios)}`);
@@ -42,6 +42,7 @@ export function textReport(result, { color = true, verbose = false } = {}) {
       for (const f of group.filter((x) => !x.id.startsWith('dep-major:'))) {
         out.push(`${label.low} ${c.bold(f.title)}`);
         out.push(c.gray(indent + f.detail));
+        if (f.attack) { out.push(indent + 'Verify: ' + f.attack.validation); out.push(indent + 'Fix: ' + f.fix.step); }
       }
       if (bumps.length) {
         const shown = verbose ? bumps : bumps.slice(0, 8);
@@ -57,6 +58,7 @@ export function textReport(result, { color = true, verbose = false } = {}) {
     for (const f of group.filter((x) => !(x.fix && x.fix.expoManaged))) {
       out.push(`${label[sev]} ${c.bold(f.title)}`);
       out.push(c.gray(indent + f.detail));
+      if (f.attack) { out.push(indent + 'Verify: ' + f.attack.validation); out.push(indent + 'Fix: ' + f.fix.step); }
     }
     if (expoMoves.length) {
       const names = expoMoves.map((f) => f.fix.name);
@@ -74,10 +76,19 @@ export function textReport(result, { color = true, verbose = false } = {}) {
   if (result.security) {
     const groups = Object.entries(result.security);
     const withIssues = groups.filter(([, k]) => k > 0).map(([g, k]) => `${g.toLowerCase()} ${k}`);
-    out.push(`${c.bold('Security')} (OWASP MASVS)  ${withIssues.length ? withIssues.join(' · ') : c.green('no issues')}${c.gray(`  ·  ${groups.length} groups checked`)}`);
+    out.push(`${c.bold('Security')} (OWASP MASVS)  ${withIssues.length ? withIssues.join(' · ') : 'no matching findings'}${c.gray(`  ·  ${groups.length} finding categories; not a compliance verdict`)}`);
   }
 
-  if (n.critical + n.high > 0) {
+  if (result.securityReview) {
+    out.push(c.gray(result.securityReview.verdict));
+    if (result.focus === 'security') {
+      for (const [risk, group] of Object.entries(result.securityReview.risks)) out.push(`  ${risk}: ${group.count}`);
+      const coverage = result.securityReview.flowCoverage;
+      if (coverage) out.push(`Flow/config checks: ${coverage.filesRead} source files read; ${Object.values(coverage.skipped).reduce((a, b) => a + b, 0)} skipped paths/files.`);
+      for (const limit of result.securityReview.limitations) out.push(c.gray('Scope: ' + limit));
+    }
+  }
+  if (n.critical + n.high > 0 && result.focus !== 'security') {
     out.push('');
     out.push(c.bold('Start here'));
     const plain = (t) => t.replace(/\*\*/g, '').replace(/`/g, '');
@@ -88,7 +99,7 @@ export function textReport(result, { color = true, verbose = false } = {}) {
     out.push(c.gray(`No time to do it yourself? Fixed-price upgrades: ${SITE_URL}/#services`));
     out.push(c.gray(`Something wrong for your app? Tell us (no code needed): ${ISSUE_URL}`));
   } else if (!result.findings.length) {
-    out.push(c.green('Nothing to fix. This app is in good shape.'));
+    out.push(c.green('No matching findings. Unchecked runtime and backend risks may remain.'));
   }
   out.push('');
   return out.join('\n');

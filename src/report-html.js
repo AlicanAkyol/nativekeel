@@ -12,7 +12,7 @@ const rich = (s) => esc(s).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\
 export function htmlReport(result, { brand = null, plan = null } = {}) {
   const p = result.project;
   const n = countBySeverity(result.findings);
-  const title = `${p.name || 'App'} health report`;
+  const title = `${p.name || 'App'} ${result.focus === 'security' ? 'security' : 'health'} report`;
   const sevLabel = { critical: 'Critical', high: 'High', medium: 'Medium', low: 'Low', info: 'Info' };
   const defaultOn = !!result.project.reactNative && Number(result.project.reactNative.split('.')[1]) >= 76;
   const arch = (v) => (v === true ? 'on' : v === false ? 'off' : defaultOn ? 'on (default)' : 'off (default)');
@@ -22,7 +22,7 @@ export function htmlReport(result, { brand = null, plan = null } = {}) {
   const rows = SEVERITIES.flatMap((sev) =>
     result.findings
       .filter((f) => f.severity === sev && !isBump(f))
-      .map((f) => `<li class="f ${sev}"><span class="tag">${sevLabel[sev]}</span><div><strong>${rich(f.title)}</strong><p>${rich(f.detail)}</p></div></li>`),
+      .map((f) => `<li class="f ${sev}"><span class="tag">${sevLabel[sev]}</span><div><strong>${rich(f.title)}</strong><p>${rich(f.detail)}</p>${f.attack ? `<p><b>Verify:</b> ${esc(f.attack.validation)}</p><p><b>Fix:</b> ${rich(f.fix.step)}</p>` : ""}</div></li>`),
   ).join('\n');
   const bumps = result.findings.filter(isBump);
   const bumpTable = bumps.length
@@ -93,10 +93,11 @@ ${p.expo ? `<span>Expo SDK <b>${esc(p.expo.split('.')[0])}</b></span>` : ''}
 ${p.android && p.android.targetSdk ? `<span>targetSdk <b>${p.android.targetSdk}</b></span>` : ''}
 <span>${result.deps.length} dependencies (${result.deps.filter((d) => d.native).length} native)</span>
 </div>
-${n.critical + n.high > 0 ? `<section class="start"><h2>Start here</h2><ol>${startHere(result).map((x) => `<li>${rich(x.step)} <span class="muted">(${esc(x.phase)})</span></li>`).join('')}</ol><p class="muted">The full, ordered plan: <code>npx nativekeel plan</code>.</p></section>` : ''}
+${n.critical + n.high > 0 && result.focus !== 'security' ? `<section class="start"><h2>Start here</h2><ol>${startHere(result).map((x) => `<li>${rich(x.step)} <span class="muted">(${esc(x.phase)})</span></li>`).join('')}</ol><p class="muted">The full, ordered plan: <code>npx nativekeel plan</code>.</p></section>` : ''}
 ${result.security ? `<section class="sec"><h2>Security <small>OWASP MASVS</small></h2><div class="secgrid">${Object.entries(MASVS_GROUPS)
-  .map(([g, label]) => `<div class="sg ${result.security[g] ? 'bad' : 'ok'}"><b>${result.security[g] ? result.security[g] : '✓'}</b><span>${esc(label)}</span><small>MASVS-${g}</small></div>`)
-  .join('')}</div><p class="muted">Static checks of code, config and dependencies. They find the common, detectable mistakes; they do not replace a penetration test of the running app and its backend.</p></section>` : ''}
+  .map(([g, label]) => `<div class="sg ${result.security[g] ? 'bad' : ''}"><b>${result.security[g] || 0}</b><span>${esc(label)}</span><small>MASVS-${g}</small></div>`)
+  .join('')}</div><p class="muted">Finding counts, not passed controls. Static checks of code, config and dependencies. They find the common, detectable mistakes; they do not replace a penetration test of the running app and its backend.</p></section>` : ''}
+${result.focus === "security" && result.securityReview ? `<section><h2>What this scan can tell you</h2><p>${esc(result.securityReview.verdict)}</p><ul>${Object.entries(result.securityReview.risks).map(([k,v]) => `<li>${esc(k)}: ${v.count}</li>`).join("")}</ul><p>${esc(result.securityReview.limitations.join(" "))}</p>${result.securityReview.flowCoverage ? `<p>New flow/config checks read ${result.securityReview.flowCoverage.filesRead} source files. ${esc(result.securityReview.flowCoverage.limits.join(" "))}</p>` : ""}</section>` : ""}
 <h2>Findings</h2>
 ${result.findings.length ? `${rows ? `<ul class="list">${rows}</ul>` : ''}${bumpTable}` : '<p>No issues found.</p>'}
 ${planHtml}

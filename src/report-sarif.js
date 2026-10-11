@@ -11,6 +11,7 @@ const LEVEL = { critical: 'error', high: 'error', medium: 'warning', low: 'note'
 // declares the dependency, otherwise the top of package.json.
 function locate(result, finding, pkgLines) {
   const fix = finding.fix || {};
+  if (finding.evidence?.[0]?.file) return { uri: finding.evidence[0].file, line: finding.evidence[0].line || 1 };
   if (fix.file) return { uri: fix.file, line: fix.line || 1 };
   const name = fix.name || (finding.id.includes(':') ? finding.id.split(':').slice(1).join(':') : null);
   if (name) {
@@ -52,7 +53,8 @@ export function sarifReport(result, { version = '0.0.0' } = {}) {
             locations: [{ physicalLocation: { artifactLocation: { uri: toUri(loc.uri) }, region: { startLine: loc.line } } }],
             // Stable across runs so code scanning tracks one alert per finding.
             partialFingerprints: { nativekeelId: f.id },
-            properties: { severity: f.severity, area: f.area },
+            properties: { severity: f.severity, area: f.area, confidence: f.confidence, attack: f.attack },
+            ...(f.evidence?.length > 1 ? { relatedLocations: f.evidence.slice(1).map((e, i) => ({ id: i + 1, physicalLocation: { artifactLocation: { uri: toUri(e.file) }, region: { startLine: e.line || 1 } }, message: { text: e.role || "Related source evidence" } })) } : {}),
           };
         }),
       },

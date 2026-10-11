@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>React Native Security Scanner: Data Leaks · NativeKeel</title>
+<meta name="description" content="Find credential leaks, unsafe code execution, OAuth risks and open backend rules in React Native and Expo apps. Local scans with evidence and fixes.">
+<link rel="canonical" href="https://nativekeel.com/security">
+<meta property="og:title" content="React Native Security Scanner: Data Leaks · NativeKeel">
+<meta property="og:description" content="Find credential leaks, unsafe code execution, OAuth risks and open backend rules in React Native and Expo apps. Local scans with evidence and fixes.">
+<meta property="og:url" content="https://nativekeel.com/security"><meta property="og:type" content="article"><meta property="og:image" content="https://nativekeel.com/og.png">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:description" content="Find credential leaks, unsafe code execution, OAuth risks and open backend rules in React Native and Expo apps. Local scans with evidence and fixes.">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"React Native security: find data leaks and unsafe input paths","description":"Local source checks for credential exposure, code execution, OAuth and backend access risks, with evidence and verification steps.","datePublished":"2026-10-11","dateModified":"2026-10-11","author":{"@type":"Organization","name":"NativeKeel","url":"https://nativekeel.com"},"mainEntityOfPage":"https://nativekeel.com/security"}</script>
+<style>
+:root{color-scheme:light dark;--bg:#fbfaf7;--fg:#15171b;--muted:#5d6470;--line:#e4e2dc;--accent:#0b5d55;--card:#fff}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.65 system-ui,sans-serif}main{max-width:920px;margin:auto;padding:32px 24px 70px}a{color:var(--accent)}nav{display:flex;justify-content:space-between;gap:20px;font-size:15px}h1{font-size:clamp(34px,5vw,54px);line-height:1.1;letter-spacing:-1.5px;max-width:780px;margin-top:64px}h2{margin-top:48px;line-height:1.25}p{max-width:780px}.lead{font-size:21px;color:var(--muted)}pre{overflow:auto;background:#12151a;color:#d9dee6;padding:22px;border-radius:12px;font-size:15px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.card{padding:22px;border:1px solid var(--line);border-radius:12px;background:var(--card)}h3{margin:0 0 10px}.card p{margin:0;color:var(--muted)}.example{border-left:4px solid var(--accent);padding:4px 0 4px 22px}.note{color:var(--muted)}footer{margin-top:60px;border-top:1px solid var(--line);padding-top:20px;font-size:14px}@media(max-width:620px){.grid{grid-template-columns:1fr}main{padding:24px 18px}h1{margin-top:42px}}@media(prefers-color-scheme:dark){:root{--bg:#0e1013;--fg:#e9ebef;--muted:#9aa2ad;--line:#262b32;--accent:#3cc4b4;--card:#161a1f}}
+</style></head><body><main>
+<nav><a href="/">NativeKeel</a><a href="ai-agents.html">Use with your coding agent</a></nav>
+<h1>Find the paths that could expose your users’ data.</h1>
+<p class="lead">Before you ship, review credential leaks, unsafe input handling and access rules in your React Native or Expo app. See the evidence, the possible damage and what to fix.</p>
+<pre><code>npx nativekeel security . --html security.html --fail-on high</code></pre>
+<p>Free, open source and local. No account. Your source stays on your machine. Add <code>--offline</code> to skip package and advisory lookups.</p>
+<h2>What could go wrong?</h2>
+<div class="grid">
+<div class="card"><h3>Credentials escape the app</h3><p>Tokens and wallet secrets passed to telemetry, passwords embedded in URLs, secrets bundled in the app, unsafe storage and sensitive clipboard use.</p></div>
+<div class="card"><h3>Another user reaches private data</h3><p>Open Firebase rules, overly broad writes and supported Supabase RLS policy mistakes. Deployed permissions and cross-account isolation still need runtime verification.</p></div>
+<div class="card"><h3>Untrusted data becomes code</h3><p>WebView messages or fetched response bodies reaching eval/Function; traced text input or navigation values concatenated into SQLite query text.</p></div>
+<div class="card"><h3>Login or file sharing loses protection</h3><p>OAuth code flows with PKCE explicitly disabled, implicit redirect tokens, and referenced FileProvider paths that cover entire private directories.</p></div>
+</div>
+<h2>A useful finding explains the attack conditions</h2>
+<div class="example"><p><strong>Example: a WebView message reaches eval.</strong></p><p><strong>Evidence:</strong> the message value reaches a code-execution call, with file and line references.</p><p><strong>Possible damage:</strong> page-controlled JavaScript runs in the app runtime.</p><p><strong>Prerequisite:</strong> an attacker must control the page or inject script into it. This is not proof that your production page is compromised.</p><p><strong>Fix and verification:</strong> use a fixed command allowlist with validated JSON; test locally with a harmless canary and confirm it is never executed.</p></div>
+<h2>Evidence over a reassuring score</h2>
+<p>The report separates static evidence, attacker prerequisites and verification steps. It includes existing TLS, dependency, secret and planted-malware checks. Export HTML for review, JSON for automation or SARIF for code scanning. Coding agents can call <code>security_audit</code> over MCP.</p>
+<p class="note">No matching findings is not proof of security. These checks do not run your app, test a deployed backend, analyze every data flow or certify MASVS compliance. The new flow checks follow short local aliases; complex validation, cross-file flows and skipped files can hide problems. Runtime and account A/B tests remain necessary.</p>
+<h2>How the new checks were verified</h2>
+<p>Each rule has positive and negative fixtures. A read-only pass over 922 repositories produced 13 source matches in 11 repositories after exclusions for public map identifiers, server/web code and cache-only sharing. These are review candidates, not confirmed breaches. No corpus application or malicious sample was executed.</p>
+<p><a href="https://github.com/AlicanAkyol/nativekeel/blob/main/docs/mobile-security-0.1.65.md">Read the rule definitions and limitations</a> · <a href="changelog.html">Release history</a></p>
+<footer><a href="/">NativeKeel</a> · <a href="privacy.html">Privacy</a> · MIT licensed</footer>
+</main></body></html>

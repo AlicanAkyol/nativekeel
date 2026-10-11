@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline';
+import { securityOnly } from './security-review.js';
 import { loadProject } from './project.js';
 import { analyze } from './analyze.js';
 import { buildPlan, startHere } from './plan.js';
@@ -119,11 +120,12 @@ export function resolveTarget(input, roots) {
 const SEV = ['critical', 'high', 'medium', 'low', 'info'];
 const NPM_NAME = /^(?:@[a-z0-9][a-z0-9._~-]*\/)?[a-z0-9][a-z0-9._~-]*$/;
 
-async function scanTool(args, ctx) {
+async function scanTool(args, ctx, focus = false) {
   const root = resolveTarget(args.path, ctx.roots);
   const offline = !!args.offline;
   const minSev = SEV.includes(args.min_severity) ? args.min_severity : 'low';
-  const result = await analyze(loadProject(root), offline ? { get: async () => null, offline: true } : ctx.analyzeOptions || {});
+  let result = await analyze(loadProject(root), offline ? { get: async () => null, offline: true } : ctx.analyzeOptions || {});
+  if (focus) result = securityOnly(result);
   const findings = result.findings.filter((f) => SEV.indexOf(f.severity) <= SEV.indexOf(minSev));
   const counts = Object.fromEntries(SEV.map((s) => [s, result.findings.filter((f) => f.severity === s).length]));
   return {
@@ -136,6 +138,7 @@ async function scanTool(args, ctx) {
       newArchitecture: result.project.newArch,
     },
     counts,
+    securityReview: result.securityReview,
     safety: executionSafety(result.findings),
     startHere: startHere(result),
     findings: findings.slice(0, MAX_FINDINGS).map((f) => ({
@@ -148,6 +151,7 @@ async function scanTool(args, ctx) {
       masvs: f.masvs,
       confidence: f.confidence,
       evidence: f.evidence,
+      attack: f.attack,
     })),
     truncated: findings.length > MAX_FINDINGS ? findings.length - MAX_FINDINGS : 0,
     warnings: result.warnings,
@@ -247,6 +251,12 @@ export const TOOLS = [
       additionalProperties: false,
     },
     run: scanTool,
+  },
+  {
+    name: 'security_audit',
+    description: 'Review mobile app data exposure, account access, unsafe code execution, backend rules and dependency risks. Returns source evidence, attacker prerequisites, fixes, validation steps and explicit coverage limits. Static and read-only; does not claim a live penetration test or a clean bill of health.',
+    inputSchema: { type: 'object', properties: { path: { type: 'string' }, offline: { type: 'boolean' }, min_severity: { type: 'string', enum: SEV } }, required: ['path'], additionalProperties: false },
+    run: (args, ctx) => scanTool(args, ctx, true),
   },
   {
     name: 'upgrade_plan',

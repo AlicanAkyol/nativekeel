@@ -40,6 +40,9 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.65</h2><p class="date">11 October 2026</p>
+<ul><li><code>nativekeel security</code> and MCP <code>security_audit</code>: a focused report of data exposure, account access and code execution risks.</li><li>Eight new checks: credentials in telemetry and URLs, WebView/network data evaluated as code, external input in SQLite query text, PKCE disabled, implicit OAuth tokens, and broad private FileProvider paths.</li><li>New findings include source evidence, attacker prerequisites, a fix and local verification steps. SARIF points to the evidence. Reports show coverage limits; zero findings is not a passed security assessment.</li></ul><p><a href="security.html">What the security review checks →</a></p></div>
+
 <div class="rel"><h2>0.1.64</h2><p class="date">11 October 2026</p>
 <ul>
 <li><span class="tag">Security</span><b>Safer scans from AI agents.</b> MCP checks project file reads against allowed roots, rejects unsafe dependency names, and keeps malware stop warnings in upgrade plans, error explanations and verification results. A project with suspected malware no longer gets a plan that starts by running tests. Removed instruction-like object keys are not echoed in diagnostic paths. These defenses reduce risk; text filtering cannot make an agent immune to prompt injection.</li>

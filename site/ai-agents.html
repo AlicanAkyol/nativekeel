@@ -126,6 +126,7 @@ args = ["-y", "nativekeel@latest", "mcp"]</code></pre>
   <h2>What the agent can ask</h2>
   <table>
     <tr><th>Tool</th><th>Answers</th></tr>
+    <tr><td><code>security_audit</code></td><td>Focused security review: data exposure, account access, unsafe code execution and backend rules. Source evidence, attacker prerequisites, fixes, validation steps and explicit coverage limits. No live attack.</td></tr>
     <tr><td><code>scan_project</code></td><td>What is wrong with this project: upgrade blockers, New Architecture, Google Play and App Store rules (target SDK, 16 KB pages, Xcode 27 UIScene, privacy manifests), crash risks, OWASP MASVS security findings, and malware planted in the project. Each with <code>file:line</code> and the fix.</td></tr>
     <tr><td><code>upgrade_plan</code></td><td>The order to do it in: phases, the reason for each, concrete steps.</td></tr>
     <tr><td><code>explain_error</code></td><td>A build, launch, crash or App Store / Google Play review error: what it means, the fix, and where this project is affected. Matched locally against errors we reproduced or verified at the source.</td></tr>

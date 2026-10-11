@@ -8,6 +8,8 @@ import { nativeChecks } from './native.js';
 import { stabilityChecks } from './stability.js';
 import { performanceChecks } from './performance.js';
 import { vulnerableDependencies, passwordLeaks, webViewRisks, androidBackup, exportedComponents, plainHttpCalls, cloudRules, insecureTls, weakCrypto, tokenStorage, reverseEngineering, expoConfigSecrets, aiKeysInBundle, clipboardSecrets, keychainAccessibility, deepLinks, supabaseRls, playRestrictedPermissions, masvsOf, MASVS_GROUPS } from './security.js';
+import { mobileSecurity } from './mobile-security.js';
+import { securityOverview } from './security-review.js';
 import { maliciousCode } from './malware.js';
 import { supabaseBroadPolicies, firebaseBroadWrites } from './authorization.js';
 import { lockedVersions } from './lockfile.js';
@@ -593,18 +595,21 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
     }
   }
 
+  const mobile = mobileSecurity(project.root);
+  for (const f of mobile.findings) add(f);
   reportIncomplete();
-  // OWASP MASVS group for every security finding, and a per-group count (zero means checked, clean).
+  // OWASP MASVS group for every security finding, and a per-group finding count (zero is not proof of a passed control).
   const security = Object.fromEntries(Object.keys(MASVS_GROUPS).map((g) => [g, 0]));
   for (const f of findings) {
-    const g = masvsOf(f.id);
+    const g = f.masvs || masvsOf(f.id);
     if (!g) continue;
     f.masvs = g;
     if (f.severity !== 'info') security[g]++;
   }
   findings.sort((a, b) => SEVERITIES.indexOf(a.severity) - SEVERITIES.indexOf(b.severity));
-  return {
+  const result = {
     tool: 'nativekeel',
+    mobileSecurityCoverage: mobile.coverage,
     scannedAt: now.toISOString(),
     project: {
       name: project.name,
@@ -623,6 +628,8 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
     deps,
     findings,
   };
+  result.securityReview = securityOverview(result);
+  return result;
 }
 
 export const countBySeverity = (findings) =>
