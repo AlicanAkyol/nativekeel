@@ -41,7 +41,7 @@ test('upcoming: Expo SDK 58 beta changes, only where the app is affected', () =>
   const got = changes.map((c) => c.id);
   for (const id of ['expo58-r8', 'expo58-node-env', 'expo58-file-write', 'expo58-libsql', 'expo58-notifications-foreground', 'expo58-require-full-screen']) assert.ok(got.includes(id), id);
   const [f] = upcomingFinding(loadProject(root));
-  assert.match(f.title, /Expo SDK 58 \(beta\)/);
+  assert.match(f.title, /Expo SDK 58 \(beta, React Native 0\.88\)/);
   assert.equal(f.fix.kind, 'upcoming');
 
   const handled = makeProject({

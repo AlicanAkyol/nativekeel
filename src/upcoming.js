@@ -203,7 +203,8 @@ export function upcomingChanges(project) {
   return out;
 }
 
-const versionLabel = (c) => (c.expo ? `Expo SDK ${c.expo}${c.expo === NEXT.expo.sdk ? ` (${NEXT.expo.status})` : ''}` : `React Native 0.${c.rn}`);
+// Name the React Native version an SDK ships, so nobody reads "SDK 58" as "React Native 0.87".
+const versionLabel = (c) => (c.expo ? `Expo SDK ${c.expo} (${c.expo === NEXT.expo.sdk ? `${NEXT.expo.status}, ` : ''}React Native 0.${EXPO_RN[c.expo]})` : `React Native 0.${c.rn}`);
 
 export function upcomingFinding(project) {
   const changes = upcomingChanges(project);

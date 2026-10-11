@@ -40,6 +40,11 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.60</h2><p class="date">11 October 2026</p>
+<ul>
+<li><span class="tag">Fix</span><b>Expo SDKs are named with the React Native version they ship</b> ("Expo SDK 58 (beta, React Native 0.88)"). In our test an AI agent read "SDK 58" next to the React Native 0.87 changes and told the user SDK 58 ships 0.87.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.59</h2><p class="date">11 October 2026</p>
 <ul>
 <li><span class="tag">Upgrade</span><b>What changes in the next version, in your code.</b> Release notes list everything; NativeKeel now lists only the changes that touch your app, each with <code>file:line</code> and what to do, and includes the next version while it is still in beta. For React Native 0.87: <code>InteractionManager</code>, the <code>StatusBar</code> <code>backgroundColor</code>/<code>translucent</code> props, <code>Modal animated</code>, boolean <code>keyboardShouldPersistTaps</code>, deep imports that become type errors, bare <code>#import &lt;RCT…h&gt;</code> lines, Node.js 22.13+. For Expo SDK 58 (beta): R8 on by default in release builds, <code>File.write()</code> becoming async, libSQL removed from expo-sqlite, foreground notifications shown by default, the expo-router navigation rework, <code>NODE_ENV</code> set before <code>.env</code> loads, and more. Measured on 675 open-source apps: 578 are touched by at least one change, most often R8 (479 apps), the <code>StatusBar</code> props (103) and <code>InteractionManager</code> (47). We added this after watching an AI agent find the SDK 58 changes on the web that NativeKeel did not know about.</li>
