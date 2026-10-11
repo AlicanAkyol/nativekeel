@@ -2,9 +2,9 @@ const isSecurity = f => f.area === 'security' || f.area === 'secret' || !!f.masv
 export function securityOverview(result) {
   const findings = result.findings.filter(isSecurity);
   const risks = {
-    'Credentials and private data': findings.filter(f => /^(?:credential-|password-|token-|clipboard-|keychain-|secret:|expo-secret|ai-key-|android-fileprovider|android-allow-backup)/.test(f.id)).map(f => f.id),
+    'Credentials and private data': findings.filter(f => /^(?:credential-|password-|token-|clipboard-|keychain-|secret:|expo-secret|ai-key-|android-fileprovider|android-allow-backup|native-intent-file|native-archive)/.test(f.id)).map(f => f.id),
     'Account and backend access': findings.filter(f => /^(?:oauth-|firebase-|supabase-|deeplink-)/.test(f.id)).map(f => f.id),
-    'Code execution and input handling': findings.filter(f => /^(?:webview-|remote-code-|sqlite-|malicious-code|vscode-autorun)/.test(f.id)).map(f => f.id),
+    'Code execution and input handling': findings.filter(f => /^(?:webview-|remote-code-|sqlite-|native-intent-(?:sql|webview|redirection)|malicious-code|vscode-autorun)/.test(f.id)).map(f => f.id),
     'Transport, dependencies and other security': [],
   };
   const assigned = new Set(Object.values(risks).flat());
@@ -19,6 +19,7 @@ export function securityOverview(result) {
       ...(result.offline ? ['Online package/advisory checks were unavailable or skipped; see scan warnings.'] : []),
     ],
     flowCoverage: result.mobileSecurityCoverage,
+    nativeCoverage: result.nativeSecurityCoverage,
   };
 }
 export function securityOnly(result) {

@@ -5,7 +5,7 @@ import path from 'node:path';
 // Strings/comments/regex literals cannot manufacture calls; template expressions stay visible.
 export function lex(text) {
   const out = []; let i = 0, line = 1;
-  const push = (kind, value, start, row) => out.push({ kind, value, start, end: i, line: row });
+  const push = (kind, value, start, row) => { if (out.length >= 60000) throw new Error('Static token limit exceeded'); out.push({ kind, value, start, end: i, line: row }); };
   const advance = () => { if (text[i] === '\n') line++; return text[i++]; };
   const code = (template = false, level = 0) => {
     if (level > 64) throw new Error('Template nesting exceeds static analysis limit');
@@ -56,6 +56,7 @@ export function lex(text) {
   const stack = []; let nextScope = 1;
   for (let n = 0; n < out.length; n++) {
     const t = out[n]; t.index = n; t.scope = stack.map(x => x.scope).join('/');
+    if (stack.length > 256) throw new Error('Static delimiter nesting limit exceeded');
     if (['(', '[', '{', '${'].includes(t.value) && t.kind === 'punct') stack.push({ index: n, scope: nextScope++, close: { '(': ')', '[': ']', '{': '}', '${': '}' }[t.value] });
     else if (stack.length && t.value === stack.at(-1).close && t.kind === 'punct') { const open = stack.pop(); t.match = open.index; out[open.index].match = n; }
   }
@@ -119,8 +120,8 @@ export function resolveLocal(expr, tokens, decls, before, depth = 0) {
   if (!d || tokens.slice(d.token.index + 2, before.index).some((t, i, a) => t.value === d.name && ['=', '+=', '-=', '++', '--'].includes(a[i + 1]?.value))) return expr;
   return resolveLocal(d.expr, tokens, decls, d.token, depth + 1);
 }
-const SKIP = new Set(['node_modules', '.git', 'Pods', 'build', '.gradle', 'DerivedData', '.expo', 'dist', 'coverage', 'vendor', '__tests__', '__mocks__', 'test', 'tests', 'e2e', 'fixtures', 'examples', 'backend', 'server', 'web_app', 'desktop_app']);
-export function sourceFiles(root) {
+const SKIP = new Set(['node_modules', '.git', 'Pods', 'build', '.gradle', 'DerivedData', '.expo', 'dist', 'coverage', 'vendor', '__tests__', '__mocks__', 'test', 'tests', 'androidTest', 'e2e', 'fixtures', 'examples', 'backend', 'server', 'web_app', 'desktop_app']);
+export function sourceFiles(root, extensions = /\.(?:[cm]?[jt]sx?|xml)$/) {
   const files = []; const skipped = { unreadable: 0, oversized: 0, depth: 0, symlink: 0 };
   const walk = (dir, depth) => {
     if (depth > 20) { skipped.depth++; return; }
@@ -129,7 +130,7 @@ export function sourceFiles(root) {
       const f = path.join(dir, e.name);
       if (e.isDirectory()) { if (!SKIP.has(e.name) && !e.name.startsWith('.') && !(e.name === 'functions' && path.basename(dir) === 'supabase')) walk(f, depth + 1); }
       else if (e.isSymbolicLink()) skipped.symlink++;
-      else if (e.isFile() && /\.(?:[cm]?[jt]sx?|xml)$/.test(e.name) && !/\.(?:test|spec|d|web)\.[cm]?[jt]sx?$/.test(e.name)) {
+      else if (e.isFile() && extensions.test(e.name) && !/\.(?:test|spec|d|web)\.[cm]?[jt]sx?$/.test(e.name)) {
         try { if (fs.statSync(f).size > 512 * 1024) { skipped.oversized++; continue; } files.push({ file: path.relative(root, f), text: fs.readFileSync(f, 'utf8') }); } catch { skipped.unreadable++; }
       }
     }

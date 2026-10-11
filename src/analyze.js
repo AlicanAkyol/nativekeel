@@ -9,6 +9,7 @@ import { stabilityChecks } from './stability.js';
 import { performanceChecks } from './performance.js';
 import { vulnerableDependencies, passwordLeaks, webViewRisks, androidBackup, exportedComponents, plainHttpCalls, cloudRules, insecureTls, weakCrypto, tokenStorage, reverseEngineering, expoConfigSecrets, aiKeysInBundle, clipboardSecrets, keychainAccessibility, deepLinks, supabaseRls, playRestrictedPermissions, masvsOf, MASVS_GROUPS } from './security.js';
 import { mobileSecurity } from './mobile-security.js';
+import { nativeSecurity } from './native-security.js';
 import { securityOverview } from './security-review.js';
 import { maliciousCode } from './malware.js';
 import { supabaseBroadPolicies, firebaseBroadWrites } from './authorization.js';
@@ -595,6 +596,8 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
     }
   }
 
+  const native = nativeSecurity(project.root);
+  for (const f of native.findings) add(f);
   const mobile = mobileSecurity(project.root);
   for (const f of mobile.findings) add(f);
   reportIncomplete();
@@ -610,6 +613,7 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
   const result = {
     tool: 'nativekeel',
     mobileSecurityCoverage: mobile.coverage,
+    nativeSecurityCoverage: native.coverage,
     scannedAt: now.toISOString(),
     project: {
       name: project.name,

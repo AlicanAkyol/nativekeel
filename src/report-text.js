@@ -85,6 +85,8 @@ export function textReport(result, { color = true, verbose = false } = {}) {
       for (const [risk, group] of Object.entries(result.securityReview.risks)) out.push(`  ${risk}: ${group.count}`);
       const coverage = result.securityReview.flowCoverage;
       if (coverage) out.push(`Flow/config checks: ${coverage.filesRead} source files read; ${Object.values(coverage.skipped).reduce((a, b) => a + b, 0)} skipped paths/files.`);
+      const native = result.securityReview.nativeCoverage;
+      if (native) out.push(`Native Android checks: ${native.filesRead} files read; ${native.matchedEntryPoints} matched entry points; ${native.guardedOrUnresolved} guarded/unresolved sink candidates.`, ...native.limits.map(s => c.gray('Native scope: ' + s)));
       for (const limit of result.securityReview.limitations) out.push(c.gray('Scope: ' + limit));
     }
   }

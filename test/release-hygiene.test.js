@@ -23,7 +23,7 @@ test('every exported check is actually called (storeReviewRules was imported but
   const files = fs.readdirSync(dir).filter((f) => f.endsWith('.js'));
   const all = Object.fromEntries(files.map((f) => [f, fs.readFileSync(path.join(dir, f), 'utf8')]));
   const missing = [];
-  for (const f of ['mobile-security.js', 'authorization.js', 'security.js', 'store-rules.js', 'stability.js', 'native.js', 'performance.js', 'usage.js', 'interop.js']) {
+  for (const f of ['native-security.js', 'mobile-security.js', 'authorization.js', 'security.js', 'store-rules.js', 'stability.js', 'native.js', 'performance.js', 'usage.js', 'interop.js']) {
     for (const m of all[f].matchAll(/^export (?:async )?function (\w+)/gm)) {
       const called = Object.entries(all).some(([g, text]) => {
         const body = g === f ? text.replace(new RegExp(`export (?:async )?function ${m[1]}\\b`), '') : text.replace(/^import[^;]+;/gm, '');
