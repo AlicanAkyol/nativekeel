@@ -673,7 +673,7 @@ export function masvsOf(id) {
   if (/^(insecure-tls|user-certificates|plain-http|ios-ats|android-cleartext)/.test(id)) return 'NETWORK';
   if (/^(webview-|android-exported|deeplink-)/.test(id)) return 'PLATFORM';
   if (/^(firebase-|supabase-)/.test(id)) return 'AUTH';
-  if (/^(vuln:|signing-|android-debuggable)/.test(id)) return 'CODE';
+  if (/^(vuln:|signing-|android-debuggable|malicious-code|vscode-autorun)/.test(id)) return 'CODE';
   if (/^(sourcemap-in-app|easy-reverse-engineering)/.test(id)) return 'RESILIENCE';
   return null;
 }

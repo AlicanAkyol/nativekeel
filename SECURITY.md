@@ -39,6 +39,7 @@ NativeKeel reads source and configuration; it does not run the app, so it cannot
 
 | Check | Detects | Does not detect |
 |---|---|---|
+| Malware planted in the project | VS Code tasks that run on folder open, code hidden after a long run of spaces or tabs in JavaScript/TypeScript files, JavaScript saved under a font or image extension, install scripts that run a data file or pipe a download into a shell | Malware in dependencies inside node_modules (use npm audit and a supply-chain scanner); obfuscated code without these hiding tricks |
 | Secrets in code and config | Keys and tokens of known formats in the app or the repository; whether they ship in the bundle | Secrets with no recognisable format; whether a key is still active |
 | AI provider keys in the bundle | OpenAI, Gemini, Anthropic and similar keys read from `EXPO_PUBLIC_`, react-native-config or react-native-dotenv variables | Keys fetched at runtime from your own server |
 | Android components other apps can start | Services, receivers and providers exported without a permission in your manifest | Whether the component does anything sensitive with the input it receives |

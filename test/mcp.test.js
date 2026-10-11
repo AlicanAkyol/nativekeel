@@ -72,3 +72,12 @@ test('MCP: check_library validates the name and uses the registry', async () => 
   const bad = await call(ctx, 'check_library', { name: 'x/../../evil?q=1' });
   assert.equal(bad.result.isError, true);
 });
+
+test('MCP: a project with planted malware gets a stop warning', async () => {
+  const payload = "global['!']='0';" + 'var _0x1a2b=function(_0x3c4d){return _0x3c4d;};'.repeat(20);
+  const root = makeProject({ 'package.json': { name: 'app', dependencies: { 'react-native': '0.80.0' } }, 'babel.config.js': 'module.exports = {};' + ' '.repeat(150) + payload });
+  const res = await call(ctxFor(root), 'scan_project', { path: root, offline: true });
+  assert.match(res.result.structuredContent.warning, /Do not run install/);
+  const clean = makeProject({ 'package.json': { name: 'app', dependencies: { 'react-native': '0.80.0' } } });
+  assert.equal((await call(ctxFor(clean), 'scan_project', { path: clean, offline: true })).result.structuredContent.warning, undefined);
+});

@@ -6,7 +6,7 @@ Health check for React Native and Expo apps. One command, no install, no account
 npx nativekeel
 ```
 
-**What's new in 0.1.55:** listed in the official MCP Registry (`io.github.AlicanAkyol/nativekeel`). **0.1.54:** keychain items readable while the device is locked (deprecated "Always" accessibility levels). Recent releases added a *Start here* list in every report, hacking risks mapped to OWASP MASVS, crash and performance checks. Every check is tuned on 850+ open-source React Native and Expo apps, with recently updated ones added every week, to keep false alarms out ([what we found in them](https://dev.to/keel_alican_akyol/we-scanned-470-open-source-react-native-apps-here-is-what-breaks-them-5072)). [All releases →](https://nativekeel.com/changelog)
+**What's new in 0.1.56:** warns before you run a project with planted malware (a VS Code task that runs on folder open, code hidden after a long run of spaces in babel.config.js, JavaScript disguised as a font), the trick behind fake job tests sent to developers. Found in 4 open-source repositories during our weekly scan. **0.1.55:** listed in the official MCP Registry (`io.github.AlicanAkyol/nativekeel`). Recent releases added a *Start here* list in every report, hacking risks mapped to OWASP MASVS, crash and performance checks. Every check is tuned on 850+ open-source React Native and Expo apps, with recently updated ones added every week, to keep false alarms out ([what we found in them](https://dev.to/keel_alican_akyol/we-scanned-470-open-source-react-native-apps-here-is-what-breaks-them-5072)). [All releases →](https://nativekeel.com/changelog)
 
 ```
 Summary  4 critical · 5 high · 4 medium · 6 low
