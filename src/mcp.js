@@ -7,6 +7,7 @@ import { buildPlan, startHere } from './plan.js';
 import { createRegistry } from './registry.js';
 import { COMPAT, bestRange } from './compat.js';
 import { REPLACEMENTS, PACKAGE_NOTES } from './rules.js';
+import { explainError, relatedFindings } from './errors.js';
 
 // NativeKeel as an MCP server (stdio, JSON-RPC 2.0, one message per line), with no
 // dependencies. AI coding agents call it to learn what is wrong with a React Native / Expo
@@ -169,6 +170,34 @@ async function libraryTool(args, ctx) {
   };
 }
 
+async function errorTool(args, ctx) {
+  if (typeof args.error !== 'string' || !args.error.trim()) throw new Error('error is required: paste the error message or the failing part of the log');
+  const matches = explainError(args.error);
+  let findings = null;
+  if (args.path && matches.length) {
+    const root = resolveTarget(args.path, ctx.roots);
+    // Local checks are enough to place these errors in the project, so this scan is offline
+    // unless the caller asks for the network.
+    const online = args.offline === false;
+    const result = await analyze(loadProject(root), online ? ctx.analyzeOptions || {} : { get: async () => null, offline: true });
+    findings = result.findings;
+  }
+  return {
+    matches: matches.slice(0, 3).map((e) => ({
+      id: e.id,
+      title: e.title,
+      cause: e.cause,
+      fix: e.fix,
+      page: e.page,
+      source: e.source,
+      inThisProject: findings ? relatedFindings(e, findings).slice(0, 5).map((f) => ({ id: f.id, severity: f.severity, title: f.title, fix: f.fix && f.fix.step ? f.fix.step : undefined })) : undefined,
+    })),
+    next: matches.length
+      ? findings || !args.path ? undefined : 'Pass path to see where this project is affected.'
+      : 'Not a known error. Run scan_project on the project: many build and launch failures come from a version mismatch it reports. For a library error, call check_library with the package name and the React Native version before changing versions.',
+  };
+}
+
 export const TOOLS = [
   {
     name: 'scan_project',
@@ -211,6 +240,22 @@ export const TOOLS = [
       additionalProperties: false,
     },
     run: libraryTool,
+  },
+  {
+    name: 'explain_error',
+    description:
+      'Explain a React Native or Expo build, launch, crash or store-review error: what it means and the fix, from errors NativeKeel has reproduced or verified against Apple, Google, Expo and React Native documentation. Pass the error message (or the failing part of the log) and, optionally, the project path to see where this project is affected. Call it before searching the web or changing versions.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        error: { type: 'string', maxLength: 20000, description: 'The error message or the relevant part of the build log.' },
+        path: { type: 'string', description: 'Project folder, to point at the place in this project (optional).' },
+        offline: { type: 'boolean', description: 'Default true: the project check runs without network requests.' },
+      },
+      required: ['error'],
+      additionalProperties: false,
+    },
+    run: errorTool,
   },
 ];
 

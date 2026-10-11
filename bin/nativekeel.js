@@ -13,8 +13,8 @@ import { applyBaseline, saveBaseline } from '../src/baseline.js';
 import { compareScans, compareToMarkdown } from '../src/compare.js';
 import { SITE_URL } from '../src/config.js';
 
-const VALUE_FLAGS = new Set(['--html', '--out', '--baseline', '--save-baseline', '--brand', '--sarif', '--markdown', '--fail-on']);
-const COMMANDS = new Set(['scan', 'plan', 'compare', 'mcp', 'help']);
+const VALUE_FLAGS = new Set(['--html', '--out', '--baseline', '--save-baseline', '--brand', '--sarif', '--markdown', '--fail-on', '--path']);
+const COMMANDS = new Set(['scan', 'plan', 'compare', 'explain', 'mcp', 'help']);
 
 function parseArgs(argv) {
   const flags = {};
@@ -45,8 +45,11 @@ Usage
   npx nativekeel [path]          Scan an app and print the report
   npx nativekeel plan [path]     Write a step-by-step upgrade plan
   npx nativekeel compare <before.json> <after.json>
-  npx nativekeel mcp             Run as an MCP server for AI coding agents (stdio)
                                  What got fixed and what is new between two scans
+  npx nativekeel explain "<error>" [--path <app>]
+                                 What a build, launch or store error means and the
+                                 fix (or pipe a log in: ... | npx nativekeel explain)
+  npx nativekeel mcp             Run as an MCP server for AI coding agents (stdio)
 
 Scan options
   --json                    Machine-readable output
@@ -109,6 +112,33 @@ async function main() {
     const { serve } = await import('../src/mcp.js');
     console.log = (...a) => process.stderr.write(`${a.join(' ')}\n`);
     await serve({ version: packageVersion() });
+    return 0;
+  }
+
+  if (command === 'explain') {
+    const { explainError, relatedFindings } = await import('../src/errors.js');
+    let text = positional.join(' ');
+    if (!text && !process.stdin.isTTY) text = fs.readFileSync(0, 'utf8');
+    if (!text.trim()) fail('usage: nativekeel explain "<error message>" [--path <app>]  (or pipe a log into it)');
+    const matches = explainError(text).slice(0, 3);
+    let findings = null;
+    if (flags.path && matches.length) findings = (await runScan(path.resolve(flags.path), { ...flags, offline: true, json: true })).findings;
+    if (flags.json) {
+      console.log(JSON.stringify(matches.map((e) => ({ id: e.id, title: e.title, cause: e.cause, fix: e.fix, page: e.page, inThisProject: findings ? relatedFindings(e, findings).map((f) => ({ id: f.id, severity: f.severity, title: f.title })) : undefined })), null, 2));
+      return matches.length ? 0 : 1;
+    }
+    if (!matches.length) {
+      console.log(`Not a known error. Run \`npx nativekeel\` in the app: many build and launch failures come from a version mismatch it reports.\nKnown errors: ${SITE_URL}/fix/`);
+      return 1;
+    }
+    for (const e of matches) {
+      console.log(`\n${e.title}\n\n${e.cause}\n\nFix:\n${e.fix.map((f) => `  - ${f}`).join('\n')}`);
+      if (findings) {
+        const here = relatedFindings(e, findings);
+        console.log(here.length ? `\nIn this project:\n${here.slice(0, 5).map((f) => `  - [${f.severity}] ${f.title}`).join('\n')}` : '\nThe scan found nothing related in this project.');
+      }
+      if (e.page) console.log(`\nMore: ${e.page}`);
+    }
     return 0;
   }
 

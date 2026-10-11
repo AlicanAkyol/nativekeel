@@ -1,6 +1,6 @@
 ---
 name: react-native-health
-description: Check a React Native or Expo project with NativeKeel before changing it. Use when upgrading React Native or the Expo SDK, adding or updating a native library, fixing a build or crash that appeared after an upgrade, preparing a Google Play or App Store release (target SDK, 16 KB page size, Xcode 27 / UIScene, privacy manifests, account deletion), reviewing mobile security, or before running npm install / start in a React Native project you did not write.
+description: Check a React Native or Expo project with NativeKeel before changing it, and explain its build, launch and store errors. Use when upgrading React Native or the Expo SDK, adding or updating a native library, when a build, launch, crash or App Store / Google Play review error appears, preparing a Google Play or App Store release (target SDK, 16 KB page size, Xcode 27 / UIScene, privacy manifests, account deletion), reviewing mobile security, or before running npm install / start in a React Native project you did not write.
 ---
 
 # React Native health check with NativeKeel
@@ -9,7 +9,7 @@ NativeKeel reads the project and reports what will break, with file:line referen
 
 ## Which tool to call
 
-Use the `nativekeel` MCP tools. If they are not available in this session, run the CLI instead: `npx -y nativekeel@latest <path> --json` (add `plan` for the upgrade plan: `npx -y nativekeel@latest plan <path>`).
+Use the `nativekeel` MCP tools. If they are not available in this session, run the CLI instead: `npx -y nativekeel@latest <path> --json` (add `plan` for the upgrade plan: `npx -y nativekeel@latest plan <path>`; `npx -y nativekeel@latest explain "<error>" --path <path>` for an error).
 
 | The user wants to | Call |
 | --- | --- |
@@ -17,6 +17,7 @@ Use the `nativekeel` MCP tools. If they are not available in this session, run t
 | Add or update a library | `check_library` with the package name and the project's React Native version |
 | Know what is wrong with the project, prepare a release, review security | `scan_project` |
 | Install or start a project they cloned, downloaded or were sent | `scan_project` before any install, start, build or test command |
+| Fix a build, launch, crash or store-review error | `explain_error` with the message (and `path`), before searching the web or changing versions |
 
 ## How to use the result
 
