@@ -15,7 +15,7 @@ import { securityOnly } from '../src/security-review.js';
 import { SITE_URL } from '../src/config.js';
 
 const VALUE_FLAGS = new Set(['--html', '--out', '--baseline', '--save-baseline', '--brand', '--sarif', '--markdown', '--fail-on', '--path', '--base']);
-const COMMANDS = new Set(['scan', 'security', 'plan', 'compare', 'compare-imports', 'explain', 'verify', 'mcp', 'help']);
+const COMMANDS = new Set(['scan', 'security', 'plan', 'compare', 'compare-imports', 'prepare-imports', 'explain', 'verify', 'mcp', 'help']);
 
 function parseArgs(argv) {
   const flags = {};
@@ -48,6 +48,8 @@ Usage
   npx nativekeel plan [path]     Write a step-by-step upgrade plan
   npx nativekeel compare <before.json> <after.json>
                                  What got fixed and what is new between two scans
+  npx nativekeel prepare-imports <settings.json>
+                                 Prepare artifact/source hashes without running code
   npx nativekeel compare-imports <experiment.json> [--json]
                                  Compare supplied release bundles for a reviewed
                                  same-version Lodash import change (no code runs)
@@ -167,6 +169,13 @@ async function main() {
       console.log(r.ok ? 'No new critical or high findings.' : `${r.newSerious.length} new critical or high finding(s).`);
     }
     return r.ok ? 0 : 1;
+  }
+
+  if (command === 'prepare-imports') {
+    if (positional.length !== 1) fail('usage: nativekeel prepare-imports <settings.json> (redirect stdout to experiment.json beside settings.json)');
+    const { prepareImports } = await import('../src/prepare-imports.js');
+    console.log(JSON.stringify(prepareImports(path.resolve(positional[0])), null, 2));
+    return 0;
   }
 
   if (command === 'compare-imports') {

@@ -60,7 +60,7 @@ These are static checks: they catch the common, detectable mistakes, not everyth
 
 This development branch treats apparently unused dependencies as review candidates, keeps their upgrade advice, and checks optional and nested installed dependency references before suggesting a review. Root imports no longer imply a measured bundle or startup cost.
 
-For a reviewed same-version Lodash 4 import change, `node bin/nativekeel.js compare-imports experiment.json --json` compares supplied release bundle bytes without executing either bundle. Build context and test results remain caller-reported; no runtime speed gain or automatic migration recommendation is inferred. See [the experiment format and limits](docs/import-experiments.md). The published CLI and plugins do not include this command yet.
+For a same-version Lodash 4 import experiment, `node bin/nativekeel.js prepare-imports settings.json` can capture artifact and selected-source hashes without running code or marking tests as passed. For a reviewed change, `node bin/nativekeel.js compare-imports experiment.json --json` compares supplied release bundle bytes without executing either bundle. Build context and test results remain caller-reported; no runtime speed gain or automatic migration recommendation is inferred. See [the experiment format and limits](docs/import-experiments.md). The published CLI and plugins do not include this command yet.
 
 ## Usage
 

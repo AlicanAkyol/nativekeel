@@ -1,6 +1,6 @@
 import fs from './read-boundary.js';
 import path from 'node:path';
-import { lex } from './security-source.js';
+import { rootImportEvidence } from './import-evidence.js';
 
 // Performance problems you can see in the code: things that make lists stutter, animations run
 // on the JavaScript thread, or the app download heavier than it needs to be. Runtime profiling
@@ -19,7 +19,7 @@ function* walk(dir, test) {
   for (const e of entries) {
     if (e.isDirectory()) {
       if (!SKIP_DIRS.has(e.name) && !e.name.startsWith('.')) yield* walk(path.join(dir, e.name), test);
-    } else if (test.test(e.name) && !/\.(test|spec)[._]/.test(e.name)) {
+    } else if (test.test(e.name) && !/\.(test|spec)[._]/.test(e.name) && !/\.d\.[cm]?ts$/.test(e.name)) {
       yield path.join(dir, e.name);
     }
   }
@@ -44,32 +44,6 @@ function tagProps(text, start) {
     else if (c === '>' && depth === 0) return { props: text.slice(start, i), end: i + 1 };
   }
   return { props: text.slice(start, start + 4000), end: start + 4000 };
-}
-
-// Token evidence avoids examples hidden in comments, strings and regex literals.
-// This is still a source signal, not module resolution or proof of inclusion in a build.
-function rootImports(text) {
-  let tokens;
-  try { tokens = lex(text); } catch { return []; }
-  const found = [];
-  for (let i = 0; i < tokens.length; i++) {
-    const t = tokens[i];
-    if (t.kind !== 'id' || ['.', '?.'].includes(tokens[i - 1]?.value)) continue;
-    let spec;
-    if (t.value === 'require' && tokens[i + 1]?.value === '(' && tokens[i + 2]?.kind === 'string' && tokens[i + 3]?.value === ')') spec = tokens[i + 2];
-    if (t.value === 'import') {
-      if (tokens[i + 1]?.kind === 'string') spec = tokens[i + 1];
-      else if (tokens[i + 1]?.value === '(' && tokens[i + 2]?.kind === 'string' && tokens[i + 3]?.value === ')') spec = tokens[i + 2];
-      else if (!['type', 'typeof', '.', '('].includes(tokens[i + 1]?.value)) {
-        for (let j = i + 1; j < Math.min(tokens.length, i + 100); j++) {
-          if (tokens[j].value === ';') break;
-          if (tokens[j].kind === 'id' && tokens[j].value === 'from' && tokens[j + 1]?.kind === 'string') { spec = tokens[j + 1]; break; }
-        }
-      }
-    }
-    if (spec && ['lodash', 'moment'].includes(spec.value)) found.push({ name: spec.value, line: t.line });
-  }
-  return found;
 }
 
 export function performanceChecks(project) {
@@ -118,7 +92,7 @@ export function performanceChecks(project) {
       if (/shallowEqual|isEqual|equalityFn|,\s*\w+Equal\s*\)/.test(close)) continue;
       selectors.push(`${rel}:${code.slice(0, m.index).split('\n').length}`);
     }
-    for (const hit of rootImports(text)) if (!heavyImports.has(hit.name)) heavyImports.set(hit.name, `${rel}:${hit.line}`);
+    for (const hit of rootImportEvidence(text)) if (!heavyImports.has(hit.name)) heavyImports.set(hit.name, `${rel}:${hit.line}`);
   }
 
   if (nested.length) {
