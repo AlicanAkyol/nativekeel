@@ -13,6 +13,7 @@ import { explainError, relatedFindings } from './errors.js';
 import { verifyUpgrade } from './verify.js';
 import { withReadRoots, readPolicy } from './read-boundary.js';
 import { validPackageName } from './package-name.js';
+import { buildImprovementPlan } from './improve.js';
 import { executionSafety } from './safety.js';
 
 // NativeKeel as an MCP server (stdio, JSON-RPC 2.0, one message per line), with no
@@ -240,6 +241,12 @@ async function verifyTool(args, ctx) {
   };
 }
 
+async function improveTool(args, ctx) {
+  const root = resolveTarget(args.path, ctx.roots);
+  const result = await analyze(loadProject(root), args.offline ? { get: async () => null, offline: true } : ctx.analyzeOptions || {});
+  return buildImprovementPlan(result);
+}
+
 export const TOOLS = [
   {
     name: 'scan_project',
@@ -262,6 +269,12 @@ export const TOOLS = [
     description: 'Review mobile app data exposure, account access, unsafe code execution, backend rules and dependency risks. Returns source evidence, attacker prerequisites, fixes, validation steps and explicit coverage limits. Static and read-only; does not claim a live penetration test or a clean bill of health.',
     inputSchema: { type: 'object', properties: { path: { type: 'string' }, offline: { type: 'boolean' }, min_severity: { type: 'string', enum: SEV } }, required: ['path'], additionalProperties: false },
     run: (args, ctx) => scanTool(args, ctx, true),
+  },
+  {
+    name: 'improve_app',
+    description: 'Prioritize existing security, crash, performance, store and dependency findings into a review plan with prerequisites, expected effects and validation. No project code runs, no automatic changes or unmeasured performance claims. Reports unassessed areas explicitly.',
+    inputSchema: { type: 'object', properties: { path: { type: 'string' }, offline: { type: 'boolean' } }, required: ['path'], additionalProperties: false },
+    run: improveTool,
   },
   {
     name: 'upgrade_plan',

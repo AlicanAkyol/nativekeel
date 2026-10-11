@@ -12,10 +12,11 @@ import { buildPlan, planToMarkdown } from '../src/plan.js';
 import { applyBaseline, saveBaseline } from '../src/baseline.js';
 import { compareScans, compareToMarkdown } from '../src/compare.js';
 import { securityOnly } from '../src/security-review.js';
+import { buildImprovementPlan, improvementToMarkdown } from '../src/improve.js';
 import { SITE_URL } from '../src/config.js';
 
 const VALUE_FLAGS = new Set(['--html', '--out', '--baseline', '--save-baseline', '--brand', '--sarif', '--markdown', '--fail-on', '--path', '--base']);
-const COMMANDS = new Set(['scan', 'security', 'plan', 'compare', 'compare-imports', 'prepare-imports', 'explain', 'verify', 'mcp', 'help']);
+const COMMANDS = new Set(['scan', 'security', 'improve', 'plan', 'compare', 'compare-imports', 'prepare-imports', 'explain', 'verify', 'mcp', 'help']);
 
 function parseArgs(argv) {
   const flags = {};
@@ -45,6 +46,7 @@ const HELP = `NativeKeel: health check for React Native and Expo apps
 Usage
   npx nativekeel [path]          Scan an app and print the report
   npx nativekeel security [path]  Review data theft, account access and code execution risks
+  npx nativekeel improve [path]  Prioritized app improvement review (--json or --out)
   npx nativekeel plan [path]     Write a step-by-step upgrade plan
   npx nativekeel compare <before.json> <after.json>
                                  What got fixed and what is new between two scans
@@ -203,6 +205,14 @@ async function main() {
 
   const root = path.resolve(positional[0] || '.');
   const brand = flags.brand || null;
+
+  if (command === 'improve') {
+    const plan = buildImprovementPlan(await runScan(root, flags));
+    const output = flags.json ? JSON.stringify(plan, null, 2) : improvementToMarkdown(plan);
+    if (flags.out) write(flags.out, output);
+    else console.log(output);
+    return plan.safety.blocked ? 1 : 0;
+  }
 
   if (command === 'plan') {
     const result = await runScan(root, flags);

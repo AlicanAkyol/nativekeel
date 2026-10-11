@@ -100,8 +100,8 @@ export function performanceChecks(project) {
       id: 'perf-nested-lists',
       severity: 'medium',
       area: 'performance',
-      title: `A list inside a ScrollView renders every item at once (${nested[0]}${nested.length > 1 ? ` and ${nested.length - 1} more` : ''})`,
-      detail: 'A vertical FlatList/SectionList inside a vertical ScrollView loses virtualization: all rows mount up front, which costs memory and makes long lists stutter or crash on low-end Android. Use the list as the scroll container and move the other content into ListHeaderComponent/ListFooterComponent.',
+      title: `Review a list nested inside a ScrollView (${nested[0]}${nested.length > 1 ? ` and ${nested.length - 1} more` : ''})`,
+      detail: 'The source contains nested list component names. Confirm these resolve to the expected React Native components and share a scroll direction. This arrangement may interfere with virtualization; mounted row counts, memory use and scrolling performance have not been measured. Consider making the list the scroll container after checking layout behavior.',
       fix: { kind: 'performance', step: `In \`${nested[0]}\`, make the FlatList the scroll container (ListHeaderComponent/ListFooterComponent) instead of nesting it in a ScrollView.` },
     });
   }
@@ -111,7 +111,7 @@ export function performanceChecks(project) {
       severity: 'low',
       area: 'performance',
       title: `${jsDriver} animations run on the JavaScript thread (useNativeDriver: false, e.g. ${jsDriverAt})`,
-      detail: 'Each frame of these animations waits for JavaScript, so they drop frames whenever the app is busy. Transform and opacity animations can use useNativeDriver: true; layout animations can move to Reanimated.',
+      detail: 'The source contains useNativeDriver: false settings. Confirm these configure active React Native Animated calls. JavaScript-driven animations can be affected by busy JS work, but no dropped frames were measured. Check whether each animated property supports the native driver before changing it; layout properties may require a different implementation.',
       fix: { kind: 'performance', step: 'Switch transform/opacity animations to `useNativeDriver: true` (or Reanimated for layout properties).' },
     });
   }
@@ -121,9 +121,9 @@ export function performanceChecks(project) {
       id: 'perf-console-in-release',
       severity: 'low',
       area: 'performance',
-      title: `${logs} console.log calls ship in the release build`,
-      detail: 'They run in production, slow the JavaScript thread in hot paths, and can write user data to the device log. Strip them from release builds with babel-plugin-transform-remove-console (keep console.error/warn).',
-      fix: { kind: 'performance', step: "Add `['transform-remove-console', { exclude: ['error', 'warn'] }]` to the production `env` of your Babel config." },
+      title: `Review ${logs} console logging calls in source`,
+      detail: 'Logging calls were found without a recognized Babel console-removal setting. Other build transforms or development guards may remove them. Inspect the release bundle and logging payloads before changing configuration; runtime cost and data exposure have not been established.',
+      fix: { kind: 'performance', step: "If unnecessary logging remains in the release bundle, review production-only console removal while preserving required diagnostics and argument side effects." },
     });
   }
   if (selectors.length) {

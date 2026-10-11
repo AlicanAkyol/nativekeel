@@ -56,6 +56,12 @@ These are static checks: they catch the common, detectable mistakes, not everyth
 **Performance**
 - **Is it slow or heavy?** A FlatList inside a ScrollView (no virtualization), animations with `useNativeDriver: false`, `console.log` left in release builds, whole-library `lodash`/`moment` imports, images over 500 KB that the app requires, Redux selectors that re-render on every store update.
 
+## App improvement review (unreleased)
+
+`node bin/nativekeel.js improve /path/to/app --offline --out IMPROVE.md` turns existing security, stability, performance, store and dependency findings into an ordered review plan. Use `--json` for structured output or the `improve_app` MCP tool on this development branch. Each action preserves its finding, lists prerequisites, expected effects, verification and rollback. Unknown runtime, backend, accessibility and reliability coverage stays explicit. No quality score, invented performance gains or automatic dependency removal. Malware findings block execution-dependent actions.
+
+This adds a decision layer over existing checks, **not new vulnerability detection coverage**. It is not yet in the published CLI or plugins. See [scope and next modules](docs/app-improvement.md).
+
 ## Import experiments (unreleased)
 
 This development branch treats apparently unused dependencies as review candidates, keeps their upgrade advice, and checks optional and nested installed dependency references before suggesting a review. Root imports no longer imply a measured bundle or startup cost.

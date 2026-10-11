@@ -54,11 +54,14 @@ test('real MCP stdio from a plugin folder scans without custom server env', (t) 
   const input = [
     { jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-03-26' } },
     { jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'scan_project', arguments: { path: project, offline: true } } },
+    { jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'improve_app', arguments: { path: project, offline: true } } },
   ].map((m) => JSON.stringify(m)).join('\n') + '\n';
   const r = spawnSync(process.execPath, [fileURLToPath(new URL('../bin/nativekeel.js', import.meta.url)), 'mcp'], { cwd: plugin, env, input, encoding: 'utf8', timeout: 30000, maxBuffer: 2 * 1024 * 1024 });
   assert.equal(r.status, 0, r.stderr);
   const replies = r.stdout.trim().split('\n').map((line) => JSON.parse(line));
-  assert.equal(replies.length, 2);
+  assert.equal(replies.length, 3);
+  assert.equal(replies[2].result.isError, false, JSON.stringify(replies[2]));
+  assert.equal(replies[2].result.structuredContent.schemaVersion, 1);
   assert.equal(replies[1].result.isError, false, JSON.stringify(replies[1]));
   assert.ok(replies[1].result.structuredContent.project.reactNative);
   assert.doesNotMatch(r.stdout, /No project folders configured/);
