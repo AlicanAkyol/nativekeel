@@ -100,6 +100,7 @@ claude plugin install nativekeel@nativekeel</code></pre>
   <p>The plugin adds the MCP server and the same skill:</p>
 <pre><code>codex plugin marketplace add AlicanAkyol/nativekeel
 codex plugin add nativekeel@nativekeel</code></pre>
+  <p>When using the plugin, configure <code>NATIVEKEEL_MCP_ROOTS</code> in the server environment with the absolute project path. Use the workspace root for a monorepo. The plugin does not automatically allow the home folder.</p>
   <p>Or only the MCP server:</p>
 <pre><code># ~/.codex/config.toml
 [mcp_servers.nativekeel]
@@ -137,7 +138,7 @@ args = ["-y", "nativekeel@latest", "mcp"]</code></pre>
   <ul>
     <li><strong>Read-only.</strong> No tool writes to your project or executes project code. <code>verify_upgrade</code> unpacks the committed version into a temporary folder outside the project and deletes it.</li>
     <li><strong>Warns before the agent runs a project.</strong> If the project hides malware (a VS Code task that runs on folder open, code hidden after a long run of spaces in <code>babel.config.js</code>, JavaScript saved as a font), the result tells the agent not to install, start or build it.</li>
-    <li><strong>Only your folders.</strong> It scans folders under the directory it was started in (plus <code>NATIVEKEEL_MCP_ROOTS</code>), with symlinks resolved. A server started in the filesystem root allows nothing until you name a folder.</li>
+    <li><strong>Only your folders.</strong> It scans folders under the directory it was started in (plus <code>NATIVEKEEL_MCP_ROOTS</code>), with symlinks resolved. Servers started in the filesystem root or inside a plugin directory require explicit project folders in <code>NATIVEKEEL_MCP_ROOTS</code>. File reads, including symlinks and parent lookups, stay within those folders.</li>
     <li><strong>No source code in results.</strong> Findings point to <code>file:line</code>; file contents are never returned.</li>
     <li><strong>Cleaned text.</strong> Control, zero-width and bidi characters are removed; text that reads like instructions to an AI agent is replaced and reported.</li>
     <li><strong>git cannot be turned against you.</strong> A repository's own git config cannot make the scan run a program.</li>

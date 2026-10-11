@@ -1,4 +1,4 @@
-import fs from 'node:fs';
+import fs from './read-boundary.js';
 import path from 'node:path';
 
 // Libraries whose version an Expo SDK decides (from Expo's bundledNativeModules.json). When the

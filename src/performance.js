@@ -1,4 +1,4 @@
-import fs from 'node:fs';
+import fs from './read-boundary.js';
 import path from 'node:path';
 
 // Performance problems you can see in the code: things that make lists stutter, animations run

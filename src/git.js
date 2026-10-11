@@ -1,4 +1,6 @@
 import { spawnSync } from 'node:child_process';
+import fs, { readPolicy, checkedPath } from './read-boundary.js';
+import path from 'node:path';
 
 // The scanned project is untrusted input. Its .git/config can set options that make git run
 // commands: core.fsmonitor runs on plain `git ls-files` (checked with git 2.50.1), so scanning
@@ -27,14 +29,57 @@ const GIT_ENV = {
   GIT_OPTIONAL_LOCKS: '0',
 };
 
+// Git reads its own metadata outside our fs facade. Refuse redirected worktrees/object
+// stores outside the request's roots before invoking it. Ordinary CLI scans are unaffected.
+function gitPathExists(file) {
+  try { fs.lstatSync(file); return true; } catch (e) { if (e.code === 'ENOENT') return false; throw e; }
+}
+function permittedGit(root) {
+  if (!readPolicy()) return true;
+  try {
+    let dir = path.resolve(root);
+    while (true) {
+      if (!readPolicy().roots.some(r => dir === r || dir.startsWith(r.endsWith(path.sep) ? r : r + path.sep))) return false;
+      checkedPath(dir);
+      const dot = path.join(dir, '.git');
+      if (gitPathExists(dot)) {
+        let gitdir = dot;
+        if (fs.statSync(dot).isFile()) {
+          const m = fs.readFileSync(dot, 'utf8').match(/^gitdir: (.+)\s*$/);
+          if (!m) return false;
+          gitdir = path.resolve(dir, m[1].trim());
+        }
+        checkedPath(gitdir);
+        const commonFile = path.join(gitdir, 'commondir');
+        const common = gitPathExists(commonFile) ? path.resolve(gitdir, fs.readFileSync(commonFile, 'utf8').trim()) : gitdir;
+        checkedPath(common);
+        for (const base of [gitdir, common]) {
+          for (const name of ['objects', 'refs', 'packed-refs', 'HEAD', 'index', 'config', 'shallow']) {
+            const file = path.join(base, name);
+            if (gitPathExists(file)) checkedPath(file);
+          }
+          const alternates = path.join(base, 'objects/info/alternates');
+          if (gitPathExists(alternates) && fs.readFileSync(alternates, 'utf8').trim()) return false;
+        }
+        return true;
+      }
+      const parent = path.dirname(dir);
+      if (parent === dir) return false;
+      dir = parent;
+    }
+  } catch { return false; }
+}
+
 // Runs git with the safe overrides. `args` never come from the scanned project.
 function git(root, args, { encoding = 'utf8', maxBuffer = 64 * 1024 * 1024 } = {}) {
+  if (!permittedGit(root)) return { status: 1, stdout: null };
+  const env = Object.fromEntries(Object.entries(process.env).filter(([k]) => !k.startsWith('GIT_')));
   return spawnSync('git', SAFE_CONFIG.flatMap((c) => ['-c', c]).concat(args), {
     cwd: root,
     encoding,
     maxBuffer,
     timeout: 60000,
-    env: { ...process.env, ...GIT_ENV },
+    env: { ...env, ...GIT_ENV },
   });
 }
 

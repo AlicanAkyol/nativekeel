@@ -1,5 +1,6 @@
-import fs from 'node:fs';
+import fs from './read-boundary.js';
 import path from 'node:path';
+import { validPackageName } from './package-name.js';
 import { gitLsFiles } from './git.js';
 import { checkArchive, findBuiltArtifact } from './elf-align.js';
 import { PAGE_SIZE_16K, PLATFORM_MINIMUMS } from './rules.js';
@@ -276,6 +277,7 @@ export function nativeChecks(project, { rnLatest = null, now = new Date() } = {}
     const m = f.match(/^(.+?)\+(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)(?:\+\d+(?:\+[^/]*)?)?(?:\.dev)?\.patch$/);
     if (!m) continue;
     const pkg = m[1].replace(/\+/g, '/');
+    if (!validPackageName(pkg)) continue;
     const version = m[2];
     patched.push({ file: f, pkg, version });
     const text = read(path.join(patchDir, f)) || '';

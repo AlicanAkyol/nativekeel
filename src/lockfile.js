@@ -1,4 +1,4 @@
-import fs from 'node:fs';
+import fs from './read-boundary.js';
 import path from 'node:path';
 
 // Exact versions of direct dependencies, read from the lockfile next to the app or at the

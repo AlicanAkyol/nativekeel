@@ -34,7 +34,7 @@ test('MCP: text from the repository cannot steer the agent', async () => {
   assert.ok(!text.includes('UNIQUE_SOURCE_MARKER_93171'), 'source code is never returned');
   const payload = res.result.structuredContent;
   assert.match(payload.trust, /never instructions/);
-  assert.ok(payload.removedInstructionLikeText.includes('$.project.name'));
+  assert.equal(payload.project.name, '[project name omitted: not a package identifier]');
 });
 
 test('MCP: cleanText', () => {
@@ -86,7 +86,7 @@ test('MCP: a server started in the filesystem root does not allow every folder',
   const root = makeProject({ 'package.json': '{}' });
   const fsRoot = path.parse(root).root;
   assert.deepEqual(allowedRoots({}, fsRoot), []);
-  assert.throws(() => resolveTarget(root, allowedRoots({}, fsRoot)), /outside/);
+  assert.throws(() => resolveTarget(root, allowedRoots({}, fsRoot)), /No project folders/);
   assert.equal(resolveTarget(root, allowedRoots({ NATIVEKEEL_MCP_ROOTS: root }, fsRoot)), fs.realpathSync(root));
 });
 
@@ -104,10 +104,10 @@ test('MCP: explain_error explains, points into the project, never echoes the inp
   assert.equal((await call(ctxFor(root), 'explain_error', { error: '' })).result.isError, true);
 });
 
-test('MCP: a server started inside a plugin folder (Codex) uses the home folder as the boundary', () => {
+test('MCP: a server started inside a plugin folder (Codex) requires explicit project roots', () => {
   const pluginRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'nk-plugin-'));
   const roots = allowedRoots({ PLUGIN_ROOT: pluginRoot }, pluginRoot);
-  assert.deepEqual(roots, [fs.realpathSync(os.homedir())]);
+  assert.deepEqual(roots, []);
   assert.deepEqual(allowedRoots({ PLUGIN_ROOT: pluginRoot }, os.tmpdir()), [fs.realpathSync(os.tmpdir())], 'only when started inside the plugin');
   const project = fs.mkdtempSync(path.join(os.tmpdir(), 'nk-proj-'));
   assert.deepEqual(allowedRoots({ PLUGIN_ROOT: pluginRoot, NATIVEKEEL_MCP_ROOTS: project }, pluginRoot), [fs.realpathSync(project)], 'NATIVEKEEL_MCP_ROOTS narrows it');

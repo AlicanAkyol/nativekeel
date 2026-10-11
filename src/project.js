@@ -1,5 +1,6 @@
-import fs from 'node:fs';
+import fs from './read-boundary.js';
 import path from 'node:path';
+import { validateManifest, validPackageName } from './package-name.js';
 
 const readText = (file) => {
   try {
@@ -29,6 +30,7 @@ export function cleanVersion(v) {
 
 // Monorepos hoist packages, so look in every node_modules from the app up to the filesystem root.
 export function findPackageDir(root, name) {
+  if (!validPackageName(name)) return null;
   let dir = root;
   while (true) {
     const candidate = path.join(dir, 'node_modules', name);
@@ -128,6 +130,7 @@ export function versionFromSpec(name, spec) {
 export function loadProject(root) {
   const pkg = readJson(path.join(root, 'package.json'));
   if (!pkg) throw new Error(`No package.json found in ${root}`);
+  validateManifest(pkg);
   const usesCatalog = JSON.stringify([pkg.dependencies, pkg.devDependencies]).includes('"catalog:');
   const catalogs = usesCatalog ? readCatalogs(root) : null;
   const deps = resolveCatalogRefs({ ...(pkg.dependencies || {}) }, catalogs);

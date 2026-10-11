@@ -1,4 +1,5 @@
-import fs from 'node:fs';
+import fs, { withReadRoots, readPolicy } from './read-boundary.js';
+import { executionSafety } from './safety.js';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -21,7 +22,8 @@ export async function verifyUpgrade(root, { base = 'HEAD', offline = true, analy
     const x = spawnSync('tar', ['-x', '-f', '-', '-C', tmp], { input: archive.tar, maxBuffer: 16 * 1024 * 1024, timeout: 120000 });
     if (x.status !== 0) throw new Error('could not unpack the committed version');
     const options = offline ? { get: async () => null, offline: true } : analyzeOptions;
-    const before = await analyze(loadProject(tmp), options);
+    const scanBase = () => analyze(loadProject(tmp), options);
+    const before = await (readPolicy() ? withReadRoots([tmp], scanBase) : scanBase());
     const after = await analyze(loadProject(root), options);
     const diff = compareScans(before, after);
     const bad = diff.added.filter((f) => f.severity === 'critical' || f.severity === 'high');
@@ -30,7 +32,7 @@ export async function verifyUpgrade(root, { base = 'HEAD', offline = true, analy
     if (after.project && fs.existsSync(path.join(root, 'node_modules')) && !fs.existsSync(path.join(tmp, 'node_modules'))) {
       notes.push('The committed version was scanned without node_modules (versions from the lockfile); the working tree with node_modules.');
     }
-    return { base, commit: archive.sha, diff, ok: bad.length === 0, newSerious: bad, notes, offline };
+    return { base, commit: archive.sha, diff, ok: bad.length === 0, newSerious: bad, safety: executionSafety(after.findings), notes, offline };
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
   }

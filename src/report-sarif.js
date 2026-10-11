@@ -1,4 +1,4 @@
-import fs from 'node:fs';
+import fs from './read-boundary.js';
 import path from 'node:path';
 import { SITE_URL } from './config.js';
 

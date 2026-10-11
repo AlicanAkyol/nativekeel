@@ -1,4 +1,5 @@
-import fs from 'node:fs';
+import fs from './read-boundary.js';
+import { validPackageName } from './package-name.js';
 import path from 'node:path';
 import { cleanVersion, findPackageDir, installedVersion, versionFromSpec } from './project.js';
 import { createRegistry, fetchJson } from './registry.js';
@@ -8,6 +9,7 @@ import { stabilityChecks } from './stability.js';
 import { performanceChecks } from './performance.js';
 import { vulnerableDependencies, passwordLeaks, webViewRisks, androidBackup, exportedComponents, plainHttpCalls, cloudRules, insecureTls, weakCrypto, tokenStorage, reverseEngineering, expoConfigSecrets, aiKeysInBundle, clipboardSecrets, keychainAccessibility, deepLinks, supabaseRls, playRestrictedPermissions, masvsOf, MASVS_GROUPS } from './security.js';
 import { maliciousCode } from './malware.js';
+import { supabaseBroadPolicies, firebaseBroadWrites } from './authorization.js';
 import { lockedVersions } from './lockfile.js';
 import { storeReviewRules } from './store-rules.js';
 import { expoPinnedNames, movesWithExpoSdk } from './expo-pins.js';
@@ -285,7 +287,8 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
     }
     // Only code that has to follow React Native or the OS goes stale; a finished JS utility does not.
     const stale = !dep.unmaintained && !revived && age !== null && age > STALE_RELEASE_DAYS && (native || !!release.rnLink);
-    const alternatives = RENAMED[name] ? [RENAMED[name]] : dir && dir.alternatives && dir.alternatives.length ? dir.alternatives : REPLACEMENTS[name] || [];
+    const candidateAlternatives = RENAMED[name] ? [RENAMED[name]] : dir && dir.alternatives && dir.alternatives.length ? dir.alternatives : REPLACEMENTS[name] || [];
+    const alternatives = Array.isArray(candidateAlternatives) ? candidateAlternatives.filter(validPackageName) : [];
     if (noNewArch || dep.unmaintained || stale) {
       const problems = [
         noNewArch && 'no New Architecture support',
@@ -528,7 +531,7 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
   if (!project.isLibrary) for (const f of storeReviewRules(project, now)) add(f);
 
   // Security beyond leaked keys.
-  for (const f of [...passwordLeaks(project.root), ...webViewRisks(project.root), ...androidBackup(project.root), ...exportedComponents(project.root), ...plainHttpCalls(project.root), ...cloudRules(project.root, project.deps, now), ...insecureTls(project.root), ...weakCrypto(project.root), ...tokenStorage(project.root), ...reverseEngineering(project.root, project), ...expoConfigSecrets(project.root), ...aiKeysInBundle(project.root, { ...project.devDeps, ...project.deps }), ...clipboardSecrets(project.root), ...keychainAccessibility(project.root), ...deepLinks(project.root, project.deps), ...supabaseRls(project.root), ...(project.isLibrary ? [] : playRestrictedPermissions(project.root, project.deps)), ...maliciousCode(project.root)]) add(f);
+  for (const f of [...passwordLeaks(project.root), ...webViewRisks(project.root), ...androidBackup(project.root), ...exportedComponents(project.root), ...plainHttpCalls(project.root), ...cloudRules(project.root, project.deps, now), ...insecureTls(project.root), ...weakCrypto(project.root), ...tokenStorage(project.root), ...reverseEngineering(project.root, project), ...expoConfigSecrets(project.root), ...aiKeysInBundle(project.root, { ...project.devDeps, ...project.deps }), ...clipboardSecrets(project.root), ...keychainAccessibility(project.root), ...deepLinks(project.root, project.deps), ...supabaseRls(project.root), ...supabaseBroadPolicies(project.root), ...firebaseBroadWrites(project.root), ...(project.isLibrary ? [] : playRestrictedPermissions(project.root, project.deps)), ...maliciousCode(project.root)]) add(f);
   if (!forcedOffline) {
     // Exact versions only (installed, else the lockfile): a range would be a guess.
     const locked = lockedVersions(project.root, project.deps);

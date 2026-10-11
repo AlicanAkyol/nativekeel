@@ -1,4 +1,4 @@
-import fs from 'node:fs';
+import fs from './read-boundary.js';
 import path from 'node:path';
 
 // What changes in the React Native and Expo versions ahead of the project, matched against its

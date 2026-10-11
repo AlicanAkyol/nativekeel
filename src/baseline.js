@@ -1,4 +1,4 @@
-import fs from 'node:fs';
+import fs from './read-boundary.js';
 
 // A baseline is the list of finding ids a team has accepted. In CI only findings that are
 // not in the baseline fail the build, so an old app can adopt NativeKeel without fixing

@@ -40,6 +40,13 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.64</h2><p class="date">11 October 2026</p>
+<ul>
+<li><span class="tag">Security</span><b>Safer scans from AI agents.</b> MCP checks project file reads against allowed roots, rejects unsafe dependency names, and keeps malware stop warnings in upgrade plans, error explanations and verification results. A project with suspected malware no longer gets a plan that starts by running tests. Removed instruction-like object keys are not echoed in diagnostic paths. These defenses reduce risk; text filtering cannot make an agent immune to prompt injection.</li>
+<li><span class="tag">Security</span><b>More access-control checks for mobile backends.</b> Finds Firebase write rules that only require sign-in and supported Supabase migrations with unconditional SELECT and UPDATE/DELETE policies for anonymous or signed-in users. Reports source locations and prerequisites; does not claim the rules are deployed or that a live attack succeeded. Public reads, insert-only forms and restrictive policies are handled conservatively.</li>
+<li><span class="tag">Configuration</span><b>Plugin servers need explicit project roots.</b> Set <code>NATIVEKEEL_MCP_ROOTS</code> in the MCP server environment when it starts inside a plugin directory. The home folder is no longer granted automatically. For monorepos, allow the workspace root if hoisted dependencies must be read.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.63</h2><p class="date">11 October 2026</p>
 <ul>
 <li><span class="tag">AI agents</span><b>Codex plugin.</b> <code>codex plugin marketplace add AlicanAkyol/nativekeel</code>, then <code>codex plugin add nativekeel@nativekeel</code>. It adds the MCP server, pinned to the release, and the same skill as the Claude Code plugin, so Codex checks the project before upgrades and library changes, explains errors and verifies the upgrade before you commit. Built on the open Agent Plugins format and installed with Codex CLI 0.162.</li>

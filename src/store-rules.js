@@ -1,4 +1,4 @@
-import fs from 'node:fs';
+import fs from './read-boundary.js';
 import path from 'node:path';
 import { PRIVACY_SDKS } from './privacy-sdks.js';
 import { IOS_SDK_27, SCENE_WINDOW_LIBS } from './rules.js';

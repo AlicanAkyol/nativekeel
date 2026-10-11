@@ -7,6 +7,6 @@ codex plugin marketplace add AlicanAkyol/nativekeel
 codex plugin add nativekeel@nativekeel
 ```
 
-**Runs** `npx -y nativekeel@<version> mcp`, the open-source [nativekeel](https://www.npmjs.com/package/nativekeel) package pinned to an exact version (no dependencies, npm provenance). **Reads** project files, never writes to the project, never runs project code, never returns source code. Codex starts plugin servers in the plugin folder, so the boundary is your home folder (set `NATIVEKEEL_MCP_ROOTS` to narrow it). **Sends** only package names and versions to registry.npmjs.org, reactnative.directory and unpkg.com; no telemetry.
+**Runs** `npx -y nativekeel@<version> mcp`, the open-source [nativekeel](https://www.npmjs.com/package/nativekeel) package pinned to an exact version (no dependencies, npm provenance). **Reads** project files, never writes to the project, never runs project code, never returns source code. Codex starts plugin servers in the plugin folder, so configure `NATIVEKEEL_MCP_ROOTS` in the MCP server environment with the absolute project path (or the workspace root for a monorepo). Without explicit roots the plugin server refuses project scans; it does not allow the home folder automatically. **Sends** only package names and versions to registry.npmjs.org, reactnative.directory and unpkg.com; no telemetry.
 
 More: [nativekeel.com/ai-agents](https://nativekeel.com/ai-agents) · [Security model](https://github.com/AlicanAkyol/nativekeel/blob/main/SECURITY.md) · MIT

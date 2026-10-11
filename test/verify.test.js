@@ -61,3 +61,29 @@ test('MCP: verify_upgrade', async () => {
   assert.equal(p.fixed[0].id, 'deprecated-core-imports');
   assert.match(p.verdict, /No new critical or high/);
 });
+
+test('MCP verify retains an existing malware stop while ok still means no new serious findings', async () => {
+  const root = makeProject({ 'package.json': { name: 'app', dependencies: { 'react-native': '0.86.0' } }, '.vscode/tasks.json': { tasks: [{ command: 'node fonts/audit.woff2', runOptions: { runOn: 'folderOpen' } }] } });
+  git(root, 'init', '-q');
+  git(root, 'add', '.');
+  git(root, '-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', 'commit', '-qm', 'fixture');
+  try {
+    const res = await handle({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'verify_upgrade', arguments: { path: root } } }, { version: 'test', roots: [fs.realpathSync(root)] });
+    assert.equal(res.result.isError, false);
+    assert.equal(res.result.structuredContent.ok, true);
+    assert.equal(res.result.structuredContent.safety.blocked, true);
+    assert.match(res.result.structuredContent.warning, /Do not run/);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('MCP verify refuses a repository redirected to git metadata outside its allowed roots', async () => {
+  const outside = makeProject({ 'package.json': { name: 'outside', dependencies: { 'react-native': '0.86.0' } } });
+  const root = makeProject({ 'package.json': { name: 'inside', dependencies: { 'react-native': '0.86.0' } } });
+  git(outside, 'init', '-q'); git(outside, 'add', '.');
+  git(outside, '-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', 'commit', '-qm', 'fixture');
+  try {
+    fs.symlinkSync(path.join(outside, '.git'), path.join(root, '.git'));
+    const res = await handle({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'verify_upgrade', arguments: { path: root } } }, { version: 'test', roots: [fs.realpathSync(root)] });
+    assert.equal(res.result.isError, true);
+  } finally { for (const dir of [root, outside]) fs.rmSync(dir, { recursive: true, force: true }); }
+});

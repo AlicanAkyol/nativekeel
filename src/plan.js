@@ -1,7 +1,8 @@
-import fs from 'node:fs';
+import fs from './read-boundary.js';
 import path from 'node:path';
 import { UPGRADE_HELPER_URL, NEW_ARCH_ONLY_MINOR } from './rules.js';
 import { SITE_URL } from './config.js';
+import { executionSafety } from './safety.js';
 import { COMPAT, bestRange } from './compat.js';
 import { compareVersions } from './known-issues.js';
 import { expoPinnedNames, movesWithExpoSdk } from './expo-pins.js';
@@ -171,6 +172,11 @@ function bumpSteps(list, extra = () => '') {
 }
 
 export function buildPlan(result) {
+  const safety = executionSafety(result.findings);
+  if (safety.blocked) return { complexity: complexity(result.findings), phases: [{
+    title: 'Stop: inspect suspected malware', why: safety.warning,
+    steps: ['Keep this project closed in editors that run workspace tasks. Do not install dependencies or run its code. Review the malicious-code finding and restore a trusted copy before planning an upgrade.'],
+  }] };
   const isExpo = !!result.project.expo;
   const basePm = commands[packageManager(result.project.root)];
   // In Expo projects `npx expo install` picks the version that matches the SDK.
