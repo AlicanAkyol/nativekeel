@@ -40,6 +40,11 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.58</h2><p class="date">11 October 2026</p>
+<ul>
+<li><span class="tag">AI agents</span><b>The Claude Code plugin runs an exact NativeKeel version</b> instead of whatever is latest on npm, and updates with each release. Its README lists what it runs, what it reads and the only data it sends (package names and versions, to npm, React Native Directory and unpkg; no source code, no telemetry).</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.57</h2><p class="date">11 October 2026</p>
 <ul>
 <li><span class="tag">AI agents</span><b>Claude Code plugin.</b> <code>claude plugin marketplace add AlicanAkyol/nativekeel</code>, then <code>claude plugin install nativekeel@nativekeel</code>. It adds the MCP server and a skill that tells Claude when to use it: before upgrading React Native or Expo, adding a native library, preparing a store release, or running a project you did not write. In our test Claude used it without being asked, took 7 turns instead of 16, and found a store-blocking issue it missed on its own. <a href="/ai-agents">Details</a>.</li>

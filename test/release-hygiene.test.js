@@ -83,7 +83,9 @@ test('Claude Code plugin matches package.json and runs the MCP server', () => {
   assert.equal(plugin.name, entry.name, 'entry name and manifest name must match');
   assert.equal(plugin.version, pkg.version, 'bump plugins/nativekeel/.claude-plugin/plugin.json with each release');
   const mcp = JSON.parse(fs.readFileSync(path.join(dir, '.mcp.json'), 'utf8'));
-  assert.deepEqual(mcp.mcpServers.nativekeel.args, ['-y', `${pkg.name}@latest`, 'mcp']);
+  // The Claude directory blocks unpinned launchers (npx pkg@latest): pin to this release.
+  assert.deepEqual(mcp.mcpServers.nativekeel.args, ['-y', `${pkg.name}@${pkg.version}`, 'mcp']);
+  assert.ok(fs.existsSync(path.join(dir, 'README.md')) && fs.existsSync(path.join(dir, 'LICENSE')), 'the directory requires a README and a LICENSE in the plugin folder');
   const skill = fs.readFileSync(path.join(dir, 'skills/react-native-health/SKILL.md'), 'utf8');
   for (const tool of ['scan_project', 'upgrade_plan', 'check_library']) assert.ok(skill.includes(tool), `skill mentions ${tool}`);
 });

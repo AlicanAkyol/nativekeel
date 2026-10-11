@@ -2,7 +2,11 @@
   "mcpServers": {
     "nativekeel": {
       "command": "npx",
-      "args": ["-y", "nativekeel@latest", "mcp"]
+      "args": [
+        "-y",
+        "nativekeel@0.1.58",
+        "mcp"
+      ]
     }
   }
 }
