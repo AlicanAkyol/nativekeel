@@ -37,6 +37,29 @@ const guidance = {
   },
 };
 
+
+function secretGuidance(f) {
+  const x = f.fix;
+  if (x?.kind !== 'secret') return null;
+  const location = `${x.file}${x.line ? `:${x.line}` : ''}`;
+  let change;
+  if (f.id.startsWith('secret:aws-access-key:')) change = `Deactivate the IAM access key matching the AWS access key ID in ${location} immediately, then replace legitimate use through protected credentials. Remove the value from the app and review AWS activity logs; deleting source alone does not revoke the key.`;
+  else if (f.id.startsWith('signing-keystore:')) change = `Move the release keystore in ${location} into protected signing storage. If exposed, use the appropriate signing-key recovery process; for Play App Signing, reset the upload key rather than replacing the app signing identity blindly.`;
+  else if (f.id.startsWith('signing-asc-key:')) change = `Revoke the App Store Connect API key in ${location} in Users and Access → Integrations; provision its replacement in CI secrets.`;
+  else if (f.id.startsWith('signing-p12:')) change = `Revoke the exposed signing certificate associated with ${location} in the Apple Developer portal, then provision a protected replacement signing identity.`;
+  else if (x.label === 'Signing passwords') change = `Move signing passwords in ${location} to protected signing storage. Change them if the keystore or passwords left your control; assess the signing key's exposure separately.`;
+  else if (x.exposure === 'test-key') change = `Confirm the private key in ${location} is dedicated to tests. If it is also used by a real service, rotate it there; do not rotate unrelated production keys for a dedicated test fixture.`;
+  else if (x.exposure === 'comment') change = `If the credential in ${location} is real, revoke or rotate it at its provider; then delete the commented value. A comment can remain exposed through repository history.`;
+  else change = `Revoke or rotate the ${x.label || 'credential'} in ${location} at its provider immediately. Removing it from source does not invalidate exposed copies. ${x.bundled ? 'Move privileged operations to a backend; never put the replacement secret in the app.' : 'Store the replacement in protected server or CI secrets, outside the repository.'}`;
+  return {
+    change,
+    prerequisite: x.exposure === 'test-key' ? 'Check whether this key is dedicated to tests or also protects a real service.' : x.exposure === 'comment' ? 'Determine whether this is a real credential; comments do not establish active use or invalidate a previously exposed key.' : 'Identify the credential owner and provider without exposing the value. For a real exposed credential, containment must not wait for path reachability or an exploit reproduction.',
+    effect: 'Invalidate the exposed credential and prevent its replacement from being distributed through the same path; assess any prior misuse separately.',
+    validate: x.exposure === 'test-key' ? 'Verify the test key is absent from production configuration and release inputs; if production reuse is found, confirm rotation with its provider.' : x.exposure === 'comment' ? 'Verify removal from current source; if the value was real, confirm provider revocation or rotation. Deleting the comment alone does not remove history.' : 'Confirm revocation or rotation in provider records, inspect access logs for misuse, and verify legitimate operations with the replacement. Check repository and release outputs for the old value without displaying it.',
+    rollback: 'Keep the exposed credential revoked. Restore legitimate service using a protected replacement; never roll back to the leaked value.',
+  };
+}
+
 // This is a decision layer over existing checks, not a new vulnerability detector.
 // Severity determines review order; it is never converted to an app quality score.
 export function buildImprovementPlan(result, { limit = 80 } = {}) {
@@ -49,7 +72,8 @@ export function buildImprovementPlan(result, { limit = 80 } = {}) {
   const cap = Number.isInteger(limit) && limit >= 0 ? Math.min(limit, 1000) : 80;
   const actions = sorted.slice(0, cap).map((f, i) => {
     const category = domain(f);
-    const guide = guidance[category];
+    const secret = secretGuidance(f);
+    const guide = secret || guidance[category];
     return {
       order: i + 1, findingId: f.id, domain: category, severity: f.severity,
       title: f.title, reason: f.detail,
@@ -61,10 +85,10 @@ export function buildImprovementPlan(result, { limit = 80 } = {}) {
       expectedEffect: f.attack?.impact ? `Address this reported potential impact: ${f.attack.impact}` : guide.effect,
       measuredBenefit: null,
       automaticFix: false,
-      status: safety.blocked ? 'blocked-by-execution-safety' : 'review-required',
-      proposedChange: safety.blocked ? null : f.fix?.step || 'Review the finding in context before choosing a change.',
+      status: safety.blocked ? 'blocked-by-execution-safety' : secret && !['comment', 'test-key'].includes(f.fix.exposure) ? 'containment-required' : 'review-required',
+      proposedChange: safety.blocked ? null : secret?.change || f.fix?.step || 'Review the finding in context before choosing a change.',
       validation: safety.blocked ? [] : [f.attack?.validation || guide.validate],
-      rollback: safety.blocked ? null : 'Keep the original implementation in version control; revert if behavior regresses or the intended benefit cannot be verified.',
+      rollback: safety.blocked ? null : secret?.rollback || 'Keep the original implementation in version control; revert if behavior regresses or the intended benefit cannot be verified.',
     };
   });
   return {
@@ -90,9 +114,25 @@ const safe = value => String(value ?? '').replace(/[\u0000-\u001f\u007f-\u009f\u
 export function improvementToMarkdown(plan) {
   const lines = ['# App improvement plan', '', safe(plan.conclusion), '', safe(plan.ordering), '', `Actions: ${plan.totalActions}; omitted: ${plan.omittedActions}.`, ''];
   for (const a of plan.actions) {
-    lines.push(`## ${a.order}. ${safe(a.title)}`, '', `${safe(a.domain)} · ${safe(a.severity)} · ${safe(a.status)}`, '', `Finding: ${safe(a.findingId)}`, '', `Why: ${safe(a.reason)}`, '', `Expected effect: ${safe(a.expectedEffect)}`, '', `Evidence: ${safe(JSON.stringify(a.evidence))}`, '', safe(a.evidenceLimit), '', `Confidence: ${safe(a.confidence)}. Measured benefit: none.`, '', ...a.prerequisites.map(p => `- Before changing: ${safe(p)}`), '');
-    if (a.proposedChange) lines.push(`Proposed change (review first): ${safe(a.proposedChange)}`, '', ...a.validation.map(v => `- Validate: ${safe(v)}`), '', `Rollback: ${safe(a.rollback)}`, '');
+    lines.push(`## ${a.order}. ${safe(a.title)}`, '', `${safe(a.domain)} · ${safe(a.severity)} · ${safe(a.status)}`, '', `Finding: ${safe(a.findingId)}`, '', `Why: ${safe(a.reason)}`, '', `Expected effect: ${safe(a.expectedEffect)}`, '', ...(a.evidence && Object.keys(a.evidence).length ? [`Evidence: ${safe(JSON.stringify(a.evidence))}`, ''] : []), safe(a.evidenceLimit), '', ...(a.confidence !== 'not-specified-by-check' ? [`Confidence: ${safe(a.confidence)}`, ''] : []), ...a.prerequisites.map(p => `- Before changing: ${safe(p)}`), '');
+    if (a.proposedChange) lines.push(`Action: ${safe(a.proposedChange)}`, '', ...a.validation.map(v => `- Validate: ${safe(v)}`), '', `Rollback: ${safe(a.rollback)}`, '');
   }
   lines.push('## Still unassessed', '', ...plan.unassessed.map(u => `- ${safe(u.domain)}: ${safe(u.reason)} Needed: ${safe(u.evidenceNeeded)}`), '', ...plan.warnings.map(w => `- Scan warning: ${safe(w)}`), '');
+  return lines.join('\n');
+}
+
+// Terminal output needs no Markdown escaping; retain control/bidi stripping.
+const plain = value => String(value ?? '').replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/g, ' ');
+export function improvementToText(plan) {
+  const lines = ['App improvement plan', plain(plan.conclusion), `Actions: ${plan.totalActions}; omitted: ${plan.omittedActions}.`, ''];
+  for (const a of plan.actions) {
+    lines.push(`${a.order}. [${plain(a.severity)} / ${plain(a.domain)}] ${plain(a.title)}`, `   Why: ${plain(a.reason)}`);
+    if (a.proposedChange) lines.push(`   Action: ${plain(a.proposedChange)}`);
+    for (const p of a.prerequisites) lines.push(`   Check: ${plain(p)}`);
+    for (const v of a.validation) lines.push(`   Verify: ${plain(v)}`);
+    if (a.rollback) lines.push(`   Recovery: ${plain(a.rollback)}`);
+    lines.push('');
+  }
+  lines.push('Still unassessed:', ...plan.unassessed.map(u => `  ${plain(u.domain)}: ${plain(u.reason)} Needed: ${plain(u.evidenceNeeded)}`), ...plan.warnings.map(w => `  Scan warning: ${plain(w)}`));
   return lines.join('\n');
 }

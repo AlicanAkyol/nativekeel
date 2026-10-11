@@ -12,7 +12,7 @@ import { buildPlan, planToMarkdown } from '../src/plan.js';
 import { applyBaseline, saveBaseline } from '../src/baseline.js';
 import { compareScans, compareToMarkdown } from '../src/compare.js';
 import { securityOnly } from '../src/security-review.js';
-import { buildImprovementPlan, improvementToMarkdown } from '../src/improve.js';
+import { buildImprovementPlan, improvementToMarkdown, improvementToText } from '../src/improve.js';
 import { SITE_URL } from '../src/config.js';
 
 const VALUE_FLAGS = new Set(['--html', '--out', '--baseline', '--save-baseline', '--brand', '--sarif', '--markdown', '--fail-on', '--path', '--base']);
@@ -50,11 +50,6 @@ Usage
   npx nativekeel plan [path]     Write a step-by-step upgrade plan
   npx nativekeel compare <before.json> <after.json>
                                  What got fixed and what is new between two scans
-  npx nativekeel prepare-imports <settings.json>
-                                 Prepare artifact/source hashes without running code
-  npx nativekeel compare-imports <experiment.json> [--json]
-                                 Compare supplied release bundles for a reviewed
-                                 same-version Lodash import change (no code runs)
   npx nativekeel explain "<error>" [--path <app>]
                                  What a build, launch or store error means and the
                                  fix (or pipe a log in: ... | npx nativekeel explain)
@@ -208,7 +203,7 @@ async function main() {
 
   if (command === 'improve') {
     const plan = buildImprovementPlan(await runScan(root, flags));
-    const output = flags.json ? JSON.stringify(plan, null, 2) : improvementToMarkdown(plan);
+    const output = flags.json ? JSON.stringify(plan, null, 2) : flags.out ? improvementToMarkdown(plan) : improvementToText(plan);
     if (flags.out) write(flags.out, output);
     else console.log(output);
     return plan.safety.blocked ? 1 : 0;

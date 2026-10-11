@@ -88,3 +88,49 @@ test('improve_app keeps MCP sanitization, boundaries and malware stop behavior',
     assert.equal(JSON.parse(cli.stdout).safety.blocked, true);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
+
+test('real bundled secret receives immediate containment without reachability or unsafe rollback', () => {
+  const p = buildImprovementPlan(result([{ ...finding('secret:aws:App.js', 'secret', 'critical'), fix: { kind: 'secret', label: 'AWS access key', file: 'App.js', line: 3, bundled: true } }]));
+  const a = p.actions[0];
+  assert.match(a.proposedChange, /Revoke or rotate.*immediately/);
+  assert.match(a.proposedChange, /never put the replacement secret in the app/);
+  assert.match(a.prerequisites[0], /must not wait for path reachability/);
+  assert.doesNotMatch(a.validation.join(' '), /reproduce.*condition/);
+  assert.match(a.rollback, /never roll back to the leaked/);
+  assert.equal(a.status, 'containment-required');
+});
+
+test('dedicated test keys and comments require checking real use; signing keys retain platform recovery', () => {
+  for (const exposure of ['test-key', 'comment']) {
+    const a = buildImprovementPlan(result([{ ...finding('secret:key:x', 'secret'), fix: { kind: 'secret', exposure, file: 'test.js', label: 'Private key', bundled: false } }])).actions[0];
+    assert.equal(a.status, 'review-required');
+    assert.doesNotMatch(a.proposedChange, /immediately/);
+  }
+  const a = buildImprovementPlan(result([{ ...finding('signing-keystore:release.jks', 'secret'), fix: { kind: 'secret', file: 'release.jks', label: 'Release keystore', bundled: false } }])).actions[0];
+  assert.match(a.proposedChange, /reset the upload key/);
+});
+
+test('terminal is readable and help keeps narrow experiments out of the primary workflow', async () => {
+  const { improvementToText } = await import('../src/improve.js');
+  const p = buildImprovementPlan(result([{ ...finding('x', 'performance'), title: 'Review imports (src/App.js:1)' }]));
+  assert.match(improvementToText(p), /imports \(src\/App.js:1\)/);
+  assert.doesNotMatch(improvementToText(p), /Evidence: \[\]|not-specified|\\\(/);
+  assert.doesNotMatch(improvementToMarkdown(p), /Evidence:|not-specified/);
+  const help = execFileSync(process.execPath, ['bin/nativekeel.js', '--help'], { encoding: 'utf8' });
+  assert.doesNotMatch(help, /compare-imports|prepare-imports/);
+});
+
+test('scanner-to-CLI regression: bundled AWS key gets deactivation as its explicit action', () => {
+  const root = makeProject({ 'package.json': { name: 'fixture', dependencies: { 'react-native': '0.80.0' } }, 'src/App.js': `const accessKeyId = '${'AKIA' + '7X9Q'.repeat(4)}';` });
+  try {
+    const args = ['bin/nativekeel.js', 'improve', root, '--offline'];
+    const p = JSON.parse(execFileSync(process.execPath, [...args, '--json'], { encoding: 'utf8' }));
+    const a = p.actions.find(a => a.findingId.startsWith('secret:aws-access-key:'));
+    assert.ok(a);
+    assert.match(a.proposedChange, /Deactivate the IAM access key.*immediately/);
+    assert.doesNotMatch(a.prerequisites.join(' '), /Confirm the affected path is reachable/);
+    const terminal = execFileSync(process.execPath, args, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+    assert.match(terminal, /Action: Deactivate the IAM access key/);
+    assert.doesNotMatch(terminal, /Evidence: \[\]|Confidence: not-specified|\\\(/);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});

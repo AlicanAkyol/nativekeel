@@ -40,6 +40,14 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.68</h2><p class="date">12 October 2026</p>
+<ul>
+<li><span class="tag">Plan</span><b>Review the whole app in order.</b> <code>nativekeel improve</code> and MCP <code>improve_app</code> turn existing security, crash, performance, store and dependency findings into actions with applicability conditions, verification and recovery. This adds a decision layer, not new vulnerability detectors.</li>
+<li><span class="tag">Security</span><b>Exposed credentials need containment.</b> Secret findings get provider revocation or rotation steps rather than a generic instruction to reproduce an exploit. Dedicated test keys, comments and platform signing identities have separate guidance. Recovery never restores a leaked credential.</li>
+<li><span class="tag">Accuracy</span><b>Review dependencies before removing them.</b> Optional and nested installed references are checked, and incomplete evidence suppresses unused candidates. Dynamic, native and generated consumers still need review. Upgrade advice is retained.</li>
+<li><span class="tag">Performance</span>Source logging, list and import patterns no longer imply measured release cost or speed gains. Terminal output is plain text; saved plans use escaped Markdown. Narrow import experiments remain documented separately from the main CLI help.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.67</h2><p class="date">11 October 2026</p>
 <ul>
 <li><span class="tag">Fix</span><b>The Codex plugin can scan projects again.</b> Since 0.1.64, a server started inside a plugin folder needed <code>NATIVEKEEL_MCP_ROOTS</code>, but Codex does not let users set environment variables for a plugin's server, so every scan from the plugin was refused. Codex starts plugin servers in the plugin's own folder, which says nothing about the open project, so the boundary there is your home folder again. To limit it to one project, configure the server yourself in <code>~/.codex/config.toml</code> with <code>NATIVEKEEL_MCP_ROOTS</code>. The tools stay read-only, never run project code and never return source code. Claude Code is not affected: it starts the server in the project folder.</li>

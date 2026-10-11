@@ -565,7 +565,7 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
         area: 'secret',
         title: `${s.label} in a commented-out line (${where})`,
         detail: `${value}Comments are not shipped in the app, but the line is in the repository and its git history. If the value is real, rotate it; either way, delete the line.`,
-        fix: { kind: 'secret', label: s.label, file: s.file, line: s.line, bundled: false },
+        fix: { kind: 'secret', label: s.label, file: s.file, line: s.line, bundled: false, exposure: 'comment' },
       });
     } else if (s.committed !== false && s.rule === 'private-key' && TEST_PATH.test(s.file.split(path.sep).join('/'))) {
       // A key pair made for a test (Edge signs and verifies a sample payload with one) unlocks
@@ -576,7 +576,7 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
         area: 'secret',
         title: `Private key in a test file (${where})`,
         detail: `${value}Test code is not shipped, and a key generated for a test protects nothing. Make sure it is not also used by a real server or service; if it is, rotate it.`,
-        fix: { kind: 'secret', label: s.label, file: s.file, line: s.line, bundled: false },
+        fix: { kind: 'secret', label: s.label, file: s.file, line: s.line, bundled: false, exposure: 'test-key' },
       });
     } else if (s.committed !== false) {
       add({
@@ -585,7 +585,7 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
         area: 'secret',
         title: `${s.label} committed to the repository (${where})`,
         detail: `${value}Not shipped in the app, but everyone with repo access has it and it stays in git history. Rotate it and load it from the environment instead.`,
-        fix: { kind: 'secret', label: s.label, file: s.file, line: s.line, bundled: false },
+        fix: { kind: 'secret', label: s.label, file: s.file, line: s.line, bundled: false, exposure: 'repository' },
       });
     }
   }

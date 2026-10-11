@@ -1,13 +1,13 @@
 # App improvement review
 
-Development branch only. `improve` and `improve_app` combine existing checks into an actionable review. They do not run application code or add runtime measurement or new vulnerability detectors.
+Introduced in 0.1.68. `improve` and `improve_app` combine existing checks into an actionable review. They do not run application code or add runtime measurement or new vulnerability detectors.
 
 ```sh
 node bin/nativekeel.js improve /path/to/app --offline --out IMPROVE.md
 node bin/nativekeel.js improve /path/to/app --offline --json
 ```
 
-Without `--offline`, the existing scanner's package metadata lookups apply. CLI exit code 1 means malware blocked execution; 0 means a plan was generated, **not** that the app passed. Use `scan --fail-on` for the existing CI severity gate. `--out` writes JSON when combined with `--json`, otherwise Markdown. Existing scan/report commands are unchanged.
+Without `--offline`, the existing scanner's package metadata lookups apply. The terminal prints plain text; `--out` saves escaped Markdown. CLI exit code 1 means malware blocked execution; 0 means a plan was generated, **not** that the app passed. Use `scan --fail-on` for the existing CI severity gate. `--out` writes JSON when combined with `--json`, otherwise Markdown. Existing scan/report commands are unchanged.
 
 ## Decision contract
 
@@ -35,3 +35,7 @@ The intended product helps a developer decide what to fix, why it matters, and w
 Every new detector needs: stated threat or cost model, exact evidence provenance, positive and negative fixtures, bounds on unsupported syntax/configuration, and a reproducible verification procedure. Every measured recommendation needs an unchanged baseline and behavioral parity review. Unknowns stay unknown; no universal app quality or security score is inferred.
 
 Next useful deliverable is a release-measurement import contract and parser with negative fixtures, followed by a trusted-device pilot when one exists. This does not require installing or executing unknown corpus applications. Until a pilot exists, synthetic tests establish parser behavior only, never real-world speed gains.
+
+## Credential containment sources
+
+AWS recommends immediately deactivating a compromised key: https://repost.aws/knowledge-center/manage-iam-access-keys-securely. Google distinguishes upload-key recovery from app signing identity: https://developer.android.com/studio/publish/app-signing. Dedicated test keys and commented credentials retain conditional guidance based on real use.
