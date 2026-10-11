@@ -251,14 +251,15 @@ export function buildPlan(result) {
     });
   }
 
-  const unusedDeps = byKind('remove-dep');
-  if (unusedDeps.length) {
+  const reviewDeps = [...byKind('review-dep'), ...byKind('remove-dep')];
+  if (reviewDeps.length) {
     phases.push({
-      title: 'Remove unused packages',
-      why: 'Every package you delete is one you never have to upgrade. Native modules also cut build time.',
+      title: 'Review dependency usage before removal',
+      why: 'A static scan can miss dynamic, generated and native registration paths. These candidates are not confirmed unused.',
       steps: [
-        `\`${pm.remove} ${unusedDeps.map((d) => d.name).join(' ')}\`${unusedDeps.some((d) => d.native) ? ', then reinstall pods' : ''}.`,
-        'Search the code once more for each name before removing it (dynamic requires are invisible to static analysis), then build both platforms.',
+        `Review ${reviewDeps.map((d) => `\`${d.name}\``).join(', ')} across every platform, build configuration, script and generated source. Keep packages with unresolved usage.`,
+        'Only after confirming no required use, try one removal at a time on a separate branch. Re-resolve dependencies, build supported targets and run the affected behavior tests; revert if required behavior changes.',
+        'Compare the actual release artifacts before claiming a size saving. A package can remain as a transitive dependency.',
       ],
     });
   }
@@ -684,7 +685,7 @@ const PHASE_KINDS = {
   'Fix the iOS AppDelegate': ['app-dependency-provider'],
   'Replace blocking and abandoned packages': ['replace-dep'],
   'Remove legacy tooling': ['deprecated-core', 'remove-flipper', 'podfile-cli-require', 'rctappdelegate', 'enable-hermes', 'folly-flags', 'patch-artifacts', 'patch-version', 'default-react-host'],
-  'Remove unused packages': ['remove-dep'],
+  'Review dependency usage before removal': ['review-dep', 'remove-dep'],
 };
 
 export function startHere(result, count = 3) {

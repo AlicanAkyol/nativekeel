@@ -15,7 +15,7 @@ import { securityOnly } from '../src/security-review.js';
 import { SITE_URL } from '../src/config.js';
 
 const VALUE_FLAGS = new Set(['--html', '--out', '--baseline', '--save-baseline', '--brand', '--sarif', '--markdown', '--fail-on', '--path', '--base']);
-const COMMANDS = new Set(['scan', 'security', 'plan', 'compare', 'explain', 'verify', 'mcp', 'help']);
+const COMMANDS = new Set(['scan', 'security', 'plan', 'compare', 'compare-imports', 'explain', 'verify', 'mcp', 'help']);
 
 function parseArgs(argv) {
   const flags = {};
@@ -48,6 +48,9 @@ Usage
   npx nativekeel plan [path]     Write a step-by-step upgrade plan
   npx nativekeel compare <before.json> <after.json>
                                  What got fixed and what is new between two scans
+  npx nativekeel compare-imports <experiment.json> [--json]
+                                 Compare supplied release bundles for a reviewed
+                                 same-version Lodash import change (no code runs)
   npx nativekeel explain "<error>" [--path <app>]
                                  What a build, launch or store error means and the
                                  fix (or pipe a log in: ... | npx nativekeel explain)
@@ -164,6 +167,14 @@ async function main() {
       console.log(r.ok ? 'No new critical or high findings.' : `${r.newSerious.length} new critical or high finding(s).`);
     }
     return r.ok ? 0 : 1;
+  }
+
+  if (command === 'compare-imports') {
+    if (positional.length !== 1) fail('usage: nativekeel compare-imports <experiment.json> [--json]');
+    const { compareImports, importComparisonText } = await import('../src/compare-imports.js');
+    const result = compareImports(path.resolve(positional[0]));
+    console.log(flags.json ? JSON.stringify(result, null, 2) : importComparisonText(result));
+    return result.status === 'incomparable' ? 2 : 0;
   }
 
   if (command === 'compare') {

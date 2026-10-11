@@ -1,12 +1,10 @@
 import fs from './read-boundary.js';
 import path from 'node:path';
 import { findPackageDir } from './project.js';
+import { dependencyReferences } from './dependency-references.js';
 
-// Finds runtime dependencies that nothing uses. A package only counts as unused when it is
-// (1) never imported from JS/TS, (2) not referenced from native code, (3) not required by
-// another dependency (e.g. @rneui/themed needs @rneui/base even if the app never imports it),
-// and (4) not mentioned in config files or package.json scripts. Removing unused native
-// modules is the cheapest way to shrink an upgrade.
+// Finds dependencies for a usage review, never proof that removal is safe. Dynamic,
+// generated and self-registering usage can be invisible to a static source scan.
 
 const SKIP_DIRS = new Set(['node_modules', '.git', 'Pods', 'build', '.gradle', 'DerivedData', '.expo', 'dist', 'coverage', 'vendor']);
 const JS_EXT = new Set(['.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs']);
@@ -142,17 +140,9 @@ export function findUnused(project) {
     }
   };
 
-  // Required by any installed package (peer or regular), including indirect ones: e.g.
-  // @react-navigation/elements, pulled in by the stack navigator, peers on masked-view.
-  const requiredByOthers = new Set();
-  for (const manifest of installedManifests(root)) {
-    try {
-      const m = JSON.parse(fs.readFileSync(manifest, 'utf8'));
-      for (const k of ['peerDependencies', 'dependencies']) for (const d of Object.keys(m[k] || {})) requiredByOthers.add(d);
-    } catch {
-      // unreadable manifest
-    }
-  }
+  const { references: requiredByOthers, complete } = dependencyReferences(root);
+  // An unreadable or partially installed dependency tree cannot establish absence of use.
+  if (!complete || names.some((name) => !findPackageDir(root, name))) return [];
 
   // A package someone patched (patch-package) is one they care about: never call it unused.
   const patched = new Set();
@@ -172,37 +162,6 @@ export function findUnused(project) {
   return candidates
     .filter((n) => !nativeText.includes(n) && !nativeTokens(root, n).some((t) => nativeText.includes(t)) && !(RESOURCE_TOKENS[n] || []).some((t) => nativeText.includes(t)))
     .map((name) => ({ name, native: nativeTokens(root, name).length > 0 }));
-}
-
-// package.json of every package in the node_modules folders from the app up to the filesystem
-// root (monorepos hoist), one level of scopes deep. Nested node_modules are skipped.
-function installedManifests(root) {
-  const out = [];
-  let dir = root;
-  while (true) {
-    const nm = path.join(dir, 'node_modules');
-    let entries = [];
-    try {
-      entries = fs.readdirSync(nm, { withFileTypes: true });
-    } catch {
-      // none here
-    }
-    for (const e of entries) {
-      if (!e.isDirectory() && !e.isSymbolicLink()) continue;
-      if (e.name.startsWith('@')) {
-        try {
-          for (const sub of fs.readdirSync(path.join(nm, e.name))) out.push(path.join(nm, e.name, sub, 'package.json'));
-        } catch {
-          // unreadable scope
-        }
-      } else if (!e.name.startsWith('.')) {
-        out.push(path.join(nm, e.name, 'package.json'));
-      }
-    }
-    const parent = path.dirname(dir);
-    if (parent === dir) return out;
-    dir = parent;
-  }
 }
 
 // Source files (relative paths) that import `pkg` and whose text matches `pattern`.

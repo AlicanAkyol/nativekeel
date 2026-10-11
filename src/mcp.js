@@ -151,6 +151,7 @@ async function scanTool(args, ctx, focus = false) {
       area: f.area,
       title: f.title,
       detail: f.detail,
+      ...(f.recommendation ? { recommendation: f.recommendation } : {}),
       fix: f.fix && f.fix.step ? f.fix.step : undefined,
       masvs: f.masvs,
       confidence: f.confidence,

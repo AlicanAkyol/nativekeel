@@ -1,5 +1,6 @@
 import fs from './read-boundary.js';
 import path from 'node:path';
+import { lex } from './security-source.js';
 
 // Performance problems you can see in the code: things that make lists stutter, animations run
 // on the JavaScript thread, or the app download heavier than it needs to be. Runtime profiling
@@ -43,6 +44,32 @@ function tagProps(text, start) {
     else if (c === '>' && depth === 0) return { props: text.slice(start, i), end: i + 1 };
   }
   return { props: text.slice(start, start + 4000), end: start + 4000 };
+}
+
+// Token evidence avoids examples hidden in comments, strings and regex literals.
+// This is still a source signal, not module resolution or proof of inclusion in a build.
+function rootImports(text) {
+  let tokens;
+  try { tokens = lex(text); } catch { return []; }
+  const found = [];
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i];
+    if (t.kind !== 'id' || ['.', '?.'].includes(tokens[i - 1]?.value)) continue;
+    let spec;
+    if (t.value === 'require' && tokens[i + 1]?.value === '(' && tokens[i + 2]?.kind === 'string' && tokens[i + 3]?.value === ')') spec = tokens[i + 2];
+    if (t.value === 'import') {
+      if (tokens[i + 1]?.kind === 'string') spec = tokens[i + 1];
+      else if (tokens[i + 1]?.value === '(' && tokens[i + 2]?.kind === 'string' && tokens[i + 3]?.value === ')') spec = tokens[i + 2];
+      else if (!['type', 'typeof', '.', '('].includes(tokens[i + 1]?.value)) {
+        for (let j = i + 1; j < Math.min(tokens.length, i + 100); j++) {
+          if (tokens[j].value === ';') break;
+          if (tokens[j].kind === 'id' && tokens[j].value === 'from' && tokens[j + 1]?.kind === 'string') { spec = tokens[j + 1]; break; }
+        }
+      }
+    }
+    if (spec && ['lodash', 'moment'].includes(spec.value)) found.push({ name: spec.value, line: t.line });
+  }
+  return found;
 }
 
 export function performanceChecks(project) {
@@ -91,9 +118,7 @@ export function performanceChecks(project) {
       if (/shallowEqual|isEqual|equalityFn|,\s*\w+Equal\s*\)/.test(close)) continue;
       selectors.push(`${rel}:${code.slice(0, m.index).split('\n').length}`);
     }
-    // Whole-library imports of packages with per-function or lighter alternatives.
-    if (/from\s+['"]lodash['"]|require\(\s*['"]lodash['"]\s*\)/.test(code)) heavyImports.set('lodash', heavyImports.get('lodash') || rel);
-    if (/from\s+['"]moment['"]|require\(\s*['"]moment['"]\s*\)/.test(code)) heavyImports.set('moment', heavyImports.get('moment') || rel);
+    for (const hit of rootImports(text)) if (!heavyImports.has(hit.name)) heavyImports.set(hit.name, `${rel}:${hit.line}`);
   }
 
   if (nested.length) {
@@ -138,14 +163,30 @@ export function performanceChecks(project) {
     });
   }
   if (heavyImports.size) {
-    const advice = { lodash: 'import single functions (lodash/debounce) or use lodash-es with tree shaking', moment: 'use dayjs or date-fns (moment is in maintenance mode and pulls in all locales)' };
+    const advice = { lodash: 'check whether the used methods can use same-version per-method entry points; first review chaining, mixins and bundler transforms', moment: 'review the used date, locale and timezone behavior before considering any alternative' };
     findings.push({
       id: 'perf-heavy-imports',
       severity: 'low',
       area: 'performance',
-      title: `Whole-library imports of ${[...heavyImports.keys()].join(' and ')}`,
-      detail: `${[...heavyImports].map(([k, at]) => `${k} (${at}): ${advice[k]}`).join('; ')}. They add hundreds of KB to the bundle the app parses at start-up.`,
-      fix: { kind: 'performance', step: `Replace whole-library imports: ${[...heavyImports.keys()].map((k) => advice[k]).join('; ')}.` },
+      title: `Review root imports of ${[...heavyImports.keys()].join(' and ')}`,
+      detail: `${[...heavyImports].map(([k, at]) => `${k} (${at}): ${advice[k]}`).join('; ')}. Source import patterns do not establish which code ships: aliases and build transforms may change the result. Inspect the release bundle before proposing a change. No size or startup saving has been measured.`,
+      fix: { kind: 'performance', step: `Review the release bundle and behavior before changing imports: ${[...heavyImports.keys()].map((k) => advice[k]).join('; ')}. Keep the current implementation if the change adds risk without a measured benefit.` },
+      ...(heavyImports.has('lodash') ? { recommendation: {
+        recipe: 'lodash-import-scope',
+        version: 1,
+        status: 'needs-verification',
+        evidence: [{ kind: 'source-pattern', file: heavyImports.get('lodash'), package: 'lodash' }],
+        reason: 'Per-method entry points may avoid including unrelated Lodash methods. Another consumer or a build transform may already determine the shipped code, so the source pattern alone does not establish a saving.',
+        measuredBenefit: null,
+        automaticFix: false,
+        requirements: [
+          'Confirm the source pattern is an actual runtime import and resolves to the expected Lodash 4 version (other versions are outside this recipe).',
+          'Check all consumers, aliases, chaining, mixins and dynamic method access; keep the package installed.',
+          'Compare the unchanged implementation with a reviewed same-version per-method import change, using identical release build settings.',
+          'Run tests for the affected behavior and compare the actual bundles with nativekeel compare-imports; do not infer startup or frame-rate gains from bytes.',
+        ],
+        source: 'https://lodash.com/',
+      } } : {}),
     });
   }
 

@@ -43,3 +43,26 @@ test('performance findings point at the right line even after block comments', a
   const f = performanceChecks({ root: makeProject({ 'package.json': '{}', 'src/A.js': code }) }).find((x) => x.id === 'perf-redux-selector-new-object');
   assert.match(f.title, /src\/A\.js:6/);
 });
+
+test('import recommendations state evidence and unknown benefit, not automatic replacement', () => {
+  const root = makeProject({ 'src/App.js': "import { debounce } from 'lodash';\nimport moment from 'moment';" });
+  const finding = performanceChecks({ root }).find((f) => f.id === 'perf-heavy-imports');
+  assert.equal(finding.recommendation.status, 'needs-verification');
+  assert.equal(finding.recommendation.measuredBenefit, null);
+  assert.equal(finding.recommendation.automaticFix, false);
+  assert.equal(finding.recommendation.evidence[0].file, 'src/App.js:1');
+  assert.doesNotMatch(JSON.stringify(finding), /hundreds of KB|use dayjs|use lodash-es|pulls in all locales/);
+  assert.match(finding.detail, /No size or startup saving has been measured/);
+});
+
+test('comments, string examples, type imports and property calls are not import evidence', () => {
+  for (const code of [
+    `// import _ from 'lodash';`,
+    `const example = "import _ from 'lodash';";`,
+    "const example = `require('lodash')`;",
+    `const example = /require\\('lodash'\\)/;`,
+    `import type { DebouncedFunc } from 'lodash';`,
+    `loader.require('lodash');`,
+    `import debounce from 'lodash/debounce';`,
+  ]) assert.ok(!ids({ 'src/A.ts': code }).includes('perf-heavy-imports'), code);
+});

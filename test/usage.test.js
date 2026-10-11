@@ -3,6 +3,10 @@ import assert from 'node:assert/strict';
 import { findUnused, importedPackages, packageOf } from '../src/usage.js';
 import { loadProject } from '../src/project.js';
 import { makeProject } from './helpers.js';
+import fs from 'node:fs';
+import path from 'node:path';
+import { dependencyReferences } from '../src/dependency-references.js';
+import { withReadRoots } from '../src/read-boundary.js';
 
 test('import specifiers map to package names', () => {
   assert.equal(packageOf('lodash/fp'), 'lodash');
@@ -44,12 +48,56 @@ function app(extraFiles = {}) {
   });
 }
 
-test('only truly unused packages are reported', () => {
+test('only packages without observed references become review candidates', () => {
   const unused = findUnused(loadProject(app()));
   assert.deepEqual(unused, [
     { name: 'unused-js', native: false },
     { name: 'unused-native', native: true },
   ]);
+});
+
+test('optional and nested transitive consumers prevent unused candidates', () => {
+  for (const kind of ['dependencies', 'optionalDependencies', 'peerDependencies']) {
+    for (const nested of [false, true]) {
+      const root = app({
+        [`node_modules/${nested ? 'needs-peer/node_modules/bridge' : 'needs-peer'}/package.json`]: { version: '1.0.0', [kind]: { 'unused-js': '*' } },
+      });
+      assert.ok(!findUnused(loadProject(root)).some((x) => x.name === 'unused-js'), `${kind}, nested=${nested}`);
+    }
+  }
+});
+
+test('unreadable, oversized or invalid installed manifests do not support unused claims', () => {
+  for (const content of ['{broken', 'null', { dependencies: 'invalid' }, ' '.repeat(1024 * 1024 + 1)]) {
+    const root = app({ 'node_modules/needs-peer/package.json': content });
+    assert.deepEqual(findUnused(loadProject(root)), []);
+  }
+  const root = app();
+  fs.unlinkSync(path.join(root, 'node_modules/needs-peer/package.json'));
+  assert.deepEqual(findUnused(loadProject(root)), []);
+});
+
+test('linked pnpm consumers and cycles are inspected without executing code', () => {
+  const root = app({
+    'node_modules/.pnpm/bridge@1/node_modules/bridge/package.json': { dependencies: { 'unused-js': '*' } },
+    'node_modules/.pnpm/bridge@1/node_modules/bridge/index.js': "throw new Error('must never execute');",
+  });
+  fs.symlinkSync('.pnpm/bridge@1/node_modules/bridge', path.join(root, 'node_modules/bridge'));
+  fs.mkdirSync(path.join(root, 'node_modules/.pnpm/bridge@1/node_modules/bridge/node_modules'));
+  fs.symlinkSync('..', path.join(root, 'node_modules/.pnpm/bridge@1/node_modules/bridge/node_modules/cycle'));
+  assert.ok(!findUnused(loadProject(root)).some((x) => x.name === 'unused-js'));
+  assert.equal(dependencyReferences(root).complete, true);
+  assert.equal(dependencyReferences(root, { maxPackages: 1 }).complete, false);
+});
+
+test('a dependency link outside the MCP read boundary suppresses unused candidates', async () => {
+  const root = app();
+  const outside = makeProject({ 'package.json': { optionalDependencies: { 'unused-js': '*' } } });
+  fs.symlinkSync(outside, path.join(root, 'node_modules/external'));
+  await withReadRoots([root], () => {
+    assert.equal(dependencyReferences(root).complete, false);
+    assert.deepEqual(findUnused(loadProject(root)), []);
+  });
 });
 
 test('without node_modules nothing is claimed', () => {

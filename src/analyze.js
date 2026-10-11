@@ -369,24 +369,18 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
     }
   }
 
-  // Unused runtime dependencies: removing them is cheaper than upgrading them.
-  const unused = new Set();
+  // Absence of static references is a review candidate, not authority to remove a package.
   for (const u of findUnused(project)) {
-    unused.add(u.name);
     add({
       id: `unused:${u.name}`,
       severity: u.native ? 'medium' : 'low',
       area: 'dependency',
-      title: `${u.name} is installed but never used${u.native ? ' (native module)' : ''}`,
-      detail: `Not imported from JS, not referenced from native code, not required by another dependency.${u.native ? ' It still compiles into both apps and has to survive every upgrade.' : ''} Remove it.`,
-      fix: { kind: 'remove-dep', name: u.name, native: u.native },
+      title: `Review possible unused dependency: ${u.name}${u.native ? ' (native module)' : ''}`,
+      detail: 'No use was found in the source, native/config references and installed dependency declarations checked. Dynamic imports, generated code and native auto-registration may still need it. Confirm all target platforms and build variants before trying removal on a separate branch. No size or performance saving has been measured.',
+      fix: { kind: 'review-dep', name: u.name, native: u.native },
     });
   }
-  // A package you are about to delete does not need upgrade advice.
-  for (let i = findings.length - 1; i >= 0; i--) {
-    const f = findings[i];
-    if (f.fix && ['replace-dep', 'bump-dep'].includes(f.fix.kind) && unused.has(f.fix.name)) findings.splice(i, 1);
-  }
+  // Keep upgrade/replacement advice: a usage candidate does not establish that it is safe to delete.
 
   // Known version-specific breakages, learned from real upgrades.
   const newArchOn = project.newArch.android !== false && project.newArch.ios !== false && minorOf(current || '0.0') >= 76;
