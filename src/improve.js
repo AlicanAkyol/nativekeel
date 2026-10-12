@@ -2,12 +2,14 @@ import { executionSafety } from './safety.js';
 import { buildPlan } from './plan.js';
 
 const severity = ['critical', 'high', 'medium', 'low', 'info'];
-const domains = ['security', 'stability', 'performance', 'delivery', 'dependencies'];
+const domains = ['security', 'stability', 'performance', 'delivery', 'upgrade', 'dependencies'];
+const UPGRADE_AREAS = new Set(['react-native', 'expo', 'new-architecture', 'native']);
 function domain(f) {
   if (f.area === 'security' || f.area === 'secret' || f.masvs || f.id === 'malicious-code') return 'security';
   if (f.area === 'crash') return 'stability';
   if (f.area === 'performance') return 'performance';
   if (f.area === 'store') return 'delivery';
+  if (UPGRADE_AREAS.has(f.area)) return 'upgrade';
   return 'dependencies';
 }
 const guidance = {
@@ -31,6 +33,11 @@ const guidance = {
     prerequisite: 'Confirm the requirement applies to the intended platform, submission date and release artifact.',
     validate: 'Inspect the actual signed release artifact and platform validation results; source configuration alone does not establish store acceptance.',
   },
+  upgrade: {
+    effect: 'Keep the app buildable on a supported React Native or Expo version.',
+    prerequisite: 'Confirm the installed versions and the platforms the change affects; `npx nativekeel plan` orders it with the related upgrade steps.',
+    validate: 'After this one change, build debug and release on each supported platform and go through the screens that use native modules.',
+  },
   dependencies: {
     effect: 'Resolve the reported dependency constraint if it applies to the installed graph and used features.',
     prerequisite: 'Review resolved versions, direct and transitive consumers, dynamic/native/generated usage, and feature parity. Popularity or age alone does not justify replacement.',
@@ -41,6 +48,16 @@ const guidance = {
 
 function secretGuidance(f) {
   const x = f.fix;
+  // An AI key read from a public env variable ships in the bundle. Revoking it before the
+  // server endpoint exists breaks the feature for installed copies, so the scanner's order stays.
+  if (f.id.startsWith('ai-key-in-bundle:') && x?.step) return {
+    change: `${x.step} Until the key is revoked, set a spending limit on it at the provider if one is offered.`,
+    prerequisite: 'Identify the provider account that owns the key without exposing the value.',
+    effect: 'Invalidate the shipped key and keep its replacement on a server you control.',
+    validate: 'Confirm at the provider that the shipped key is revoked, check its usage for requests you did not make, and verify the new release bundle no longer contains a provider key.',
+    rollback: 'Keep the shipped key revoked. Restore the feature through the server endpoint; never put a provider key back into the app.',
+    exposure: 'bundle',
+  };
   if (x?.kind !== 'secret') return null;
   const location = `${x.file}${x.line ? `:${x.line}` : ''}`;
   let change;
@@ -52,6 +69,14 @@ function secretGuidance(f) {
   else if (x.exposure === 'test-key') change = `Confirm the private key in ${location} is dedicated to tests. If it is also used by a real service, rotate it there; do not rotate unrelated production keys for a dedicated test fixture.`;
   else if (x.exposure === 'comment') change = `If the credential in ${location} is real, revoke or rotate it at its provider; then delete the commented value. A comment can remain exposed through repository history.`;
   else change = `Revoke or rotate the ${x.label || 'credential'} in ${location} at its provider immediately. Removing it from source does not invalidate exposed copies. ${x.bundled ? 'Move privileged operations to a backend; never put the replacement secret in the app.' : 'Store the replacement in protected server or CI secrets, outside the repository.'}`;
+  const signing = f.id.startsWith('signing-') || x.label === 'Signing passwords';
+  if (signing) return {
+    change,
+    prerequisite: 'Find out who had access to the repository and whether release builds were signed with this key; for Play App Signing the upload key can be reset.',
+    effect: 'Keep the signing key and its passwords out of the repository, so nobody else can sign builds as you.',
+    validate: 'Confirm the file or passwords are gone from the current source and from CI logs, a release build still signs with the protected copy, and (if reset) Google Play or Apple accepts the new key.',
+    rollback: 'Keep the exposed key material out of the repository; restore signing from protected storage, never from the committed copy.',
+  };
   return {
     change,
     prerequisite: x.exposure === 'test-key' ? 'Check whether this key is dedicated to tests or also protects a real service.' : x.exposure === 'comment' ? 'Determine whether this is a real credential; comments do not establish active use or invalidate a previously exposed key.' : 'Identify the credential owner and provider without exposing the value. For a real exposed credential, containment must not wait for path reachability or an exploit reproduction.',
@@ -107,7 +132,7 @@ export function buildImprovementPlan(result, { limit = 80 } = {}) {
       expectedEffect: f.attack?.impact ? `Address this reported potential impact: ${f.attack.impact}` : guide.effect,
       measuredBenefit: null,
       automaticFix: false,
-      status: safety.blocked ? 'blocked-by-execution-safety' : secret && !['comment', 'test-key'].includes(f.fix.exposure) ? 'containment-required' : 'review-required',
+      status: safety.blocked ? 'blocked-by-execution-safety' : secret && !['comment', 'test-key'].includes(secret.exposure || f.fix.exposure) ? 'containment-required' : 'review-required',
       proposedChange: safety.blocked ? null : secret?.change || f.fix?.step || planSteps(result, f).join(' ') || fallbackChange(f),
       validation: safety.blocked ? [] : [f.attack?.validation || guide.validate],
       rollback: safety.blocked ? null : secret?.rollback || 'Keep the original implementation in version control; revert if behavior regresses or the intended benefit cannot be verified.',
@@ -116,7 +141,7 @@ export function buildImprovementPlan(result, { limit = 80 } = {}) {
   return {
     schemaVersion: 1, project: result.project, safety,
     conclusion: safety.blocked ? safety.warning : findings.length ? 'Review source-backed candidates, validate applicability, then measure the effect of each change.' : 'No actionable matches in the checks run. App security and quality remain unverified.',
-    ordering: 'Malware stop condition, then severity, then security/stability/performance/delivery/dependencies. No quality score or benefit estimate.',
+    ordering: 'Malware stop condition, then severity, then security/stability/performance/delivery/upgrade/dependencies. No quality score or benefit estimate.',
     totalActions: sorted.length, omittedActions: Math.max(0, sorted.length - actions.length), actions,
     coverage: domains.map(name => ({ domain: name, scope: 'existing static checks only', findings: findings.filter(f => domain(f) === name).length, verdict: 'not-certified' })),
     unassessed: [

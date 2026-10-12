@@ -13,7 +13,7 @@ Without `--offline`, the existing scanner's package metadata lookups apply. The 
 
 An action identifies its original finding, domain, severity, confidence (or unspecified), available structured evidence, applicability prerequisites, expected effect, proposed change, validation and rollback. Existing checks without structured evidence remain visibly without it. Findings are candidates for review, not independently verified exploits or measured improvements. `measuredBenefit` is always null in this static plan.
 
-Malware findings always take precedence, including when the output is truncated. They suppress proposed changes, execution-dependent prerequisites, validation and rollback for all actions. Otherwise ordering follows severity, then security, stability, performance, delivery and dependencies. This is transparent triage, not estimated business impact. At most 80 actions are returned; total and omitted counts refer to the full scan. Informational findings are excluded from actions.
+Malware findings always take precedence, including when the output is truncated. They suppress proposed changes, execution-dependent prerequisites, validation and rollback for all actions. Otherwise ordering follows severity, then security, stability, performance, delivery, upgrade and dependencies. This is transparent triage, not estimated business impact. At most 80 actions are returned; total and omitted counts refer to the full scan. Informational findings are excluded from actions.
 
 The MCP tool uses the existing allowed-root, bounded-read and response sanitization wrapper. No server environment changes are needed. Markdown escapes repository-derived formatting. Sanitization reduces injection surfaces; it does not certify arbitrary agent behavior safe.
 

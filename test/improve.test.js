@@ -156,3 +156,17 @@ test('New Architecture before 0.76 gets the switch steps, not a generic action',
   const p = buildImprovementPlan(result([{ ...finding('new-arch-disabled', 'dependency'), fix: { kind: 'enable-new-arch', platforms: ['android', 'ios'] } }]));
   assert.match(p.actions[0].proposedChange, /newArchEnabled=true/);
 });
+
+test('a bundled AI key is contained and never restored on rollback', () => {
+  const f = { id: 'ai-key-in-bundle:OpenAI', severity: 'high', area: 'security', title: 'OpenAI API key ships inside the app', detail: 'd', fix: { kind: 'security', step: 'Move the OpenAI call (App.js) behind your own server endpoint that keeps the key, then revoke the key that shipped.' } };
+  const a = buildImprovementPlan(result([f])).actions[0];
+  assert.equal(a.status, 'containment-required');
+  assert.match(a.proposedChange, /revoke the key that shipped.*spending limit/);
+  assert.match(a.rollback, /never put a provider key back/);
+});
+
+test('upgrade work is not judged with dependency-replacement guidance', () => {
+  const a = buildImprovementPlan(result([finding('ios-app-dependency-provider', 'native')])).actions[0];
+  assert.equal(a.domain, 'upgrade');
+  assert.doesNotMatch(a.validation.join(' '), /saving|Popularity/);
+});
