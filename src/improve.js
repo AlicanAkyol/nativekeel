@@ -1,4 +1,5 @@
 import { executionSafety } from './safety.js';
+import { buildPlan } from './plan.js';
 
 const severity = ['critical', 'high', 'medium', 'low', 'info'];
 const domains = ['security', 'stability', 'performance', 'delivery', 'dependencies'];
@@ -11,9 +12,9 @@ function domain(f) {
 }
 const guidance = {
   security: {
-    effect: 'Reduce the reported exposure if its attacker prerequisites hold.',
-    prerequisite: 'Confirm the affected path is reachable and inspect existing protections before treating this as an exploitable vulnerability.',
-    validate: 'In an isolated test environment with synthetic data, reproduce the reported condition and verify the protection rejects it while legitimate access still works.',
+    effect: 'Reduce the reported exposure of user data, accounts or the app itself.',
+    prerequisite: 'Confirm the reported code is part of the shipped app and check for protections the scan could not see.',
+    validate: 'Rescan to confirm the finding is gone, then run the affected flow with synthetic data: the sensitive value or untrusted input must no longer reach the reported destination, and the feature must still work.',
   },
   stability: {
     effect: 'Remove the reported crash or compatibility condition if the affected feature is used.',
@@ -60,6 +61,20 @@ function secretGuidance(f) {
   };
 }
 
+// Concrete steps for one finding, taken from the upgrade plan so both commands give the same
+// instructions. Phases every plan carries (safety net, final verification) are not specific to it.
+const SHARED_PHASES = new Set(['Set up a safety net', 'Verify before you ship']);
+function planSteps(result, f) {
+  try {
+    return buildPlan({ ...result, findings: [f] }).phases
+      .filter((p) => !SHARED_PHASES.has(p.title))
+      .flatMap((p) => p.steps)
+      .map((s) => s.replace(/\*\*/g, ''));
+  } catch {
+    return [];
+  }
+}
+
 // This is a decision layer over existing checks, not a new vulnerability detector.
 // Severity determines review order; it is never converted to an app quality score.
 export function buildImprovementPlan(result, { limit = 80 } = {}) {
@@ -86,7 +101,7 @@ export function buildImprovementPlan(result, { limit = 80 } = {}) {
       measuredBenefit: null,
       automaticFix: false,
       status: safety.blocked ? 'blocked-by-execution-safety' : secret && !['comment', 'test-key'].includes(f.fix.exposure) ? 'containment-required' : 'review-required',
-      proposedChange: safety.blocked ? null : secret?.change || f.fix?.step || 'Review the finding in context before choosing a change.',
+      proposedChange: safety.blocked ? null : secret?.change || f.fix?.step || planSteps(result, f).join(' ') || 'Apply the fix described under Why after confirming it applies to this app.',
       validation: safety.blocked ? [] : [f.attack?.validation || guide.validate],
       rollback: safety.blocked ? null : secret?.rollback || 'Keep the original implementation in version control; revert if behavior regresses or the intended benefit cannot be verified.',
     };

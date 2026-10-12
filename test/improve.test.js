@@ -134,3 +134,20 @@ test('scanner-to-CLI regression: bundled AWS key gets deactivation as its explic
     assert.doesNotMatch(terminal, /Evidence: \[\]|Confidence: not-specified|\\\(/);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
+
+test('findings without a fix step get the same concrete steps as the upgrade plan', () => {
+  const root = makeProject({ 'package.json': { name: 'fixture', dependencies: { 'react-native': '0.80.0' } }, 'android/build.gradle': 'ext { targetSdkVersion = 34 }' });
+  try {
+    const p = JSON.parse(execFileSync(process.execPath, ['bin/nativekeel.js', 'improve', root, '--offline', '--json'], { encoding: 'utf8' }));
+    const a = p.actions.find(a => a.findingId === 'play-target-sdk-visibility');
+    assert.ok(a);
+    assert.match(a.proposedChange, /Set `targetSdkVersion = 3\d`/);
+    assert.doesNotMatch(a.proposedChange, /\*\*|Maestro/);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('security actions without attack details do not ask to reproduce an exploit', () => {
+  const p = buildImprovementPlan(result([{ ...finding('password-leak:App.js', 'security'), fix: undefined }]));
+  assert.doesNotMatch(p.actions[0].validation.join(' '), /reproduce/);
+  assert.match(p.actions[0].validation[0], /Rescan/);
+});
