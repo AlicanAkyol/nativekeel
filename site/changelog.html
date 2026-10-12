@@ -40,6 +40,12 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.69</h2><p class="date">12 October 2026</p>
+<ul>
+<li><span class="tag">Fix</span><b>One odd package.json entry no longer stops the scan.</b> Since 0.1.64 a dependency name that is not a valid package name (a typo such as <code>"@types/"</code>, or a workspace alias such as <code>"@global-ui"</code>) refused the whole scan. Those entries are now skipped with a warning, and they still never reach a path, a command or a registry request. Found in 3 of 871 open-source apps when rescanning them with 0.1.68.</li>
+<li><span class="tag">Plan</span>On React Native before 0.76, the improvement plan now says how to switch on the New Architecture (after upgrading to 0.76–0.81) instead of pointing back at the finding. Other actions without their own steps point to <code>npx nativekeel plan</code>.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.68</h2><p class="date">12 October 2026</p>
 <ul>
 <li><span class="tag">Plan</span><b>Review the whole app in order.</b> <code>nativekeel improve</code> and MCP <code>improve_app</code> turn existing security, crash, performance, store and dependency findings into actions with applicability conditions, verification and recovery. Each action carries the same concrete steps as the upgrade plan. This adds a decision layer, not new vulnerability detectors.</li>

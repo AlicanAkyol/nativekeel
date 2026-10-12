@@ -128,9 +128,9 @@ export function versionFromSpec(name, spec) {
 }
 
 export function loadProject(root) {
-  const pkg = readJson(path.join(root, 'package.json'));
-  if (!pkg) throw new Error(`No package.json found in ${root}`);
-  validateManifest(pkg);
+  const raw = readJson(path.join(root, 'package.json'));
+  if (!raw) throw new Error(`No package.json found in ${root}`);
+  const { pkg, skipped: skippedDeps } = validateManifest(raw);
   const usesCatalog = JSON.stringify([pkg.dependencies, pkg.devDependencies]).includes('"catalog:');
   const catalogs = usesCatalog ? readCatalogs(root) : null;
   const deps = resolveCatalogRefs({ ...(pkg.dependencies || {}) }, catalogs);
@@ -158,6 +158,7 @@ export function loadProject(root) {
   return {
     root,
     name: pkg.name,
+    skippedDeps,
     isLibrary,
     deps,
     devDeps,

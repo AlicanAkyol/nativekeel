@@ -128,6 +128,10 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
   if (!project.rnVersion && rnSpec) {
     warnings.push(`React Native is declared as "${rnSpec}", which has no version number (a git fork or a workspace reference). Install dependencies so NativeKeel can read the installed version; version checks were skipped.`);
   }
+  if (project.skippedDeps?.length) {
+    const shown = project.skippedDeps.slice(0, 5).map((n) => JSON.stringify(n.replace(/[^\x20-\x7e]/g, '?').slice(0, 60)));
+    warnings.push(`Skipped ${project.skippedDeps.length} package.json entr${project.skippedDeps.length === 1 ? 'y' : 'ies'} that ${project.skippedDeps.length === 1 ? 'is' : 'are'} not a valid package name or version (${shown.join(', ')}${project.skippedDeps.length > 5 ? ', …' : ''}). Checks for ${project.skippedDeps.length === 1 ? 'it' : 'them'} were skipped.`);
+  }
   if (project.isLibrary) {
     warnings.push('This looks like a React Native library, not an app (react-native is a peer dependency, or android/ builds a library). App Store and Google Play checks were skipped; scan the app that uses it for those.');
   }

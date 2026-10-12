@@ -75,6 +75,13 @@ function planSteps(result, f) {
   }
 }
 
+// Before React Native 0.76 the upgrade plan folds the architecture switch into the version
+// upgrade, so a single-finding plan has no steps for it.
+function fallbackChange(f) {
+  if (f.fix?.kind === 'enable-new-arch') return 'Upgrade to a React Native version between 0.76 and 0.81 first, then switch on the New Architecture there in its own commit: set newArchEnabled=true in android/gradle.properties and in ios/Podfile.properties.json (newArchEnabled in app.json for Expo), clean-build both platforms and test every screen that uses a native module. `npx nativekeel plan` lists the upgrade stops.';
+  return 'Apply the fix described under Why. `npx nativekeel plan` puts it in order with the upgrade steps it depends on.';
+}
+
 // This is a decision layer over existing checks, not a new vulnerability detector.
 // Severity determines review order; it is never converted to an app quality score.
 export function buildImprovementPlan(result, { limit = 80 } = {}) {
@@ -101,7 +108,7 @@ export function buildImprovementPlan(result, { limit = 80 } = {}) {
       measuredBenefit: null,
       automaticFix: false,
       status: safety.blocked ? 'blocked-by-execution-safety' : secret && !['comment', 'test-key'].includes(f.fix.exposure) ? 'containment-required' : 'review-required',
-      proposedChange: safety.blocked ? null : secret?.change || f.fix?.step || planSteps(result, f).join(' ') || 'Apply the fix described under Why after confirming it applies to this app.',
+      proposedChange: safety.blocked ? null : secret?.change || f.fix?.step || planSteps(result, f).join(' ') || fallbackChange(f),
       validation: safety.blocked ? [] : [f.attack?.validation || guide.validate],
       rollback: safety.blocked ? null : secret?.rollback || 'Keep the original implementation in version control; revert if behavior regresses or the intended benefit cannot be verified.',
     };

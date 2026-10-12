@@ -8,10 +8,15 @@ import { makeProject } from './helpers.js';
 const pkg = { name: 'audit-app', dependencies: { 'react-native': '0.86.0' } };
 const call = (root, name = 'scan_project', args = {}) => handle({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name, arguments: { path: root, offline: true, ...args } } }, { version: 'test', roots: [fs.realpathSync(root)] });
 
-test('untrusted dependency names cannot become shell syntax or filesystem paths', () => {
+test('untrusted dependency names are skipped and never become shell syntax or filesystem paths', () => {
   for (const name of ['pkg;echo CANARY', '../outside', '--prefix', 'pkg`echo CANARY`', 'pkg$(echo CANARY)']) {
     const root = makeProject({ 'package.json': { ...pkg, dependencies: { ...pkg.dependencies, [name]: '1.0.0' } } });
-    try { assert.throws(() => loadProject(root), /invalid dependency/i); } finally { fs.rmSync(root, { recursive: true }); }
+    try {
+      const project = loadProject(root);
+      assert.equal(Object.hasOwn(project.deps, name), false);
+      assert.deepEqual(project.skippedDeps, [name]);
+      assert.equal(project.deps['react-native'], '0.86.0');
+    } finally { fs.rmSync(root, { recursive: true }); }
   }
 });
 

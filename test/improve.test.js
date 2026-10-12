@@ -151,3 +151,8 @@ test('security actions without attack details do not ask to reproduce an exploit
   assert.doesNotMatch(p.actions[0].validation.join(' '), /reproduce/);
   assert.match(p.actions[0].validation[0], /Rescan/);
 });
+
+test('New Architecture before 0.76 gets the switch steps, not a generic action', () => {
+  const p = buildImprovementPlan(result([{ ...finding('new-arch-disabled', 'dependency'), fix: { kind: 'enable-new-arch', platforms: ['android', 'ios'] } }]));
+  assert.match(p.actions[0].proposedChange, /newArchEnabled=true/);
+});
