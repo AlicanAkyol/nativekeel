@@ -339,7 +339,7 @@ export function uiChecks(project) {
       severity: 'medium',
       area: 'accessibility',
       title: `${unlabeledButtons.length} icon-only button${unlabeledButtons.length === 1 ? ' has' : 's have'} no accessibility label (${where(unlabeledButtons)})`,
-      detail: 'These touchables contain only an icon or image and set no accessibilityLabel. VoiceOver and TalkBack announce them as an unnamed "button" (or read the icon font glyph), so a screen reader user cannot tell back from close from delete. Add accessibilityLabel describing the action ("Close", "Delete photo") and accessibilityRole="button". (WCAG 2.2: 1.1.1 Non-text Content, 4.1.2 Name, Role, Value)',
+      detail: 'These touchables contain only an icon or image and set no accessibilityLabel. VoiceOver and TalkBack announce them as an unnamed "button", so a screen reader user cannot tell back from close from delete. Add accessibilityLabel describing the action ("Close", "Delete photo") and accessibilityRole="button". (WCAG 2.2: 1.1.1 Non-text Content, 4.1.2 Name, Role, Value)',
       evidence: unlabeledButtons.slice(0, MAX_LOCATIONS).map((at) => ({ kind: 'source', at })),
       fix: { kind: 'accessibility', step: `Add \`accessibilityLabel\` (what the button does) and \`accessibilityRole="button"\` to the icon-only buttons: ${unlabeledButtons.slice(0, 5).map((a) => `\`${a}\``).join(', ')}${unlabeledButtons.length > 5 ? ` and ${unlabeledButtons.length - 5} more` : ''}. Check each with VoiceOver or TalkBack.` },
     });
