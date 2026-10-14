@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>NativeKeel · Keep your React Native app shippable</title>
-<meta name="description" content="Free one-command health check for React Native and Expo apps: upgrade blockers, store rules, crash risks and OWASP MASVS security. Fixed-price upgrades too.">
+<meta name="description" content="Free one-command health check for React Native and Expo apps: upgrade blockers, store rules, crash risks, accessibility and OWASP MASVS security.">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <meta name="theme-color" content="#0b5d55">
@@ -13,16 +13,16 @@
 <meta property="og:site_name" content="NativeKeel">
 <meta property="og:url" content="https://nativekeel.com/">
 <meta property="og:title" content="NativeKeel · Keep your React Native app shippable">
-<meta property="og:description" content="Free one-command health check for React Native and Expo apps: upgrade blockers, store rules, crash risks and OWASP MASVS security. Fixed-price upgrades too.">
+<meta property="og:description" content="Free one-command health check for React Native and Expo apps: upgrade blockers, store rules, crash risks, accessibility and OWASP MASVS security.">
 <meta property="og:image" content="https://nativekeel.com/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="NativeKeel: npx nativekeel, a free health check for React Native and Expo apps">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="NativeKeel · Keep your React Native app shippable">
-<meta name="twitter:description" content="Free one-command health check for React Native and Expo apps: upgrade blockers, store rules, crash risks and OWASP MASVS security. Fixed-price upgrades too.">
+<meta name="twitter:description" content="Free one-command health check for React Native and Expo apps: upgrade blockers, store rules, crash risks, accessibility and OWASP MASVS security.">
 <meta name="twitter:image" content="https://nativekeel.com/og.png">
-<script type="application/ld+json">[{"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "NativeKeel", "applicationCategory": "DeveloperApplication", "operatingSystem": "macOS, Linux, Windows (Node.js 20+)", "description": "Free one-command health check for React Native and Expo apps: upgrade blockers, store rules, crash risks and OWASP MASVS security. Fixed-price upgrades too.", "url": "https://nativekeel.com/", "downloadUrl": "https://www.npmjs.com/package/nativekeel", "softwareHelp": "https://github.com/AlicanAkyol/nativekeel", "license": "https://opensource.org/licenses/MIT", "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}}, {"@context": "https://schema.org", "@type": "Service", "name": "React Native and Expo upgrades", "serviceType": "React Native upgrade", "provider": {"@type": "Organization", "name": "NativeKeel", "url": "https://nativekeel.com/", "logo": "https://nativekeel.com/apple-touch-icon.png", "sameAs": ["https://github.com/AlicanAkyol/nativekeel", "https://www.npmjs.com/package/nativekeel"]}, "areaServed": "Worldwide", "offers": [{"@type": "Offer", "name": "Upgrade", "price": "1500", "priceCurrency": "USD", "description": "Fixed-price upgrade, delivered as a pull request with test builds (from $1,500)."}, {"@type": "Offer", "name": "Care", "price": "499", "priceCurrency": "USD", "description": "Monthly maintenance (from $499 per month)."}]}, {"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "Can it tell me whether my app can be hacked?", "acceptedAnswer": {"@type": "Answer", "text": "It finds the common, detectable ways mobile apps get breached: open database rules, disabled certificate checks, keys and passwords in the app or its logs, unsafe WebViews, vulnerable dependencies. Findings are grouped by OWASP MASVS, the standard mobile security reviews use. What it cannot do is attack your running app and backend to prove nothing else is there; that is a penetration test, done with your permission. No matching findings is not proof of security; runtime and deployed backend checks remain separate."}}, {"@type": "Question", "name": "Does my code leave my machine?", "acceptedAnswer": {"@type": "Answer", "text": "No. The scan runs locally. The only network requests are package-name lookups on npm and React Native Directory, and one request to npm's advisory endpoint with the names and exact versions of your dependencies (the same one npm audit makes). --offline makes none. Secret values are masked in every report."}}, {"@type": "Question", "name": "Does it work with Expo and monorepos?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. It reads Expo SDK versions and app.json, supports managed apps without native folders, and finds packages hoisted to a parent node_modules."}}, {"@type": "Question", "name": "Is it really free? What is the catch?", "acceptedAnswer": {"@type": "Answer", "text": "The tool and the plan are free and open source under MIT. We make money when teams ask us to do the upgrade for them. The report tells you honestly whether you need that."}}, {"@type": "Question", "name": "Do we need a call for the upgrade service?", "acceptedAnswer": {"@type": "Answer", "text": "No. Everything runs over email and your Git host: you send the report, we send a fixed quote, you grant repository access, we deliver a pull request with test builds."}}, {"@type": "Question", "name": "Can I check what the tool does before running it on our code?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. It has no dependencies and no install scripts, the source is short and public, and releases are published with npm provenance so you can verify the package matches the source (npm audit signatures). Run it with --offline to forbid all network access."}}, {"@type": "Question", "name": "What if the report is wrong?", "acceptedAnswer": {"@type": "Answer", "text": "Version and maintenance data comes from npm and React Native Directory and can lag. Write to us and we will fix the rule. A missed upgrade blocker is a bug to us."}}, {"@type": "Question", "name": "What if you cannot finish the upgrade?", "acceptedAnswer": {"@type": "Answer", "text": "If we cannot deliver the agreed scope, you get your deposit back. You keep the plan and any partial work on the branch."}}]}]</script>
+<script type="application/ld+json">[{"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "NativeKeel", "applicationCategory": "DeveloperApplication", "operatingSystem": "macOS, Linux, Windows (Node.js 20+)", "description": "Free one-command health check for React Native and Expo apps: upgrade blockers, store rules, crash risks, accessibility and OWASP MASVS security.", "url": "https://nativekeel.com/", "downloadUrl": "https://www.npmjs.com/package/nativekeel", "softwareHelp": "https://github.com/AlicanAkyol/nativekeel", "license": "https://opensource.org/licenses/MIT", "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}}, {"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "Can it tell me whether my app can be hacked?", "acceptedAnswer": {"@type": "Answer", "text": "It finds the common, detectable ways mobile apps get breached: open database rules, disabled certificate checks, keys and passwords in the app or its logs, unsafe WebViews, vulnerable dependencies. Findings are grouped by OWASP MASVS, the standard mobile security reviews use. What it cannot do is attack your running app and backend to prove nothing else is there; that is a penetration test, done with your permission. No matching findings is not proof of security; runtime and deployed backend checks remain separate."}}, {"@type": "Question", "name": "Does my code leave my machine?", "acceptedAnswer": {"@type": "Answer", "text": "No. The scan runs locally. The only network requests are package-name lookups on npm and React Native Directory, and one request to npm's advisory endpoint with the names and exact versions of your dependencies (the same one npm audit makes). --offline makes none. Secret values are masked in every report."}}, {"@type": "Question", "name": "Does it work with Expo and monorepos?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. It reads Expo SDK versions and app.json, supports managed apps without native folders, and finds packages hoisted to a parent node_modules."}}, {"@type": "Question", "name": "Is it really free? What is the catch?", "acceptedAnswer": {"@type": "Answer", "text": "The tool and the plan are free and open source under MIT, with no account and no paid tier. If your team wants help with a large upgrade, you can write to us."}}, {"@type": "Question", "name": "Can I check what the tool does before running it on our code?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. It has no dependencies and no install scripts, the source is short and public, and releases are published with npm provenance so you can verify the package matches the source (npm audit signatures). Run it with --offline to forbid all network access."}}, {"@type": "Question", "name": "What if the report is wrong?", "acceptedAnswer": {"@type": "Answer", "text": "Version and maintenance data comes from npm and React Native Directory and can lag. Write to us and we will fix the rule. A missed upgrade blocker is a bug to us."}}]}]</script>
 <style>
 :root{
   --bg:#fbfaf7;--surface:#ffffff;--text:#15171b;--muted:#5d6470;--line:#e4e2dc;
@@ -114,7 +114,7 @@ footer a{color:var(--muted)}
       <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="var(--accent)"/><path d="M16 6v16M9 22h14M11 26h10" stroke="var(--accent-ink)" stroke-width="3" stroke-linecap="round"/></svg>
       NativeKeel
     </a>
-    <nav><a href="#checks">What it checks</a><a href="case-study.html">Case study</a><a href="sample-report.html">Sample report</a><a href="ai-agents.html">AI agents</a><a href="changelog.html">What's new</a><a href="#services">Services</a><a href="#trust">Security</a><a href="https://github.com/AlicanAkyol/nativekeel">GitHub</a></nav>
+    <nav><a href="#checks">What it checks</a><a href="case-study.html">Case study</a><a href="sample-report.html">Sample report</a><a href="ai-agents.html">AI agents</a><a href="changelog.html">What's new</a><a href="security.html">Security</a><a href="https://github.com/AlicanAkyol/nativekeel">GitHub</a></nav>
   </header>
 
   <div class="hero">
@@ -189,64 +189,21 @@ New Architecture  android: <span class="r">off</span>  ios: <span class="r">off<
 
   <section>
     <h2>From report to fixed</h2>
-    <p class="section-lead">Use the report and the plan yourself, or hand the whole thing to us.</p>
+    <p class="section-lead">Everything you need to do the upgrade yourself, step by step.</p>
     <div class="steps">
       <div class="card"><h3>Scan</h3><p>Run <code>npx nativekeel</code> in your app folder. Share the HTML report with your team or client.</p></div>
       <div class="card"><h3>Plan</h3><p><code>nativekeel plan</code> orders the work: stop leaks, replace blockers, switch architecture, then upgrade React Native in reviewable hops.</p></div>
-      <div class="card"><h3>Ship</h3><p>Do it yourself with the plan, or we do it on a branch of your repo and send you a pull request with test builds.</p></div>
+      <div class="card"><h3>Verify</h3><p>After each step, <code>nativekeel verify</code> shows what got fixed and what is new compared with your last commit, so nothing slips in unnoticed.</p></div>
     </div>
   </section>
 
-  <section id="services">
-    <h2>Services</h2>
-    <p class="section-lead">The tool and the upgrade plan are free. If you would rather not do the work, we do it for a fixed price, entirely over email and your Git host. No calls needed.</p>
-    <div class="pricing">
-      <div class="card plan">
-        <h3>Tool</h3>
-        <div class="price">Free</div>
-        <p class="note">Open source, MIT licensed</p>
-        <ul><li>Health report and upgrade plan</li><li>HTML, JSON and CI baselines</li><li>White-label reports for agencies</li></ul>
-        <a class="btn" href="#">npx nativekeel</a>
-      </div>
-      <div class="card plan featured">
-        <h3>Upgrade</h3>
-        <div class="price">from $1,500 <small>once</small></div>
-        <p class="note">Fixed price, quoted from your report</p>
-        <ul><li>React Native or Expo upgraded to the latest version</li><li>New Architecture migration</li><li>Blocking packages replaced, leaked keys removed</li><li>Pull request with test builds</li><li>30-day warranty on our changes</li></ul>
-        <a class="btn primary" href="mailto:hello@nativekeel.com?subject=Upgrade%20quote&body=Please%20attach%20your%20report%3A%20npx%20nativekeel%20--html%20report.html%0A%0ARepository%20host%20(GitHub%2FGitLab%2FBitbucket)%3A%0ADeadline%2C%20if%20any%3A%0A">Get a fixed quote</a>
-      </div>
-      <div class="card plan">
-        <h3>Care</h3>
-        <div class="price">from $499 <small>/ month</small></div>
-        <p class="note">After an upgrade, for apps that must keep shipping</p>
-        <ul><li>Monthly dependency and SDK updates</li><li>New Apple and Google requirements handled</li><li>Build breakages fixed</li><li>Monthly health report</li></ul>
-        <a class="btn" href="mailto:hello@nativekeel.com?subject=NativeKeel%20Care&body=App%20name%3A%0AStores%20(iOS%2FAndroid)%3A%0APlease%20attach%20your%20report%3A%20npx%20nativekeel%20--html%20report.html%0A">Ask about Care</a>
-      </div>
-    </div>
-
-    <div class="buy">
-      <div class="card"><h3>1. Send your report</h3><p>Run <code>npx nativekeel --html report.html</code> and email it. Nothing else is needed for a quote.</p></div>
-      <div class="card"><h3>2. Get a fixed quote</h3><p>Within two business days: scope, price and delivery date in writing. 50% to start, 50% on delivery, by international bank transfer.</p></div>
-      <div class="card"><h3>3. Review a pull request</h3><p>We work on a branch. You test the builds, review every change and merge when you are happy.</p></div>
-    </div>
-  </section>
-
-  <section id="trust">
-    <h2>How we handle your code</h2>
-    <p class="section-lead">Giving someone access to your app is a big decision. These are commitments, and we put them in writing with every quote.</p>
-    <div class="grid3">
-      <div class="card"><span class="k">Control</span><h3>You merge, not us</h3><p>All work happens on a separate branch. We never push to your main branch or release to your users. You review and merge.</p></div>
-      <div class="card"><span class="k">Access</span><h3>The minimum, then removed</h3><p>Access to one repository, removed when the work ends. We never ask for your App Store or Google Play passwords, signing keys or production secrets.</p></div>
-      <div class="card"><span class="k">Confidentiality</span><h3>Your NDA, if you have one</h3><p>Happy to sign your NDA before seeing any code. Your code stays on an encrypted machine and is deleted when the work ends, confirmed in writing.</p></div>
-      <div class="card"><span class="k">AI tools</span><h3>Disclosed, never trained on</h3><p>We use AI coding assistants to work faster, only under terms that do not allow training on your code. If your policy forbids them, we work without.</p></div>
-      <div class="card"><span class="k">Price</span><h3>Fixed before we start</h3><p>The quote is the price. If we underestimated, that is our problem. Anything outside the agreed scope is quoted separately and only done if you say yes.</p></div>
-      <div class="card"><span class="k">Warranty</span><h3>30 days on our changes</h3><p>If something we changed breaks within 30 days of delivery, we fix it at no cost.</p></div>
-    </div>
+  <section id="help">
+    <p class="section-lead">NativeKeel is free and open source. If your team wants help with a large upgrade, write to <a href="mailto:hello@nativekeel.com">hello@nativekeel.com</a>.</p>
   </section>
 
   <section id="about">
-    <h2>Who does the work</h2>
-    <p class="section-lead">NativeKeel is not an agency that hands your code to someone you never hear about. Every upgrade is done by one engineer, start to finish.</p>
+    <h2>Who builds it</h2>
+    <p class="section-lead">NativeKeel is built and maintained by one engineer who ships React Native apps in production and checks every rule against real apps before it goes out.</p>
     <div class="about card">
       <div class="avatar">AA<img src="alican.jpg" alt="Alican Akyol" width="120" height="120" onerror="this.remove()"></div>
       <div>
@@ -265,11 +222,9 @@ New Architecture  android: <span class="r">off</span>  ios: <span class="r">off<
     <details><summary>Can it tell me whether my app can be hacked?</summary><p>It finds the common, detectable ways mobile apps get breached: open database rules, disabled certificate checks, keys and passwords in the app or its logs, unsafe WebViews, vulnerable dependencies. Findings are grouped by OWASP MASVS, the standard mobile security reviews use. What it cannot do is attack your running app and backend to prove nothing else is there; that is a penetration test, done with your permission. No matching findings is not proof of security; runtime and deployed backend checks remain separate.</p></details>
     <details><summary>Does my code leave my machine?</summary><p>No. The scan runs locally. The only network requests are package-name lookups on npm and React Native Directory, and one request to npm's advisory endpoint with the names and exact versions of your dependencies (the same one <code>npm audit</code> makes). <code>--offline</code> makes none. Secret values are masked in every report.</p></details>
     <details><summary>Does it work with Expo and monorepos?</summary><p>Yes. It reads Expo SDK versions and <code>app.json</code>, supports managed apps without native folders, and finds packages hoisted to a parent <code>node_modules</code>.</p></details>
-    <details><summary>Is it really free? What is the catch?</summary><p>The tool and the plan are free and open source under MIT. We make money when teams ask us to do the upgrade for them. The report tells you honestly whether you need that.</p></details>
-    <details><summary>Do we need a call for the upgrade service?</summary><p>No. Everything runs over email and your Git host: you send the report, we send a fixed quote, you grant repository access, we deliver a pull request with test builds.</p></details>
+    <details><summary>Is it really free? What is the catch?</summary><p>The tool and the plan are free and open source under MIT, with no account and no paid tier. If your team wants help with a large upgrade, you can write to us.</p></details>
     <details><summary>Can I check what the tool does before running it on our code?</summary><p>Yes. It has no dependencies and no install scripts, the <a href="https://github.com/AlicanAkyol/nativekeel">source is short and public</a>, and releases are published with npm provenance so you can verify the package matches the source (<code>npm audit signatures</code>). Run it with <code>--offline</code> to forbid all network access.</p></details>
     <details><summary>What if the report is wrong?</summary><p>Version and maintenance data comes from npm and React Native Directory and can lag. Write to us and we will fix the rule. A missed upgrade blocker is a bug to us.</p></details>
-    <details><summary>What if you cannot finish the upgrade?</summary><p>If we cannot deliver the agreed scope, you get your deposit back. You keep the plan and any partial work on the branch.</p></details>
   </section>
 
   <footer>

@@ -32,6 +32,6 @@
 - [Supabase tables without row level security in a React Native app](https://nativekeel.com/fix/supabase-rls-disabled): Why a Supabase table without row level security is readable by anyone who has your React Native or Expo app, and how to enable RLS with policies.
 - [Xcode 27 "UIScene life cycle is required": React Native fix](https://nativekeel.com/fix/uiscene-life-cycle-required-xcode-27): Why a React Native or Expo app stops at launch when built with Xcode 27 and the iOS 27 SDK, the April 2027 App Store deadline, and how to adopt UIScene.
 
-## Services
+## Contact
 
-- [Fixed-price React Native and Expo upgrades](https://nativekeel.com/#services) by the maintainer, for teams that prefer not to do it themselves.
+- Questions or help with a large upgrade: hello@nativekeel.com

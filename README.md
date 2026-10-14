@@ -175,10 +175,6 @@ Agencies can put their own name on the HTML report: `npx nativekeel plan --html 
 
 Details and vulnerability reporting: [SECURITY.md](SECURITY.md). Wrong or missed finding? [Tell us](https://github.com/AlicanAkyol/nativekeel/issues/new?template=false-alarm.yml), no code needed.
 
-## Need it done for you?
-
-We do fixed-price React Native and Expo upgrades on a branch of your repository, delivered as a pull request with test builds. No calls needed. See https://nativekeel.com/#services.
-
 ## License
 
 MIT
