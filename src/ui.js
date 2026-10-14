@@ -61,6 +61,62 @@ function classify(text) {
 
 const hasAny = (el, props) => el.spread || props.some((p) => el.attrs.has(p));
 
+// Size-related numbers from a style object literal's own text. Only plain numeric literals
+// count; anything computed, spread or percentage leaves the value unknown.
+const SIZE_KEYS = ['width', 'height', 'minWidth', 'minHeight', 'padding', 'paddingHorizontal', 'paddingVertical', 'paddingTop', 'paddingBottom', 'paddingLeft', 'paddingRight', 'flex', 'flexGrow', 'aspectRatio'];
+function sizeOf(objectText) {
+  if (/\.\.\./.test(objectText)) return null;
+  // Only the object's own keys: drop nested objects such as shadowOffset: { width, height }.
+  let inner = objectText.trim().replace(/^\{|\}$/g, '');
+  for (let prev = ''; prev !== inner;) { prev = inner; inner = inner.replace(/\{[^{}]*\}/g, '0'); }
+  objectText = `{${inner}}`;
+  const out = {};
+  for (const k of SIZE_KEYS) {
+    const m = objectText.match(new RegExp(`(?:^|[{,\\s])${k}\\s*:\\s*([^,}\\n]+)`));
+    if (!m) continue;
+    const v = m[1].trim();
+    out[k] = /^\d+(?:\.\d+)?$/.test(v) ? Number(v) : NaN;
+  }
+  return out;
+}
+// `StyleSheet.create({ name: { ... } })` in the same file: name → size info.
+function styleSheets(text) {
+  const sheets = new Map();
+  for (const m of text.matchAll(/(?:const|let|var)\s+([\w$]+)\s*=\s*StyleSheet\.create\(\s*\{/g)) {
+    let i = m.index + m[0].length, depth = 1;
+    const start = i;
+    while (i < text.length && depth) { if (text[i] === '{') depth++; else if (text[i] === '}') depth--; i++; }
+    const body = text.slice(start, i - 1);
+    const entries = new Map();
+    let level = 0, keyStart = 0, key = null, objStart = -1;
+    for (let j = 0; j < body.length; j++) {
+      const c = body[j];
+      if (c === '{') { if (level === 0) { const k = body.slice(keyStart, j).match(/([\w$]+)['"]?\s*:\s*$/); key = k && k[1]; objStart = j; } level++; }
+      else if (c === '}') { level--; if (level === 0 && key) { entries.set(key, sizeOf(body.slice(objStart, j + 1))); key = null; keyStart = j + 1; } }
+      else if (c === ',' && level === 0) keyStart = j + 1;
+    }
+    sheets.set(m[1], entries);
+  }
+  return sheets;
+}
+// The size a style attribute gives an element, when every part of it can be read.
+function styleSize(attr, sheets) {
+  if (!attr || attr.kind !== 'expr') return null;
+  const raw = attr.raw.trim();
+  const parts = raw.startsWith('[') && raw.endsWith(']') ? raw.slice(1, -1).split(/,(?![^{]*})/).map((x) => x.trim()).filter(Boolean) : [raw];
+  const merged = {};
+  for (const part of parts) {
+    let info = null;
+    const ref = part.match(/^([\w$]+)\.([\w$]+)$/);
+    if (ref && sheets.has(ref[1])) info = sheets.get(ref[1]).get(ref[2]);
+    else if (part.startsWith('{') && part.endsWith('}')) info = sizeOf(part);
+    if (!info) return null;
+    Object.assign(merged, info);
+  }
+  return merged;
+}
+const SMALL = 44;
+
 // The touchable's content is only icons/images (optionally wrapped in Views), with no text,
 // no expression that could produce text, and no unknown component that could carry a label.
 function iconOnly(el, { rnName, isIcon }) {
@@ -79,6 +135,28 @@ function iconOnly(el, { rnName, isIcon }) {
   return visit(el) && icon;
 }
 
+// A touchable whose tappable area is certainly under 44×44: explicit width and height below 44
+// (padding is inside them in React Native), or no style at all around a single small icon.
+function smallTarget(el, kinds, sheets) {
+  const style = el.attrs.get('style');
+  if (style) {
+    const size = styleSize(style, sheets);
+    if (!size) return null;
+    const { width, height, minWidth, minHeight, flex, flexGrow, aspectRatio } = size;
+    if ([flex, flexGrow, aspectRatio, minWidth, minHeight].some((v) => v !== undefined)) return null;
+    if (!(width < SMALL && height < SMALL)) return null;
+    return `${width}×${height}`;
+  }
+  const kids = el.children;
+  if (kids.length !== 1 || kids[0].kind !== 'element') return null;
+  const icon = kids[0].element;
+  if (!kinds.isIcon(icon.name) || icon.spread) return null;
+  const sz = icon.attrs.get('size');
+  const n = sz && (sz.kind === 'expr' ? Number(sz.raw) : sz.kind === 'string' ? Number(sz.value) : NaN);
+  if (!(n > 0 && n < SMALL)) return null;
+  return `icon ${n}`;
+}
+
 // React 19 (React Native 0.78+) no longer applies defaultProps to function components in JSX
 // compiled with the automatic runtime (the React Native and Expo default). Only
 // React.createElement callers and the classic runtime still apply them.
@@ -89,6 +167,7 @@ export function uiChecks(project) {
   const { files, skipped } = sourceFiles(root, /\.(?:jsx|tsx|js|ts)$/);
   const unlabeledButtons = [];
   const unlabeledInputs = [];
+  const smallTargets = [];
   const defaultProps = []; // { file, line, component, props }
   let readable = 0, unreadable = 0;
   for (const { file, text } of files) {
@@ -109,12 +188,17 @@ export function uiChecks(project) {
     if (rel.endsWith('.ts') || !/<[A-Z]/.test(text)) continue;
     let tree;
     try { tree = parseJsx(text); readable++; } catch { unreadable++; continue; }
+    const sheets = /StyleSheet\.create/.test(text) ? styleSheets(text) : new Map();
     for (const el of walkElements(tree)) {
       const name = kinds.rnName(el.name);
       if (TOUCHABLES.has(name)) {
         if (!el.attrs.has('onPress') && !el.attrs.has('onLongPress')) continue;
-        if (hasAny(el, LABEL_PROPS)) continue;
         if (el.attrs.get('disabled')?.kind === 'true') continue;
+        if (!el.attrs.has('hitSlop') && !el.spread) {
+          const size = smallTarget(el, kinds, sheets);
+          if (size) smallTargets.push({ at: `${rel}:${el.line}`, size });
+        }
+        if (hasAny(el, LABEL_PROPS)) continue;
         if (iconOnly(el, kinds)) unlabeledButtons.push(`${rel}:${el.line}`);
       } else if (name === 'TextInput') {
         if (hasAny(el, LABEL_PROPS.concat(['placeholder']))) continue;
@@ -150,6 +234,20 @@ export function uiChecks(project) {
       detail: 'A TextInput without accessibilityLabel or placeholder is announced only as "text field". A visible label next to it is not linked to the field for VoiceOver (accessibilityLabelledBy works on Android only), so the user hears no name. Add accessibilityLabel matching the visible label. (WCAG 2.2: 1.3.1, 4.1.2)',
       evidence: unlabeledInputs.slice(0, MAX_LOCATIONS).map((at) => ({ kind: 'source', at })),
       fix: { kind: 'accessibility', step: `Add \`accessibilityLabel\` to the text fields without a label or placeholder: ${unlabeledInputs.slice(0, 5).map((a) => `\`${a}\``).join(', ')}${unlabeledInputs.length > 5 ? ` and ${unlabeledInputs.length - 5} more` : ''}.` },
+    });
+  }
+
+  if (smallTargets.length) {
+    const tiny = smallTargets.some((t) => Math.min(...(t.size.match(/\d+(?:\.\d+)?/g) || []).map(Number)) < 24);
+    const list = smallTargets.map((t) => `${t.at} (${t.size})`);
+    findings.push({
+      id: 'a11y-small-touch-target',
+      severity: 'low',
+      area: 'accessibility',
+      title: `${smallTargets.length} button${smallTargets.length === 1 ? ' is' : 's are'} smaller than 44×44 with no hitSlop (${where(list)})`,
+      detail: `These touchables have an explicit size under 44×44 points, or no style around a single small icon, and no hitSlop to extend the tappable area. Apple recommends at least 44×44 pt and Android 48×48 dp; small targets are missed by people with tremors and by everyone on the move.${tiny ? ' Some are under 24×24, below the WCAG 2.2 AA minimum (2.5.8 Target Size).' : ' WCAG 2.2 AA asks for at least 24×24, which these meet; the platform guidelines ask for more.'} Add hitSlop (for example hitSlop={10}) or padding to reach 44–48.`,
+      evidence: smallTargets.slice(0, MAX_LOCATIONS).map((t) => ({ kind: 'source', at: t.at, size: t.size })),
+      fix: { kind: 'accessibility', step: `Give the small buttons a 44–48 point tappable area with \`hitSlop\` or padding: ${list.slice(0, 5).map((a) => `\`${a}\``).join(', ')}${list.length > 5 ? ` and ${list.length - 5} more` : ''}.` },
     });
   }
 

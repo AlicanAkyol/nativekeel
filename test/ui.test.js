@@ -73,3 +73,25 @@ test('Text.defaultProps on React 19 is reported as ignored, except where createE
   assert.equal(run(app(scaling, { nativewind: '4.1.0' }), '0.82.0').length, 0);
   assert.equal(run(app({ ...scaling, 'babel.config.js': "module.exports = { presets: [['babel-preset-expo', { jsxRuntime: 'classic' }]] };" }), '0.82.0').length, 0);
 });
+
+test('small touch targets: explicit size under 44 or a bare small icon, unless hitSlop or unknown size', () => {
+  const f = run(app({ 'src/T.tsx': `${header}import { StyleSheet } from 'react-native';
+export const T = (p) => (<View>
+    <Pressable onPress={p.a} accessibilityLabel="A" style={styles.small}><Ionicons name="x" /></Pressable>
+    <Pressable onPress={p.b} accessibilityLabel="B"><Ionicons name="x" size={20} /></Pressable>
+    <Pressable onPress={p.c} accessibilityLabel="C" style={{ width: 30, height: 30 }}><Text>+</Text></Pressable>
+    <Pressable onPress={p.d} accessibilityLabel="D" style={styles.small} hitSlop={10}><Ionicons name="x" /></Pressable>
+    <Pressable onPress={p.e} accessibilityLabel="E" style={styles.card}><Text>Card</Text></Pressable>
+    <Pressable onPress={p.f} accessibilityLabel="F" style={styles.big}><Ionicons name="x" /></Pressable>
+    <Pressable onPress={p.g} accessibilityLabel="G" style={[styles.small, p.style]}><Ionicons name="x" /></Pressable>
+    <Pressable onPress={p.h} accessibilityLabel="H"><Ionicons name="x" size={48} /></Pressable>
+  </View>);
+const styles = StyleSheet.create({
+  small: { width: 32, height: 32, borderRadius: 16 },
+  card: { padding: 16, shadowOffset: { width: 0, height: 2 } },
+  big: { width: 48, height: 48 },
+});` }));
+  const t = f.find((x) => x.id === 'a11y-small-touch-target');
+  assert.deepEqual(t.evidence.map((e) => `${e.at} ${e.size}`), ['src/T.tsx:5 32×32', 'src/T.tsx:6 icon 20', 'src/T.tsx:7 30×30']);
+  assert.match(t.detail, /Some are under 24×24, below the WCAG 2.2 AA minimum/);
+});
