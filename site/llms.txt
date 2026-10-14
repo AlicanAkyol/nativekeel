@@ -34,4 +34,4 @@
 
 ## Contact
 
-- Questions or help with a large upgrade: hello@nativekeel.com
+- [Expert help](https://nativekeel.com/#help): the maintainer takes on React Native and Expo upgrades for teams that prefer to hand the work over (hello@nativekeel.com).

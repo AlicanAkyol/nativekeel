@@ -175,6 +175,10 @@ Agencies can put their own name on the HTML report: `npx nativekeel plan --html 
 
 Details and vulnerability reporting: [SECURITY.md](SECURITY.md). Wrong or missed finding? [Tell us](https://github.com/AlicanAkyol/nativekeel/issues/new?template=false-alarm.yml), no code needed.
 
+## Expert help
+
+The tool is free and stays free. If your team would rather hand an upgrade over, the maintainer takes on a few projects at a time: send your report to hello@nativekeel.com. [How it works](https://nativekeel.com/#help).
+
 ## License
 
 MIT
