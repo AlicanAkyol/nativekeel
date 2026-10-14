@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Text.defaultProps not working in React Native 0.78+</title>
+<meta name="description" content="React 19 ignores Text.defaultProps in React Native 0.78+: app-wide fonts and font-scaling limits stop applying with no error. Why, and the fix.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#0b5d55">
+<link rel="canonical" href="https://nativekeel.com/fix/text-defaultprops-react-19">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="NativeKeel">
+<meta property="og:url" content="https://nativekeel.com/fix/text-defaultprops-react-19">
+<meta property="og:title" content="Text.defaultProps not working in React Native 0.78+">
+<meta property="og:description" content="React 19 ignores Text.defaultProps in React Native 0.78+: app-wide fonts and font-scaling limits stop applying with no error. Why, and the fix.">
+<meta property="og:image" content="https://nativekeel.com/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:description" content="React 19 ignores Text.defaultProps in React Native 0.78+: app-wide fonts and font-scaling limits stop applying with no error. Why, and the fix.">
+<meta name="twitter:image" content="https://nativekeel.com/og.png">
+<style>:root{--bg:#fbfaf7;--text:#15171b;--muted:#5d6470;--accent:#0b5d55;--line:#e3e1db;--card:#ffffff;--code:#f1efea}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1013;--text:#e9ebef;--muted:#9aa2ad;--accent:#3cc4b4;--line:#262a31;--card:#15181d;--code:#1b1f25}}
+:root[data-theme="dark"]{--bg:#0e1013;--text:#e9ebef;--muted:#9aa2ad;--accent:#3cc4b4;--line:#262a31;--card:#15181d;--code:#1b1f25}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.65 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:760px;margin:0 auto;padding:40px 16px 64px;overflow-wrap:anywhere}
+h1{font-size:28px;line-height:1.25;margin:0 0 6px}h2{font-size:18px;margin:28px 0 6px}a{color:var(--accent)}p,li{color:var(--muted)}strong{color:var(--text)}
+code{font:14px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--code);padding:1px 5px;border-radius:5px}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow-x:auto}pre code{background:none;padding:0;white-space:pre-wrap}
+.cta{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:28px 0}.cta code{font-size:15px}
+.meta{font-size:14px;color:var(--muted)}ul.list li{margin:8px 0}</style>
+</head>
+<body><main>
+<p class="meta"><a href="/">NativeKeel</a> · <a href="/fix/">React Native fixes</a></p>
+<h1>Text.defaultProps has no effect after upgrading to React Native 0.78 (React 19)</h1>
+<p class="meta">Updated 2026-10-10</p>
+<p>There is no error message. After moving to React Native 0.78 or later, settings like these silently stop applying:</p>
+<pre><code>Text.defaultProps = Text.defaultProps || {};
+Text.defaultProps.allowFontScaling = false;
+TextInput.defaultProps = { ...TextInput.defaultProps, style: { fontFamily: 'Inter' } };</code></pre>
+<p>The app-wide font or color disappears, or text that was capped now follows the system text size and fixed layouts overflow.</p>
+<p><strong>Why.</strong> React Native 0.78 ships React 19, and React 19 applies <code>defaultProps</code> only to class components. <code>Text</code> and <code>TextInput</code> are function components. React Native and Expo compile JSX with the automatic runtime, whose <code>jsx()</code> never reads <code>defaultProps</code>, and the React Native renderer merges defaults only for classes (<code>resolveClassComponentProps</code>). Checked in React 19.1 and React Native 0.82.</p>
+<p>The one exception: components rendered through <code>React.createElement</code> still get them. NativeWind renders that way, so in NativeWind projects the defaults may still apply to styled elements.</p>
+<p><strong>Fix.</strong> Move the defaults into your own components and use them everywhere:</p>
+<pre><code>import { Text as RNText, type TextProps } from 'react-native';
+
+export function Text({ maxFontSizeMultiplier = 1.5, style, ...props }: TextProps) {
+  return &lt;RNText maxFontSizeMultiplier={maxFontSizeMultiplier} style={[{ fontFamily: 'Inter' }, style]} {...props} /&gt;;
+}</code></pre>
+<p>Do the same for <code>TextInput</code>, then check the main screens at the largest system text size. Prefer a cap such as <code>maxFontSizeMultiplier</code> over <code>allowFontScaling={false}</code>: turning scaling off locks out people who need larger text.</p>
+<p><strong>Find it in your app.</strong> <code>npx nativekeel</code> reports <code>Text.defaultProps</code> and <code>TextInput.defaultProps</code> assignments: on 0.78+ that they have no effect, before 0.78 that they will stop working when you upgrade.</p>
+<div class="cta"><strong>Check your whole app in one command:</strong> <code>npx nativekeel</code><br><span class="meta">Free, runs locally (your code is not uploaded), no account. It reports this and 80 other upgrade, store, crash and security problems.</span></div>
+<h2>Sources</h2>
+<ul><li><a href="https://react.dev/blog/2024/04/25/react-19-upgrade-guide">React 19 upgrade guide: removed defaultProps for function components</a></li><li><a href="https://reactnative.dev/blog/2025/02/19/react-native-0.78">React Native 0.78: React 19</a></li></ul>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"Text.defaultProps not working in React Native 0.78+","description":"React 19 ignores Text.defaultProps in React Native 0.78+: app-wide fonts and font-scaling limits stop applying with no error. Why, and the fix.","dateModified":"2026-10-10","author":{"@type":"Organization","name":"NativeKeel","url":"https://nativekeel.com"},"mainEntityOfPage":"https://nativekeel.com/fix/text-defaultprops-react-19"}</script>
+</main></body>
+</html>

@@ -16,6 +16,7 @@
 <meta property="og:description" content="Build errors, App Store and Google Play rejections and crashes that React Native and Expo apps hit, with the cause, the fix and sources.">
 <meta property="og:image" content="https://nativekeel.com/og.png">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:description" content="Build errors, App Store and Google Play rejections and crashes that React Native and Expo apps hit, with the cause, the fix and sources.">
 <meta name="twitter:image" content="https://nativekeel.com/og.png">
 <style>:root{--bg:#fbfaf7;--text:#15171b;--muted:#5d6470;--accent:#0b5d55;--line:#e3e1db;--card:#ffffff;--code:#f1efea}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1013;--text:#e9ebef;--muted:#9aa2ad;--accent:#3cc4b4;--line:#262a31;--card:#15181d;--code:#1b1f25}}
@@ -37,6 +38,7 @@ pre{background:var(--code);border:1px solid var(--line);border-radius:10px;paddi
 <li><a href="/fix/missing-foreground-service-type">MissingForegroundServiceTypeException</a><br><span class="meta">Why a React Native app crashes with MissingForegroundServiceTypeException after targeting Android 14, and how to declare the foreground service type.</span></li>
 <li><a href="/fix/expo-packages-should-be-updated">The following packages should be updated for best compatibility with the installed expo version</a><br><span class="meta">What Expo's "packages should be updated for best compatibility with the installed expo version" warning means, when it causes crashes, and the one-command fix.</span></li>
 <li><a href="/fix/imagebackground-safeareaview-deprecated">ImageBackground is deprecated and will be removed in a future release</a><br><span class="meta">React Native 0.87 deprecated ImageBackground (and 0.81 SafeAreaView). Why SafeAreaView already misbehaves on Android 15, and drop-in replacements for both.</span></li>
+<li><a href="/fix/text-defaultprops-react-19">Text.defaultProps has no effect after upgrading to React Native 0.78 (React 19)</a><br><span class="meta">React 19 ignores Text.defaultProps in React Native 0.78+: app-wide fonts and font-scaling limits stop applying with no error. Why, and the fix.</span></li>
 <li><a href="/fix/supabase-rls-disabled">Supabase: RLS disabled in public (0013_rls_disabled_in_public)</a><br><span class="meta">Why a Supabase table without row level security is readable by anyone who has your React Native or Expo app, and how to enable RLS with policies.</span></li>
 <li><a href="/fix/app-store-account-deletion-5-1-1-v">Guideline 5.1.1(v): the app supports account creation but does not include an option to initiate account deletion</a><br><span class="meta">Why Apple rejects React Native and Expo apps under guideline 5.1.1(v), what counts as account deletion, and what Google Play asks for as well.</span></li>
 <li><a href="/fix/app-store-sign-in-with-apple-4-8">Guideline 4.8 - Design - Login Services</a><br><span class="meta">Why iOS apps with Google or Facebook login are rejected under App Store guideline 4.8, exceptions, and how to add Sign in with Apple in React Native and Expo.</span></li>

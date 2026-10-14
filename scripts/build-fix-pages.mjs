@@ -40,7 +40,7 @@ const PAGES = [
   {
     slug: 'android-exported',
     error: 'Manifest merger failed: android:exported needs to be explicitly specified',
-    title: 'android:exported needs to be explicitly specified (React Native, targetSdk 31+)',
+    title: 'android:exported must be explicitly specified: React Native',
     description: 'Why a React Native build fails with "android:exported needs to be explicitly specified" after raising targetSdk, and how to fix every component at once.',
     body: `
 The full message usually reads:
@@ -101,7 +101,7 @@ ITMS-91061: Missing privacy manifest - Your app includes "Frameworks/FirebaseCor
   {
     slug: 'missing-foreground-service-type',
     error: 'MissingForegroundServiceTypeException',
-    title: 'MissingForegroundServiceTypeException in React Native (Android 14)',
+    title: 'MissingForegroundServiceTypeException: React Native fix',
     description: 'Why a React Native app crashes with MissingForegroundServiceTypeException after targeting Android 14, and how to declare the foreground service type.',
     body: `
 **What it means.** If your app targets Android 14 (API level 34) and starts a foreground service whose type is not declared in the manifest, the system throws \`MissingForegroundServiceTypeException\` when the service calls \`startForeground()\`. The app crashes at that moment, not at build time.
@@ -126,7 +126,7 @@ ITMS-91061: Missing privacy manifest - Your app includes "Frameworks/FirebaseCor
   {
     slug: 'expo-packages-should-be-updated',
     error: 'The following packages should be updated for best compatibility with the installed expo version',
-    title: 'Expo: "The following packages should be updated for best compatibility"',
+    title: 'Expo: "packages should be updated for best compatibility"',
     description: 'What Expo\'s "packages should be updated for best compatibility with the installed expo version" warning means, when it causes crashes, and the one-command fix.',
     body: `
 Expo prints:
@@ -155,7 +155,7 @@ It sets every package to the version your SDK expects. Do not bump these package
   {
     slug: 'imagebackground-safeareaview-deprecated',
     error: 'ImageBackground is deprecated and will be removed in a future release',
-    title: 'ImageBackground and SafeAreaView are deprecated in React Native: how to migrate',
+    title: 'ImageBackground and SafeAreaView deprecated in React Native',
     description: 'React Native 0.87 deprecated ImageBackground (and 0.81 SafeAreaView). Why SafeAreaView already misbehaves on Android 15, and drop-in replacements for both.',
     body: `
 React Native logs:
@@ -189,9 +189,45 @@ Add \`overflow: 'hidden'\` to the outer style if you used \`borderRadius\`.
     sources: [['React Native: ImageBackground', 'https://reactnative.dev/docs/imagebackground'], ['React Native: SafeAreaView', 'https://reactnative.dev/docs/safeareaview'], ['Android 15: edge-to-edge enforcement', 'https://developer.android.com/about/versions/15/behavior-changes-15']],
   },
   {
+    slug: 'text-defaultprops-react-19',
+    error: 'Text.defaultProps has no effect after upgrading to React Native 0.78 (React 19)',
+    title: 'Text.defaultProps not working in React Native 0.78+',
+    description: 'React 19 ignores Text.defaultProps in React Native 0.78+: app-wide fonts and font-scaling limits stop applying with no error. Why, and the fix.',
+    body: `
+There is no error message. After moving to React Native 0.78 or later, settings like these silently stop applying:
+
+\`\`\`
+Text.defaultProps = Text.defaultProps || {};
+Text.defaultProps.allowFontScaling = false;
+TextInput.defaultProps = { ...TextInput.defaultProps, style: { fontFamily: 'Inter' } };
+\`\`\`
+
+The app-wide font or color disappears, or text that was capped now follows the system text size and fixed layouts overflow.
+
+**Why.** React Native 0.78 ships React 19, and React 19 applies \`defaultProps\` only to class components. \`Text\` and \`TextInput\` are function components. React Native and Expo compile JSX with the automatic runtime, whose \`jsx()\` never reads \`defaultProps\`, and the React Native renderer merges defaults only for classes (\`resolveClassComponentProps\`). Checked in React 19.1 and React Native 0.82.
+
+The one exception: components rendered through \`React.createElement\` still get them. NativeWind renders that way, so in NativeWind projects the defaults may still apply to styled elements.
+
+**Fix.** Move the defaults into your own components and use them everywhere:
+
+\`\`\`
+import { Text as RNText, type TextProps } from 'react-native';
+
+export function Text({ maxFontSizeMultiplier = 1.5, style, ...props }: TextProps) {
+  return <RNText maxFontSizeMultiplier={maxFontSizeMultiplier} style={[{ fontFamily: 'Inter' }, style]} {...props} />;
+}
+\`\`\`
+
+Do the same for \`TextInput\`, then check the main screens at the largest system text size. Prefer a cap such as \`maxFontSizeMultiplier\` over \`allowFontScaling={false}\`: turning scaling off locks out people who need larger text.
+
+**Find it in your app.** \`npx nativekeel\` reports \`Text.defaultProps\` and \`TextInput.defaultProps\` assignments: on 0.78+ that they have no effect, before 0.78 that they will stop working when you upgrade.
+`,
+    sources: [['React 19 upgrade guide: removed defaultProps for function components', 'https://react.dev/blog/2024/04/25/react-19-upgrade-guide'], ['React Native 0.78: React 19', 'https://reactnative.dev/blog/2025/02/19/react-native-0.78']],
+  },
+  {
     slug: 'supabase-rls-disabled',
     error: 'Supabase: RLS disabled in public (0013_rls_disabled_in_public)',
-    title: 'Supabase tables without row level security in a React Native app',
+    title: 'Supabase tables without row level security in React Native',
     description: 'Why a Supabase table without row level security is readable by anyone who has your React Native or Expo app, and how to enable RLS with policies.',
     body: `
 Supabase's security advisor reports it as lint \`0013_rls_disabled_in_public\`.
@@ -218,7 +254,7 @@ With RLS on and no policy, nobody can read the table through the API, so add pol
   {
     slug: 'app-store-account-deletion-5-1-1-v',
     error: 'Guideline 5.1.1(v): the app supports account creation but does not include an option to initiate account deletion',
-    title: 'App Store rejection 5.1.1(v): account deletion in a React Native app',
+    title: 'App Store 5.1.1(v) account deletion: React Native fix',
     description: 'Why Apple rejects React Native and Expo apps under guideline 5.1.1(v), what counts as account deletion, and what Google Play asks for as well.',
     body: `
 The rejection reads:
@@ -268,7 +304,7 @@ Enable the Sign in with Apple capability for the app ID, show Apple's button nex
   {
     slug: 'google-play-target-api-level',
     error: 'Your app currently targets API level 34 and must target at least API level 36',
-    title: 'Google Play: "must target at least API level" in a React Native app',
+    title: 'Google Play "must target at least API level": React Native',
     description: 'What Google Play\'s target API level error means for React Native and Expo apps in 2026, the deadlines, and what usually breaks when you raise targetSdk.',
     body: `
 Play Console shows:
@@ -417,6 +453,7 @@ const head = (title, description, url) => `<!doctype html>
 <meta property="og:description" content="${attr(description)}">
 <meta property="og:image" content="${BASE}/og.png">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:description" content="${attr(description)}">
 <meta name="twitter:image" content="${BASE}/og.png">
 <style>${STYLE}</style>
 </head>`;
