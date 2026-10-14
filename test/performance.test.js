@@ -1,4 +1,5 @@
 import test from 'node:test';
+import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { loadProject } from '../src/project.js';
 import { performanceChecks } from '../src/performance.js';
@@ -65,4 +66,25 @@ test('comments, string examples, type imports and property calls are not import 
     `loader.require('lodash');`,
     `import debounce from 'lodash/debounce';`,
   ]) assert.ok(!ids({ 'src/A.ts': code }).includes('perf-heavy-imports'), code);
+});
+
+test('large JSON imported into the bundle: translations and Lottie get specific advice; tests and dynamic imports do not count', () => {
+  const big = (extra = '') => `{${extra}"data":"${'x'.repeat(320 * 1024)}"}`;
+  const root = makeProject({
+    'package.json': { name: 'fixture', dependencies: { 'react-native': '0.80.0' } },
+    'src/i18n.js': "import en from './locales/en.json';\nimport de from './locales/de.json';\nconst lazy = () => import('./locales/fr.json');",
+    'src/locales/en.json': big(), 'src/locales/de.json': big(), 'src/locales/fr.json': big(),
+    'src/Loader.js': "const anim = require('./anim/loader.json');",
+    'src/anim/loader.json': big('"nm":"x","ddd":0,"layers":[],"ip":0,'),
+    'src/__fixtures__/api.js': "import r from './response.json';",
+    'src/__fixtures__/response.json': big(),
+  });
+  try {
+    const f = performanceChecks(loadProject(root)).find((x) => x.id === 'perf-large-json');
+    assert.ok(f);
+    assert.match(f.title, /^3 JSON files over 300 KB/);
+    assert.match(f.detail, /2 look like translations: load only the active language/);
+    assert.match(f.detail, /1 is a Lottie animation: \.lottie files load as assets/);
+    assert.deepEqual(f.evidence.map((e) => e.file).sort(), ['src/anim/loader.json', 'src/locales/de.json', 'src/locales/en.json']);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });

@@ -113,3 +113,14 @@ const styles = StyleSheet.create({ page: { flex: 1, backgroundColor: '#ffffff' }
   assert.deepEqual(c.evidence.map((e) => `${e.at} ${e.color}/${e.background}`), ['src/C.tsx:5 #bbbbbb/#ffffff', 'src/C.tsx:8 #ffffff/#4caf50']);
   assert.equal(c.severity, 'medium');
 });
+
+test('missing accessibilityRole is a note with the share of touchables', () => {
+  const f = run(app({ 'src/R.tsx': `${header}export const R = (p) => (<View>
+    <Pressable onPress={p.a}><Text>Save</Text></Pressable>
+    <Pressable onPress={p.b} accessibilityRole="button"><Text>Send</Text></Pressable>
+    <Pressable onPress={p.c} role="link"><Text>Open</Text></Pressable>
+  </View>);` }));
+  const r = f.find((x) => x.id === 'a11y-button-role-missing');
+  assert.equal(r.severity, 'info');
+  assert.match(r.title, /^1 of 3 touchables/);
+});

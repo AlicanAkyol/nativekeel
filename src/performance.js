@@ -168,8 +168,30 @@ export function performanceChecks(project) {
   // memory. Screenshots and docs in the repo are not part of the app, so only required files count.
   const big = [];
   const seen = new Set();
+  // JSON imported from code: Metro puts the whole file into the JavaScript bundle as a module.
+  const bigJson = [];
+  const seenJson = new Set();
   for (const file of walk(root, JS_EXT)) {
     const text = read(file);
+    const testOnly = /(?:^|[/\\])(?:__tests__|__mocks__|__fixtures__|fixtures|mocks?|stories|storybook|e2e|tests?)(?:[/\\]|$)|\.(?:stories|mock|fixture)\.[jt]sx?$/;
+    if (testOnly.test(path.relative(root, file))) continue;
+    for (const m of text.matchAll(/(?:\bfrom\s*|\brequire\(\s*|\bimport\(\s*)['"](\.{1,2}\/[^'"]+\.json)['"]/g)) {
+      const json = path.resolve(path.dirname(file), m[1]);
+      if (testOnly.test(path.relative(root, json))) continue;
+      if (seenJson.has(json)) continue;
+      seenJson.add(json);
+      try {
+        const size = fs.statSync(json).size;
+        if (size <= 300 * 1024) continue;
+        let head = '';
+        const fd = fs.openSync(json, 'r');
+        try { const buf = Buffer.alloc(4000); head = buf.toString('utf8', 0, fs.readSync(fd, buf, 0, 4000, 0)); } finally { fs.closeSync(fd); }
+        const lottie = /"layers"\s*:/.test(head) && /"(?:ddd|fr|ip|op)"\s*:/.test(head);
+        bigJson.push({ rel: path.relative(root, json), size, lottie, lazy: m[0].startsWith('import(') });
+      } catch {
+        // missing file
+      }
+    }
     for (const m of text.matchAll(/require\(\s*['"](\.{1,2}\/[^'"]+\.(?:png|jpe?g|gif|webp))['"]\s*\)|import\s+\w+\s+from\s+['"](\.{1,2}\/[^'"]+\.(?:png|jpe?g|gif|webp))['"]/gi)) {
       const img = path.resolve(path.dirname(file), m[1] || m[2]);
       if (seen.has(img)) continue;
@@ -182,6 +204,28 @@ export function performanceChecks(project) {
       }
     }
   }
+  const eager = bigJson.filter((j) => !j.lazy);
+  if (eager.length) {
+    eager.sort((a, b) => b.size - a.size);
+    const total = eager.reduce((t, j) => t + j.size, 0);
+    const lotties = eager.filter((j) => j.lottie);
+    const LOCALE = /(?:^|[/._-])(?:ar|bg|cs|da|de|el|en|es|et|fa|fi|fr|he|hi|hr|hu|id|it|ja|ko|lt|lv|ms|nb|nl|no|pl|pt|ro|ru|sk|sl|sr|sv|th|tr|uk|vi|zh)(?:[-_][A-Za-z]{2,4})?(?=[/._-]|$)/;
+    const locales = eager.filter((j) => !j.lottie && LOCALE.test(j.rel.replace(/\.json$/, '')));
+    const advice = [
+      ...(locales.length >= 2 ? [`${locales.length} look like translations: load only the active language (dynamic import per locale, or download them) instead of importing every language up front`] : []),
+      ...(lotties.length ? [`${lotties.length} ${lotties.length === 1 ? 'is a Lottie animation' : 'are Lottie animations'}: .lottie files load as assets instead of inside the JavaScript bundle (add "lottie" to Metro's assetExts, as the lottie-react-native README shows)`] : []),
+    ];
+    findings.push({
+      id: 'perf-large-json',
+      severity: total > 5 * 1024 * 1024 ? 'medium' : 'low',
+      area: 'performance',
+      title: `${eager.length} JSON file${eager.length === 1 ? '' : 's'} over 300 KB imported into the JavaScript bundle (${(total / 1024 / 1024).toFixed(1)} MB)`,
+      detail: `${eager.slice(0, 3).map((j) => `${j.rel} (${Math.round(j.size / 1024)} KB)`).join(', ')}${eager.length > 3 ? ', …' : ''}. A JSON file imported or required from code becomes a module in the JavaScript bundle, so every user downloads it and the app loads it with the rest of the bundle, whether or not that screen is used.${advice.length ? ` ${advice.join('. ')}.` : ' Move data the app does not need at start behind a dynamic import, or fetch it.'} The start-up cost was not measured.`,
+      evidence: eager.slice(0, 20).map((j) => ({ kind: 'source', file: j.rel, bytes: j.size, ...(j.lottie ? { lottie: true } : {}) })),
+      fix: { kind: 'performance', step: `Keep large data out of the start-up bundle: ${eager.slice(0, 2).map((j) => `\`${j.rel}\``).join(', ')}${eager.length > 2 ? ` and ${eager.length - 2} more` : ''}${locales.length >= 2 ? ' (load only the active language)' : ''}${lotties.length ? ' (convert Lottie JSON to .lottie assets)' : ''}. Compare the release bundle size before and after.` },
+    });
+  }
+
   if (big.length) {
     big.sort((a, b) => b.size - a.size);
     const total = big.reduce((s, b) => s + b.size, 0);

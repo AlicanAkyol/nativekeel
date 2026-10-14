@@ -40,6 +40,12 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.74</h2><p class="date">14 October 2026</p>
+<ul>
+<li><span class="tag">Performance</span><b>Large JSON in the JavaScript bundle.</b> JSON files over 300 KB imported or required from app code become modules in the bundle, so every user downloads them and the app loads them with everything else. Translations for every language get &quot;load only the active language&quot;; Lottie animations get &quot;use a .lottie asset&quot;. Dynamic imports, tests, fixtures and stories do not count. Found in 19 of 871 open-source apps (up to 11 MB in one).</li>
+<li><span class="tag">Accessibility</span>A note (not a warning) when touchables have no <code>accessibilityRole</code>: screen readers then do not say they can be pressed. It is missing in 94% of the open-source apps that use touchables, so it is listed without raising the severity.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.73</h2><p class="date">14 October 2026</p>
 <ul>
 <li><span class="tag">New</span><b>Text that is hard to read.</b> Where a React Native <code>Text</code> has a literal color and the nearest background behind it is a literal opaque color (inline or in the file's <code>StyleSheet</code>), pairs below WCAG 2.2 AA are reported with both colors and the ratio: 4.5:1 for normal text, 3:1 for large text. Themed, computed or translucent colors, opacity, images and custom components between the text and its background are left alone. Found in 180 of 871 open-source apps; samples checked by hand.</li>

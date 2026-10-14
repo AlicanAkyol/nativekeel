@@ -255,6 +255,8 @@ export function uiChecks(project) {
   const unlabeledInputs = [];
   const smallTargets = [];
   const contrast = [];
+  let buttons = 0;
+  const noRole = [];
   const defaultProps = []; // { file, line, component, props }
   let readable = 0, unreadable = 0;
   for (const { file, text } of files) {
@@ -282,6 +284,10 @@ export function uiChecks(project) {
       if (TOUCHABLES.has(name)) {
         if (!el.attrs.has('onPress') && !el.attrs.has('onLongPress')) continue;
         if (el.attrs.get('disabled')?.kind === 'true') continue;
+        if (!el.spread) {
+          buttons++;
+          if (!el.attrs.has('accessibilityRole') && !el.attrs.has('role')) noRole.push(`${rel}:${el.line}`);
+        }
         if (!el.attrs.has('hitSlop') && !el.spread) {
           const size = smallTarget(el, kinds, sheets);
           if (size) smallTargets.push({ at: `${rel}:${el.line}`, size });
@@ -322,6 +328,18 @@ export function uiChecks(project) {
       detail: 'A TextInput without accessibilityLabel or placeholder is announced only as "text field". A visible label next to it is not linked to the field for VoiceOver (accessibilityLabelledBy works on Android only), so the user hears no name. Add accessibilityLabel matching the visible label. (WCAG 2.2: 1.3.1, 4.1.2)',
       evidence: unlabeledInputs.slice(0, MAX_LOCATIONS).map((at) => ({ kind: 'source', at })),
       fix: { kind: 'accessibility', step: `Add \`accessibilityLabel\` to the text fields without a label or placeholder: ${unlabeledInputs.slice(0, 5).map((a) => `\`${a}\``).join(', ')}${unlabeledInputs.length > 5 ? ` and ${unlabeledInputs.length - 5} more` : ''}.` },
+    });
+  }
+
+  if (noRole.length) {
+    findings.push({
+      id: 'a11y-button-role-missing',
+      severity: 'info',
+      area: 'accessibility',
+      title: `${noRole.length} of ${buttons} touchables have no accessibilityRole (${where(noRole)})`,
+      detail: 'TouchableOpacity, TouchableHighlight, TouchableWithoutFeedback and Pressable do not tell VoiceOver or TalkBack that they are buttons: the user hears the text but not that it can be pressed. Set accessibilityRole="button" (or "link", "tab", "switch" where that fits), ideally once in your own Button component. This is missing in most React Native apps (94% of 676 open-source apps with touchables), so it is listed as a note.',
+      evidence: noRole.slice(0, MAX_LOCATIONS).map((at) => ({ kind: 'source', at })),
+      fix: { kind: 'accessibility', step: 'Add `accessibilityRole="button"` (or the role that fits) to touchables, ideally in your shared Button component.' },
     });
   }
 
