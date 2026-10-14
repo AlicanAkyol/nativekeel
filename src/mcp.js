@@ -251,7 +251,7 @@ export const TOOLS = [
   {
     name: 'scan_project',
     description:
-      'Health check for a React Native or Expo project: upgrade blockers, New Architecture, Google Play and App Store rules (target SDK, 16 KB pages, Xcode 27 UIScene, privacy manifests), crash risks, accessibility (unlabeled icon buttons and text fields, small touch targets, text scaling), OWASP MASVS security findings, leaked secrets, and signs of malware planted in the project (run it before installing or starting a project you did not write). Read-only, never runs project code; returns findings with file:line references and fixes, never source code.',
+      'Health check for a React Native or Expo project: upgrade blockers, New Architecture, Google Play and App Store rules (target SDK, 16 KB pages, Xcode 27 UIScene, privacy manifests), crash risks, accessibility (unlabeled icon buttons and text fields, small touch targets, low text contrast, text scaling), OWASP MASVS security findings, leaked secrets, and signs of malware planted in the project (run it before installing or starting a project you did not write). Read-only, never runs project code; returns findings with file:line references and fixes, never source code.',
     inputSchema: {
       type: 'object',
       properties: {

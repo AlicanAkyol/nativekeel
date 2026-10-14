@@ -40,6 +40,11 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.73</h2><p class="date">14 October 2026</p>
+<ul>
+<li><span class="tag">New</span><b>Text that is hard to read.</b> Where a React Native <code>Text</code> has a literal color and the nearest background behind it is a literal opaque color (inline or in the file's <code>StyleSheet</code>), pairs below WCAG 2.2 AA are reported with both colors and the ratio: 4.5:1 for normal text, 3:1 for large text. Themed, computed or translucent colors, opacity, images and custom components between the text and its background are left alone. Found in 180 of 871 open-source apps; samples checked by hand.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.72</h2><p class="date">14 October 2026</p>
 <ul>
 <li><span class="tag">New</span><b>Buttons too small to tap.</b> React Native touchables whose tappable area is certainly under 44×44 points (an explicit width and height below 44 in an inline style or the file's <code>StyleSheet</code>, or no style around a single small icon) and no <code>hitSlop</code>. Apple recommends 44×44 pt and Android 48×48 dp; the report says separately when a button is also under the WCAG 2.2 AA minimum of 24×24. Sizes it cannot read (computed, spread, flex) are left alone. Found in 209 of 871 open-source apps; samples checked by hand.</li>

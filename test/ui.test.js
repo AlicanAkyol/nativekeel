@@ -95,3 +95,21 @@ const styles = StyleSheet.create({
   assert.deepEqual(t.evidence.map((e) => `${e.at} ${e.size}`), ['src/T.tsx:5 32×32', 'src/T.tsx:6 icon 20', 'src/T.tsx:7 30×30']);
   assert.match(t.detail, /Some are under 24×24, below the WCAG 2.2 AA minimum/);
 });
+
+test('low contrast: only literal colors with a known background behind them', () => {
+  const f = run(app({ 'src/C.tsx': `${header}import { StyleSheet } from 'react-native';
+export const C = (p) => (<View style={styles.page}>
+    <Text style={styles.muted}>Muted</Text>
+    <Text style={{ color: '#000' }}>Fine</Text>
+    <Text style={{ color: '#888', fontSize: 28 }}>Large passes 3:1</Text>
+    <View style={{ backgroundColor: '#4caf50' }}><Text style={{ color: 'white' }}>On green</Text></View>
+    <Card><Text style={{ color: '#ccc' }}>Unknown background</Text></Card>
+    <View style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}><Text style={{ color: '#333' }}>Translucent</Text></View>
+    <Text style={{ color: theme.muted }}>Themed</Text>
+    <View style={{ opacity: 0.5 }}><Text style={{ color: '#ccc' }}>Faded</Text></View>
+  </View>);
+const styles = StyleSheet.create({ page: { flex: 1, backgroundColor: '#ffffff' }, muted: { color: '#bbbbbb' } });` }));
+  const c = f.find((x) => x.id === 'a11y-low-contrast');
+  assert.deepEqual(c.evidence.map((e) => `${e.at} ${e.color}/${e.background}`), ['src/C.tsx:5 #bbbbbb/#ffffff', 'src/C.tsx:8 #ffffff/#4caf50']);
+  assert.equal(c.severity, 'medium');
+});

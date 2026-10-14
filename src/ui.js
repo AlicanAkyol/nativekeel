@@ -64,22 +64,25 @@ const hasAny = (el, props) => el.spread || props.some((p) => el.attrs.has(p));
 // Size-related numbers from a style object literal's own text. Only plain numeric literals
 // count; anything computed, spread or percentage leaves the value unknown.
 const SIZE_KEYS = ['width', 'height', 'minWidth', 'minHeight', 'padding', 'paddingHorizontal', 'paddingVertical', 'paddingTop', 'paddingBottom', 'paddingLeft', 'paddingRight', 'flex', 'flexGrow', 'aspectRatio'];
-function sizeOf(objectText) {
+// The object's own top-level `key: value` texts, or null when a spread hides some of them.
+// Nested objects (shadowOffset: { width, height }) are not the element's own keys.
+function ownProps(objectText, keys) {
   if (/\.\.\./.test(objectText)) return null;
-  // Only the object's own keys: drop nested objects such as shadowOffset: { width, height }.
   let inner = objectText.trim().replace(/^\{|\}$/g, '');
   for (let prev = ''; prev !== inner;) { prev = inner; inner = inner.replace(/\{[^{}]*\}/g, '0'); }
-  objectText = `{${inner}}`;
   const out = {};
-  for (const k of SIZE_KEYS) {
-    const m = objectText.match(new RegExp(`(?:^|[{,\\s])${k}\\s*:\\s*([^,}\\n]+)`));
-    if (!m) continue;
-    const v = m[1].trim();
-    out[k] = /^\d+(?:\.\d+)?$/.test(v) ? Number(v) : NaN;
+  for (const k of keys) {
+    const m = `{${inner}}`.match(new RegExp(`(?:^|[{,\\s])${k}\\s*:\\s*((?:'[^']*'|"[^"]*"|[^,}\\n'"])+)`));
+    if (m) out[k] = m[1].trim();
   }
   return out;
 }
-// `StyleSheet.create({ name: { ... } })` in the same file: name → size info.
+function sizeOf(objectText) {
+  const props = ownProps(objectText, SIZE_KEYS);
+  if (!props) return null;
+  return Object.fromEntries(Object.entries(props).map(([k, v]) => [k, /^\d+(?:\.\d+)?$/.test(v) ? Number(v) : NaN]));
+}
+// `StyleSheet.create({ name: { ... } })` in the same file: name → the style object's text.
 function styleSheets(text) {
   const sheets = new Map();
   for (const m of text.matchAll(/(?:const|let|var)\s+([\w$]+)\s*=\s*StyleSheet\.create\(\s*\{/g)) {
@@ -92,15 +95,17 @@ function styleSheets(text) {
     for (let j = 0; j < body.length; j++) {
       const c = body[j];
       if (c === '{') { if (level === 0) { const k = body.slice(keyStart, j).match(/([\w$]+)['"]?\s*:\s*$/); key = k && k[1]; objStart = j; } level++; }
-      else if (c === '}') { level--; if (level === 0 && key) { entries.set(key, sizeOf(body.slice(objStart, j + 1))); key = null; keyStart = j + 1; } }
+      else if (c === '}') { level--; if (level === 0 && key) { entries.set(key, body.slice(objStart, j + 1)); key = null; keyStart = j + 1; } }
       else if (c === ',' && level === 0) keyStart = j + 1;
     }
     sheets.set(m[1], entries);
   }
   return sheets;
 }
-// The size a style attribute gives an element, when every part of it can be read.
-function styleSize(attr, sheets) {
+// What a style attribute sets, read with `reader` from each part, when every part can be read.
+// Later parts win, as in React Native's style arrays.
+function styleSize(attr, sheets) { return styleRead(attr, sheets, sizeOf); }
+function styleRead(attr, sheets, reader) {
   if (!attr || attr.kind !== 'expr') return null;
   const raw = attr.raw.trim();
   const parts = raw.startsWith('[') && raw.endsWith(']') ? raw.slice(1, -1).split(/,(?![^{]*})/).map((x) => x.trim()).filter(Boolean) : [raw];
@@ -108,14 +113,95 @@ function styleSize(attr, sheets) {
   for (const part of parts) {
     let info = null;
     const ref = part.match(/^([\w$]+)\.([\w$]+)$/);
-    if (ref && sheets.has(ref[1])) info = sheets.get(ref[1]).get(ref[2]);
-    else if (part.startsWith('{') && part.endsWith('}')) info = sizeOf(part);
+    if (ref && sheets.has(ref[1])) { const text = sheets.get(ref[1]).get(ref[2]); info = text === undefined ? null : reader(text); }
+    else if (part.startsWith('{') && part.endsWith('}')) info = reader(part);
     if (!info) return null;
     Object.assign(merged, info);
   }
   return merged;
 }
 const SMALL = 44;
+
+// Opaque colors written as literals: #rgb, #rrggbb, rgb(), rgba(..., 1) and common names.
+// Anything translucent, computed or themed is unknown.
+const NAMED = { white: 'ffffff', black: '000000', red: 'ff0000', green: '008000', blue: '0000ff', yellow: 'ffff00', orange: 'ffa500', purple: '800080', pink: 'ffc0cb', gray: '808080', grey: '808080', silver: 'c0c0c0', lightgray: 'd3d3d3', lightgrey: 'd3d3d3', darkgray: 'a9a9a9', darkgrey: 'a9a9a9', navy: '000080', teal: '008080', maroon: '800000', olive: '808000', lime: '00ff00', aqua: '00ffff', cyan: '00ffff', magenta: 'ff00ff', fuchsia: 'ff00ff', gold: 'ffd700', whitesmoke: 'f5f5f5', gainsboro: 'dcdcdc', dimgray: '696969', dimgrey: '696969', slategray: '708090', slategrey: '708090', lightslategray: '778899', beige: 'f5f5dc', ivory: 'fffff0', khaki: 'f0e68c', tomato: 'ff6347', coral: 'ff7f50', salmon: 'fa8072', crimson: 'dc143c', skyblue: '87ceeb', steelblue: '4682b4', royalblue: '4169e1', dodgerblue: '1e90ff', lightblue: 'add8e6', darkblue: '00008b', darkgreen: '006400', lightgreen: '90ee90', limegreen: '32cd32', seagreen: '2e8b57', orangered: 'ff4500', darkorange: 'ff8c00', goldenrod: 'daa520', chocolate: 'd2691e', brown: 'a52a2a', tan: 'd2b48c', violet: 'ee82ee', indigo: '4b0082', plum: 'dda0dd', lavender: 'e6e6fa', snow: 'fffafa', linen: 'faf0e6', mintcream: 'f5fffa', aliceblue: 'f0f8ff', ghostwhite: 'f8f8ff', honeydew: 'f0fff0', azure: 'f0ffff', lightyellow: 'ffffe0', lightcyan: 'e0ffff', lightpink: 'ffb6c1', hotpink: 'ff69b4', deeppink: 'ff1493', turquoise: '40e0d0' };
+function parseColor(raw) {
+  if (!raw) return null;
+  const v = raw.trim().replace(/^['"]|['"]$/g, '').trim().toLowerCase();
+  if (raw.trim()[0] !== "'" && raw.trim()[0] !== '"') return null; // a variable or expression
+  let hex = NAMED[v];
+  const h = v.match(/^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/);
+  if (h) {
+    let x = h[1];
+    if (x.length === 3) x = x.split('').map((c) => c + c).join('');
+    if (x.length === 8) { if (x.slice(6) !== 'ff') return null; x = x.slice(0, 6); }
+    hex = x;
+  }
+  const rgb = v.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+)\s*)?\)$/);
+  if (rgb) {
+    if (rgb[4] !== undefined && Number(rgb[4]) < 1) return null;
+    return [1, 2, 3].map((n) => Math.min(255, Number(rgb[n])));
+  }
+  if (!hex) return null;
+  return [0, 2, 4].map((n) => parseInt(hex.slice(n, n + 2), 16));
+}
+const luminance = (rgb) => {
+  const [r, g, b] = rgb.map((c) => { const x = c / 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+export function contrastRatio(a, b) {
+  const [l1, l2] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (l1 + 0.05) / (l2 + 0.05);
+}
+const hexOf = (rgb) => `#${rgb.map((c) => c.toString(16).padStart(2, '0')).join('')}`;
+const COLOR_KEYS = ['color', 'backgroundColor', 'opacity', 'fontSize', 'fontWeight'];
+const colorProps = (text) => ownProps(text, COLOR_KEYS);
+// React Native views that draw nothing of their own beyond their style.
+const PLAIN_HOSTS = new Set(['View', 'ScrollView', 'SafeAreaView', 'KeyboardAvoidingView', 'Pressable', 'TouchableOpacity', 'TouchableHighlight', 'TouchableWithoutFeedback', 'Text']);
+
+// Text whose color and the background behind it are both known literals, with contrast below
+// WCAG 2.2 AA (4.5:1, or 3:1 for large text). Walks up the JSX ancestors to the nearest
+// background; any ancestor it cannot see through (custom component, image, opacity) stops it.
+function lowContrast(tree, kinds, sheets, rel, out) {
+  const visit = (el, ancestors) => {
+    if (kinds.rnName(el.name) === 'Text' && !el.spread) checkText(el, ancestors);
+    const next = [...ancestors, el];
+    for (const c of el.children) {
+      if (c.kind === 'element') visit(c.element, next);
+      else if (c.kind === 'expr') for (const e of c.elements) visit(e, next);
+    }
+    // Elements passed as props render somewhere else: start over without ancestors.
+    for (const a of el.attrs.values()) {
+      if (a.kind === 'expr') for (const e of a.elements) visit(e, []);
+      if (a.kind === 'element') visit(a.element, []);
+    }
+  };
+  const checkText = (el, ancestors) => {
+    const style = el.attrs.get('style');
+    const own = styleRead(style, sheets, colorProps);
+    if (!own || own.color === undefined || own.opacity !== undefined) return;
+    const fg = parseColor(own.color);
+    if (!fg) return;
+    let bg = null;
+    for (let i = ancestors.length - 1; i >= 0; i--) {
+      const a = ancestors[i];
+      const host = kinds.rnName(a.name);
+      if (!PLAIN_HOSTS.has(host) || a.spread) return;
+      const st = a.attrs.get('style');
+      if (!st) continue;
+      const p = styleRead(st, sheets, colorProps);
+      if (!p || p.opacity !== undefined) return;
+      if (p.backgroundColor !== undefined) { bg = parseColor(p.backgroundColor); if (!bg) return; break; }
+    }
+    if (!bg) return;
+    const size = Number(own.fontSize);
+    const bold = /bold|[6-9]00/.test(own.fontWeight || '');
+    const large = size >= 24 || (size >= 18.66 && bold);
+    const ratio = contrastRatio(fg, bg);
+    if (ratio < (large ? 3 : 4.5)) out.push({ at: `${rel}:${el.line}`, fg: hexOf(fg), bg: hexOf(bg), ratio: Math.round(ratio * 100) / 100, large });
+  };
+  for (const el of tree) visit(el, []);
+}
 
 // The touchable's content is only icons/images (optionally wrapped in Views), with no text,
 // no expression that could produce text, and no unknown component that could carry a label.
@@ -168,6 +254,7 @@ export function uiChecks(project) {
   const unlabeledButtons = [];
   const unlabeledInputs = [];
   const smallTargets = [];
+  const contrast = [];
   const defaultProps = []; // { file, line, component, props }
   let readable = 0, unreadable = 0;
   for (const { file, text } of files) {
@@ -189,6 +276,7 @@ export function uiChecks(project) {
     let tree;
     try { tree = parseJsx(text); readable++; } catch { unreadable++; continue; }
     const sheets = /StyleSheet\.create/.test(text) ? styleSheets(text) : new Map();
+    lowContrast(tree, kinds, sheets, rel, contrast);
     for (const el of walkElements(tree)) {
       const name = kinds.rnName(el.name);
       if (TOUCHABLES.has(name)) {
@@ -234,6 +322,20 @@ export function uiChecks(project) {
       detail: 'A TextInput without accessibilityLabel or placeholder is announced only as "text field". A visible label next to it is not linked to the field for VoiceOver (accessibilityLabelledBy works on Android only), so the user hears no name. Add accessibilityLabel matching the visible label. (WCAG 2.2: 1.3.1, 4.1.2)',
       evidence: unlabeledInputs.slice(0, MAX_LOCATIONS).map((at) => ({ kind: 'source', at })),
       fix: { kind: 'accessibility', step: `Add \`accessibilityLabel\` to the text fields without a label or placeholder: ${unlabeledInputs.slice(0, 5).map((a) => `\`${a}\``).join(', ')}${unlabeledInputs.length > 5 ? ` and ${unlabeledInputs.length - 5} more` : ''}.` },
+    });
+  }
+
+  if (contrast.length) {
+    const worst = [...contrast].sort((a, b) => a.ratio - b.ratio);
+    const list = worst.map((c) => `${c.at} (${c.fg} on ${c.bg}, ${c.ratio}:1)`);
+    findings.push({
+      id: 'a11y-low-contrast',
+      severity: worst[0].ratio < 3 ? 'medium' : 'low',
+      area: 'accessibility',
+      title: `${contrast.length} text style${contrast.length === 1 ? ' has' : 's have'} too little contrast with the background (${where(list)})`,
+      detail: `The text color and the background color behind it are both set in the code, and their contrast is below WCAG 2.2 AA: 4.5:1 for normal text, 3:1 for large text (24 pt, or 18.66 pt bold). The lowest is ${worst[0].ratio}:1. Low contrast text is hard to read in sunlight, on dim screens and for people with low vision. Only literal colors are compared; themed or computed colors were not checked. (WCAG 2.2: 1.4.3 Contrast (Minimum))`,
+      evidence: worst.slice(0, MAX_LOCATIONS).map((c) => ({ kind: 'source', at: c.at, color: c.fg, background: c.bg, ratio: c.ratio })),
+      fix: { kind: 'accessibility', step: `Darken the text or lighten the background until each pair reaches 4.5:1 (3:1 for large text): ${list.slice(0, 5).map((a) => `\`${a}\``).join(', ')}${list.length > 5 ? ` and ${list.length - 5} more` : ''}.` },
     });
   }
 
