@@ -187,7 +187,11 @@ export function performanceChecks(project) {
         const fd = fs.openSync(json, 'r');
         try { const buf = Buffer.alloc(4000); head = buf.toString('utf8', 0, fs.readSync(fd, buf, 0, 4000, 0)); } finally { fs.closeSync(fd); }
         const lottie = /"layers"\s*:/.test(head) && /"(?:ddd|fr|ip|op)"\s*:/.test(head);
-        bigJson.push({ rel: path.relative(root, json), size, lottie, lazy: m[0].startsWith('import(') });
+        // A require() indented inside a function is still bundled, but only evaluated when that
+        // code runs; a module-level import or require is evaluated when its module loads.
+        const lineStart = text.lastIndexOf('\n', m.index) + 1;
+        const deferred = m[0].startsWith('require') && /^[ \t]+/.test(text.slice(lineStart, m.index)) && !/^[ \t]*(?:export\s+)?(?:const|let|var)\s+[\w${}\s,]+=\s*require/.test(text.slice(lineStart, m.index + 20)) || false;
+        bigJson.push({ rel: path.relative(root, json), size, lottie, lazy: m[0].startsWith('import('), deferred });
       } catch {
         // missing file
       }
@@ -208,6 +212,7 @@ export function performanceChecks(project) {
   if (eager.length) {
     eager.sort((a, b) => b.size - a.size);
     const total = eager.reduce((t, j) => t + j.size, 0);
+    const deferredCount = eager.filter((j) => j.deferred).length;
     const lotties = eager.filter((j) => j.lottie);
     const LOCALE = /(?:^|[/._-])(?:ar|bg|cs|da|de|el|en|es|et|fa|fi|fr|he|hi|hr|hu|id|it|ja|ko|lt|lv|ms|nb|nl|no|pl|pt|ro|ru|sk|sl|sr|sv|th|tr|uk|vi|zh)(?:[-_][A-Za-z]{2,4})?(?=[/._-]|$)/;
     const locales = eager.filter((j) => !j.lottie && LOCALE.test(j.rel.replace(/\.json$/, '')));
@@ -220,7 +225,7 @@ export function performanceChecks(project) {
       severity: total > 5 * 1024 * 1024 ? 'medium' : 'low',
       area: 'performance',
       title: `${eager.length} JSON file${eager.length === 1 ? '' : 's'} over 300 KB imported into the JavaScript bundle (${(total / 1024 / 1024).toFixed(1)} MB)`,
-      detail: `${eager.slice(0, 3).map((j) => `${j.rel} (${Math.round(j.size / 1024)} KB)`).join(', ')}${eager.length > 3 ? ', …' : ''}. A JSON file imported or required from code becomes a module in the JavaScript bundle, so every user downloads it and the app loads it with the rest of the bundle, whether or not that screen is used.${advice.length ? ` ${advice.join('. ')}.` : ' Move data the app does not need at start behind a dynamic import, or fetch it.'} The start-up cost was not measured.`,
+      detail: `${eager.slice(0, 3).map((j) => `${j.rel} (${Math.round(j.size / 1024)} KB)`).join(', ')}${eager.length > 3 ? ', …' : ''}. A JSON file imported or required from code becomes a module in the JavaScript bundle, so every user downloads it.${deferredCount === eager.length ? ` ${eager.length === 1 ? 'It is' : 'They are'} required inside a function, so evaluated only when that code runs.` : deferredCount ? ` ${eager.length - deferredCount} ${eager.length - deferredCount === 1 ? 'is' : 'are'} imported at module level and evaluated when ${eager.length - deferredCount === 1 ? 'its' : 'their'} module loads; ${deferredCount} ${deferredCount === 1 ? 'is' : 'are'} required inside functions and evaluated only when used.` : ' Imported at module level, it is evaluated when its module loads, whether or not that screen is used.'}${advice.length ? ` ${advice.join('. ')}.` : ' Fetch data the app does not always need, or load it with a dynamic import.'} The start-up cost was not measured.`,
       evidence: eager.slice(0, 20).map((j) => ({ kind: 'source', file: j.rel, bytes: j.size, ...(j.lottie ? { lottie: true } : {}) })),
       fix: { kind: 'performance', step: `Keep large data out of the start-up bundle: ${eager.slice(0, 2).map((j) => `\`${j.rel}\``).join(', ')}${eager.length > 2 ? ` and ${eager.length - 2} more` : ''}${locales.length >= 2 ? ' (load only the active language)' : ''}${lotties.length ? ' (convert Lottie JSON to .lottie assets)' : ''}. Compare the release bundle size before and after.` },
     });

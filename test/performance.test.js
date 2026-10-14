@@ -88,3 +88,16 @@ test('large JSON imported into the bundle: translations and Lottie get specific 
     assert.deepEqual(f.evidence.map((e) => e.file).sort(), ['src/anim/loader.json', 'src/locales/de.json', 'src/locales/en.json']);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
+
+test('large JSON required inside a function is bundled but described as evaluated only when used', () => {
+  const big = `{"data":"${'x'.repeat(320 * 1024)}"}`;
+  const root = makeProject({
+    'package.json': { name: 'fixture', dependencies: { 'react-native': '0.80.0' } },
+    'src/map.ts': "let cached;\nexport function load() {\n  if (!cached) cached = require('./world.json');\n  return cached;\n}\n",
+    'src/world.json': big,
+  });
+  try {
+    const f = performanceChecks(loadProject(root)).find((x) => x.id === 'perf-large-json');
+    assert.match(f.detail, /every user downloads it\. It is required inside a function, so evaluated only when that code runs\./);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});

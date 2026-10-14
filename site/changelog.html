@@ -40,6 +40,13 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.79</h2><p class="date">15 October 2026</p>
+<ul>
+<li><span class="tag">Accuracy</span><b>Push and invitation tokens are not auth tokens.</b> The unencrypted-token check reads a storage key's constant value from the same file and the file's name, so a push-notification token behind <code>SYNCED_KEY</code> in <code>pushRegistration.ts</code> is no longer reported; single-use invitation tokens are not either. Found by scanning a real production app.</li>
+<li><span class="tag">Accuracy</span><b>Large JSON required inside a function.</b> It is still in the bundle every user downloads, but it is evaluated only when that code runs; the finding now says so instead of implying it loads at start.</li>
+<li><span class="tag">Corpus</span>The weekly scan added 149 apps (1,040 in total); the newer checks were spot-checked on them by hand.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.78</h2><p class="date">15 October 2026</p>
 <ul>
 <li><span class="tag">OTA updates</span><b>Runtime version kept by hand.</b> expo-updates sends an update only to builds with the same runtime version. When it is a hand-written string or follows the app version, an update made after a native change can reach builds without that native code; Expo's documentation calls this a runtime version mismatch. NativeKeel now adds a note and points to the fingerprint policy. 59 of the 107 open-source apps using expo-updates manage it by hand.</li>
