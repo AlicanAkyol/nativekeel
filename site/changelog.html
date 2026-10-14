@@ -40,6 +40,11 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.77</h2><p class="date">14 October 2026</p>
+<ul>
+<li><span class="tag">Security</span><b>Databases visible in the Files app.</b> With iOS file sharing on (<code>UIFileSharingEnabled</code>, in Info.plist or app.json), the app's Documents folder shows up in Finder and, with <code>LSSupportsOpeningDocumentsInPlace</code>, in the Files app. react-native-mmkv, expo-sqlite and Realm keep their data in Documents by default on iOS (checked in each library's source), so an unencrypted database can be copied out by anyone holding the unlocked phone. Encrypted stores and stores with a custom location are not reported.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.76</h2><p class="date">14 October 2026</p>
 <ul>
 <li><span class="tag">Security</span><b>Biometric unlock that only checks a yes/no.</b> When an app asks for Face ID, Touch ID or a fingerprint and trusts the success result, but no secret or key is bound to biometrics anywhere (react-native-keychain access control, expo-secure-store <code>requireAuthentication</code>, react-native-biometrics signatures, or the iOS/Android native equivalents), the prompt guards the screen, not the data. The finding states the prerequisite plainly: physical access to a jailbroken or rooted device with instrumentation (OWASP MASTG local authentication). Found in 41 of 871 open-source apps, wallets among them.</li>

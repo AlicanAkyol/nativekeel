@@ -1,10 +1,55 @@
+import fs from './read-boundary.js';
+import path from 'node:path';
 import { lex, split, values, calls, objectProperties, declarations, resolveLocal, sourceFiles } from './security-source.js';
 
 export const MOBILE_SECURITY_RULES = [
   'credential-telemetry', 'credential-url', 'webview-message-eval', 'remote-code-eval',
   'sqlite-input-query', 'oauth-pkce-disabled', 'oauth-implicit-flow', 'android-fileprovider-broad',
-  'biometric-prompt-only',
+  'biometric-prompt-only', 'ios-file-sharing-data',
 ];
+
+// iOS file sharing (UIFileSharingEnabled) shows the app's Documents folder in Finder and, with
+// LSSupportsOpeningDocumentsInPlace, in the Files app. react-native-mmkv, expo-sqlite and Realm
+// keep their data in Documents by default on iOS (checked in each library's source). Reported
+// only when such a store is opened without encryption and without a custom location.
+const DOC_STORES = [
+  { lib: 'react-native-mmkv', open: /\b(?:new\s+MMKV|createMMKV)\s*\(/, custom: /\b(?:path|encryptionKey)\s*:/ },
+  { lib: 'expo-sqlite', open: /\bopenDatabase(?:Sync|Async)?\s*\(/, custom: /\bopenDatabase(?:Sync|Async)?\s*\([^)]*,[^)]*,|defaultDatabaseDirectory|SQLCipher|PRAGMA\s+key/i },
+  { lib: 'realm', open: /\b(?:new\s+Realm|Realm\.open)\s*\(|<RealmProvider\b/, custom: /\b(?:path|encryptionKey)\s*[:=]/ },
+];
+function fileSharingChecks(root, files) {
+  // The app's own Info.plist first, then variants such as DevInfo.plist.
+  const plists = sourceFiles(root, /Info\.plist$/).files.filter((f) => !/(?:^|\/)Pods\//.test(f.file))
+    .sort((a, b) => Number(path.basename(b.file) === 'Info.plist') - Number(path.basename(a.file) === 'Info.plist'));
+  const shares = plists.find((f) => /<key>UIFileSharingEnabled<\/key>\s*<true\s*\/>/.test(f.text));
+  let config = null, configInPlace = false;
+  for (const name of ['app.json', 'app.config.json']) {
+    try {
+      const t = fs.readFileSync(path.join(root, name), 'utf8');
+      if (/"UIFileSharingEnabled"\s*:\s*true/.test(t)) { config = name; configInPlace = /"LSSupportsOpeningDocumentsInPlace"\s*:\s*true/.test(t); }
+    } catch { /* none */ }
+  }
+  const where = shares ? shares.file : config;
+  if (!where) return [];
+  const inPlace = shares ? plists.some((f) => /<key>LSSupportsOpeningDocumentsInPlace<\/key>\s*<true\s*\/>/.test(f.text)) : configInPlace;
+  const stores = [];
+  for (const store of DOC_STORES) {
+    const users = files.filter((f) => !f.file.endsWith('.xml') && new RegExp(`['"]${store.lib}['"]`).test(f.text));
+    if (!users.length || users.some((f) => store.custom.test(f.text))) continue;
+    const opener = users.find((f) => store.open.test(f.text));
+    if (!opener) continue;
+    stores.push({ lib: store.lib, file: opener.file, line: opener.text.slice(0, opener.text.search(store.open)).split('\n').length });
+  }
+  if (!stores.length) return [];
+  return [{
+    id: `ios-file-sharing-data:${where}`, severity: 'low', area: 'security', confidence: 'medium', masvs: 'STORAGE',
+    title: `iOS file sharing exposes unencrypted app data (${stores.map((s) => s.lib).join(', ')})`,
+    detail: `${where} turns on UIFileSharingEnabled${inPlace ? ' and LSSupportsOpeningDocumentsInPlace' : ''}, so the app's Documents folder is visible ${inPlace ? 'in the Files app and ' : ''}in Finder on a connected Mac. ${stores.map((s) => `${s.lib} (${s.file}:${s.line})`).join(', ')} keeps its data in Documents by default on iOS, here without encryption or a custom location, so the database file can be copied out. If the app shares Documents on purpose (exports, downloads), move the database out of it.`,
+    evidence: [{ file: where }, ...stores.map((s) => ({ file: s.file, line: s.line }))],
+    attack: { impact: 'Someone with the unlocked device, or a computer the device trusts, can copy the app\'s database files and read their contents.', prerequisite: 'Physical access to the unlocked device or a trusted computer. Not exploitable remotely.', validation: 'Install a test build, add sample data, then open the app\'s folder in the Files app or in Finder; after the fix the database files must not be there (or must be encrypted).', evidenceType: 'static-source' },
+    fix: { kind: 'security', file: where, step: 'Store the database outside Documents (Library/Application Support: react-native-mmkv `path`, expo-sqlite directory argument, Realm `path`) or encrypt it (`encryptionKey`), or turn off UIFileSharingEnabled if the app does not need to share files.' },
+  }];
+}
 
 // Biometric prompts whose only result is a yes/no in JavaScript (OWASP MASTG local authentication,
 // "event-bound"): with physical access to a jailbroken or rooted device, instrumentation can make
@@ -254,6 +299,7 @@ export function mobileSecurity(root) {
   }
   findings.push(...fileProviderChecks(files));
   findings.push(...biometricChecks(root, files));
+  findings.push(...fileSharingChecks(root, files));
   return { findings, coverage: { rules: MOBILE_SECURITY_RULES, filesRead: files.length, skipped,
     method: 'Bounded static source analysis with same-block const propagation; no project execution.',
     limits: ['Not a full JavaScript/TypeScript parser or call graph.', 'Cross-file flows, dynamic configuration and complex validation are not resolved.', 'Excluded: dependencies, build outputs, tests, examples, known server/web folders, .web files, symlinks and files over 512 KiB.', 'Backend authorization, deployed rules and runtime exploitability require separate verification.'] } };

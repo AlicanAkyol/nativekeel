@@ -23,6 +23,7 @@
 <div class="card"><h3>Another user reaches private data</h3><p>Open Firebase rules, overly broad writes and supported Supabase RLS policy mistakes. Deployed permissions and cross-account isolation still need runtime verification.</p></div>
 <div class="card"><h3>Untrusted data becomes code</h3><p>WebView messages or fetched response bodies reaching eval/Function; traced text input or navigation values concatenated into SQLite query text.</p></div>
 <div class="card"><h3>Login or file sharing loses protection</h3><p>OAuth code flows with PKCE explicitly disabled, implicit redirect tokens, and referenced FileProvider paths that cover entire private directories.</p></div>
+<div class="card"><h3>Databases visible in the Files app</h3><p>iOS file sharing (<code>UIFileSharingEnabled</code>) shows the app&#39;s Documents folder in Finder and the Files app. react-native-mmkv, expo-sqlite and Realm store their data there by default on iOS, so an unencrypted database can be copied out by anyone holding the unlocked phone.</p></div>
 <div class="card"><h3>Biometric unlock that guards nothing</h3><p>Face ID, Touch ID or fingerprint prompts whose success is only a yes/no in JavaScript, with no keychain or keystore secret bound to biometrics in JS or native code. On a jailbroken or rooted device the answer can be faked; the fix is to keep the secret behind biometric access control.</p></div>
 </div>
 <h2>Native Android entry points and file paths</h2>

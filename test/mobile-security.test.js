@@ -106,7 +106,7 @@ test('FileProvider: require a manifest reference and broad configured path, expl
 test('coverage: skipped oversized and test files never masquerade as a clean full audit', () => {
   const r = scan({ 'src/huge.ts': ' '.repeat(512 * 1024 + 1), 'test/sample.ts': sentry + 'Sentry.captureMessage(accessToken);', 'src/app.ts': '// safe' });
   assert.equal(r.coverage.skipped.oversized, 1); assert.equal(r.coverage.filesRead, 1); assert.equal(r.findings.length, 0);
-  assert.equal(r.coverage.rules.length, 9); assert.match(r.coverage.limits.join(' '), /Backend authorization/);
+  assert.equal(r.coverage.rules.length, 10); assert.match(r.coverage.limits.join(' '), /Backend authorization/);
 });
 
 test('TextInput setter is linked to the SQL value; ordinary state and bound parameters are excluded', () => {
@@ -168,7 +168,7 @@ test('security command, reports and MCP retain evidence, prerequisites and cover
     const response = await handle({ jsonrpc:'2.0', id:1, method:'tools/call', params:{name:'security_audit', arguments:{path:root,offline:true}} }, {roots:[fs.realpathSync(root)],version:'test'});
     const content = response.result.structuredContent;
     assert.ok(content.findings.find(f => f.id.startsWith('credential-telemetry')).attack.validation);
-    assert.equal(content.securityReview.flowCoverage.rules.length, 9);
+    assert.equal(content.securityReview.flowCoverage.rules.length, 10);
     const cli = spawnSync(process.execPath, ['bin/nativekeel.js','security',root,'--offline','--json','--fail-on','high'], {encoding:'utf8'});
     assert.equal(cli.status, 1, cli.stderr); assert.equal(JSON.parse(cli.stdout).focus, 'security');
   } finally { fs.rmSync(root, {recursive:true}); }
@@ -215,4 +215,19 @@ test('biometric prompt trusted as a yes/no is reported unless a secret is bound 
   const boundNative = scan({ 'src/lock.ts': prompt, 'ios/App/Vault.swift': 'let access = SecAccessControlCreateWithFlags(nil, kSecAttrAccessibleWhenUnlockedThisDeviceOnly, .biometryCurrentSet, nil)' }).findings;
   assert.equal(boundNative.some((f) => f.id === 'biometric-prompt-only'), false);
   assert.equal(ids("import TouchID from 'react-native-touch-id';\n// TouchID.authenticate('x')\n").includes('biometric-prompt-only'), false);
+});
+
+test('iOS file sharing with an unencrypted store in Documents is reported; encrypted, relocated or unshared stores are not', () => {
+  const plist = (inPlace) => `<plist><dict><key>UIFileSharingEnabled</key>\n<true/>${inPlace ? '<key>LSSupportsOpeningDocumentsInPlace</key><true/>' : ''}</dict></plist>`;
+  const mmkv = "import { createMMKV } from 'react-native-mmkv';\nexport const storage = createMMKV();\n";
+  const hit = scan({ 'ios/App/Info.plist': plist(true), 'ios/App/DevInfo.plist': plist(false), 'src/storage.ts': mmkv }).findings.find((f) => f.id.startsWith('ios-file-sharing-data'));
+  assert.ok(hit);
+  assert.equal(hit.id, 'ios-file-sharing-data:ios/App/Info.plist');
+  assert.match(hit.detail, /Files app/);
+  assert.deepEqual(hit.evidence[1], { file: 'src/storage.ts', line: 2 });
+  const none = (files) => scan(files).findings.some((f) => f.id.startsWith('ios-file-sharing-data'));
+  assert.equal(none({ 'ios/App/Info.plist': plist(true), 'src/storage.ts': "import { createMMKV } from 'react-native-mmkv';\nexport const s = createMMKV({ id: 'x', encryptionKey: key });" }), false);
+  assert.equal(none({ 'ios/App/Info.plist': '<plist><dict></dict></plist>', 'src/storage.ts': mmkv }), false);
+  assert.equal(none({ 'app.json': '{"expo":{"ios":{"infoPlist":{"UIFileSharingEnabled":true}}}}', 'src/db.ts': "import { openDatabaseSync } from 'expo-sqlite';\nconst db = openDatabaseSync('a.db', undefined, dir);" }), false);
+  assert.equal(none({ 'app.json': '{"expo":{"ios":{"infoPlist":{"UIFileSharingEnabled":true}}}}', 'src/db.ts': "import { openDatabaseSync } from 'expo-sqlite';\nconst db = openDatabaseSync('a.db');" }), true);
 });
