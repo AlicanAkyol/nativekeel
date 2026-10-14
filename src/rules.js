@@ -113,6 +113,9 @@ export const REPLACEMENTS = {
 // What a user needs to know before acting on a dep-risk finding, when the registries cannot
 // say it. Shown after the finding's detail. Sourced and dated.
 export const PACKAGE_NOTES = {
+  // learn.microsoft.com App Center retirement notice; github.com/microsoft/react-native-code-push and
+  // microsoft/code-push-server both show archived (checked 2026-10-14).
+  'react-native-code-push': 'Its service, Visual Studio App Center, was retired on 31 March 2025, and Microsoft archived both this client and its standalone CodePush server on 20 May 2025: unless you run your own CodePush server, updates sent this way no longer reach users.',
   // README and rntp.dev/pricing, checked 2026-10-09. v4 branch MusicModule.kt: 37 @ReactMethod
   // functions are written `= scope.launch { }` and return a coroutine Job, which the interop
   // layer rejects ("Detected unsupported return class: kotlinx.coroutines.Job"). expo-audio:

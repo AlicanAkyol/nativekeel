@@ -1,4 +1,5 @@
 import test from 'node:test';
+import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { loadProject } from '../src/project.js';
 import { stabilityChecks } from '../src/stability.js';
@@ -138,4 +139,15 @@ test('dev server: server actions, named local fallbacks and local-service probes
   assert.equal(run({ 'src/actions/eval.ts': "'use server';\nconst r = await fetch(`http://localhost:8081/x.bundle`);" }).length, 0);
   assert.equal(run({ 'src/api-base.ts': "const LOCAL_API_URL = 'http://localhost:54321';\nconst API_URL = process.env.EXPO_PUBLIC_API_URL || LOCAL_API_URL;" }).length, 0);
   assert.equal(run({ 'src/oracle.ts': "// Auto-detect Ollama on localhost\ntry { const r = await fetch('http://localhost:11434/api/tags'); } catch {}" }).length, 0);
+});
+
+test('expo-updates with a manually managed runtime version gets a note; the fingerprint policy does not', () => {
+  const ota = (runtimeVersion) => {
+    const root = makeProject({ 'package.json': { name: 'x', dependencies: { expo: '~57.0.0', 'expo-updates': '~57.0.0', 'react-native': '0.86.3' } }, 'app.json': { expo: { name: 'x', runtimeVersion } } });
+    try { return stabilityChecks(loadProject(root)).find((f) => f.id === 'ota-runtime-version-manual'); } finally { fs.rmSync(root, { recursive: true, force: true }); }
+  };
+  assert.match(ota({ policy: 'appVersion' }).title, /appVersion runtime version policy/);
+  assert.equal(ota('1.0.0').severity, 'info');
+  assert.match(ota('1.0.0').title, /hand-written runtimeVersion string/);
+  assert.equal(ota({ policy: 'fingerprint' }), undefined);
 });

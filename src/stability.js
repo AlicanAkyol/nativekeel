@@ -176,6 +176,27 @@ export function stabilityChecks(project) {
   for (const f of removedCoreImports(project)) add(f);
   if (!project.isLibrary) for (const f of upcomingFinding(project)) add(f);
   if (!project.isLibrary) for (const f of releaseDevServer(project)) add(f);
+  // OTA updates: expo-updates only sends an update to builds with the same runtime version.
+  // With a hand-written string, or the appVersion/nativeVersion policies, keeping that value in
+  // step with native changes is manual; the fingerprint policy derives it from the native
+  // project (docs.expo.dev/eas-update/runtime-versions). A choice, so a note, not a warning.
+  if (deps['expo-updates']) {
+    const config = ['app.json', 'app.config.json', 'app.config.js', 'app.config.ts'].map((f) => ({ f, t: readText(path.join(root, f)) })).find((c) => c.t && /runtimeVersion/.test(c.t));
+    const m = config && config.t.match(/runtimeVersion["']?\s*:\s*(\{[^}]*\}|"[^"]*"|'[^']*')/);
+    const policy = m && (m[1].startsWith('{') ? (m[1].match(/policy["']?\s*:\s*["'](\w+)/) || [])[1] : 'custom');
+    if (policy && ['custom', 'appVersion', 'nativeVersion'].includes(policy)) {
+      const how = policy === 'custom' ? 'a hand-written runtimeVersion string' : `the ${policy} runtime version policy`;
+      add({
+        id: 'ota-runtime-version-manual',
+        severity: 'info',
+        area: 'crash',
+        title: `OTA updates rely on ${how} (${config.f})`,
+        detail: `expo-updates sends an update only to builds with the same runtime version. With ${how}, that value changes only when you change ${policy === 'custom' ? 'it' : policy === 'appVersion' ? 'the app version' : 'the native build version'}, so an update made after a native change (a new native module, an upgraded library, a config plugin) can reach builds without that native code. Expo's documentation calls this a runtime version mismatch; expo-updates may roll back, or the app may fail at start. The fingerprint policy changes the runtime version whenever the native project changes, at the cost of more builds.`,
+        fix: { kind: 'crash', step: `Bump the runtime version with every native change, or set \`"runtimeVersion": { "policy": "fingerprint" }\` in ${config.f}. Test each update on a preview channel and roll it out gradually.` },
+      });
+    }
+  }
+
   return findings;
 }
 
