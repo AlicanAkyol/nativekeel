@@ -40,6 +40,12 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.76</h2><p class="date">14 October 2026</p>
+<ul>
+<li><span class="tag">Security</span><b>Biometric unlock that only checks a yes/no.</b> When an app asks for Face ID, Touch ID or a fingerprint and trusts the success result, but no secret or key is bound to biometrics anywhere (react-native-keychain access control, expo-secure-store <code>requireAuthentication</code>, react-native-biometrics signatures, or the iOS/Android native equivalents), the prompt guards the screen, not the data. The finding states the prerequisite plainly: physical access to a jailbroken or rooted device with instrumentation (OWASP MASTG local authentication). Found in 41 of 871 open-source apps, wallets among them.</li>
+<li><span class="tag">Accuracy</span>The README now describes unused packages as review candidates, as the report has since 0.1.68.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.75</h2><p class="date">14 October 2026</p>
 <ul>
 <li><span class="tag">Accessibility</span><b>Placeholder text is checked for contrast.</b> People read the placeholder to know what to type, and WCAG treats it as text. A literal <code>placeholderTextColor</code> is compared with the input's own background or, when it has none (inputs are transparent by default), the view behind it. 226 placeholders in 55 of 871 open-source apps fall below 4.5:1, often light grey on white.</li>

@@ -106,7 +106,7 @@ test('FileProvider: require a manifest reference and broad configured path, expl
 test('coverage: skipped oversized and test files never masquerade as a clean full audit', () => {
   const r = scan({ 'src/huge.ts': ' '.repeat(512 * 1024 + 1), 'test/sample.ts': sentry + 'Sentry.captureMessage(accessToken);', 'src/app.ts': '// safe' });
   assert.equal(r.coverage.skipped.oversized, 1); assert.equal(r.coverage.filesRead, 1); assert.equal(r.findings.length, 0);
-  assert.equal(r.coverage.rules.length, 8); assert.match(r.coverage.limits.join(' '), /Backend authorization/);
+  assert.equal(r.coverage.rules.length, 9); assert.match(r.coverage.limits.join(' '), /Backend authorization/);
 });
 
 test('TextInput setter is linked to the SQL value; ordinary state and bound parameters are excluded', () => {
@@ -168,7 +168,7 @@ test('security command, reports and MCP retain evidence, prerequisites and cover
     const response = await handle({ jsonrpc:'2.0', id:1, method:'tools/call', params:{name:'security_audit', arguments:{path:root,offline:true}} }, {roots:[fs.realpathSync(root)],version:'test'});
     const content = response.result.structuredContent;
     assert.ok(content.findings.find(f => f.id.startsWith('credential-telemetry')).attack.validation);
-    assert.equal(content.securityReview.flowCoverage.rules.length, 8);
+    assert.equal(content.securityReview.flowCoverage.rules.length, 9);
     const cli = spawnSync(process.execPath, ['bin/nativekeel.js','security',root,'--offline','--json','--fail-on','high'], {encoding:'utf8'});
     assert.equal(cli.status, 1, cli.stderr); assert.equal(JSON.parse(cli.stdout).focus, 'security');
   } finally { fs.rmSync(root, {recursive:true}); }
@@ -202,4 +202,17 @@ test('security overview caps finding references while retaining complete counts'
   const r=securityOnly({findings,security:{},offline:true});
   const group=r.securityReview.risks['Credentials and private data'];
   assert.equal(group.count,200);assert.equal(group.findings.length,5);
+});
+
+test('biometric prompt trusted as a yes/no is reported unless a secret is bound to biometrics in JS or native code', () => {
+  const prompt = "import * as LocalAuthentication from 'expo-local-authentication';\n// LocalAuthentication.authenticateAsync() in a comment\nexport async function unlock() {\n  const r = await LocalAuthentication.authenticateAsync({ promptMessage: 'Unlock' });\n  return r.success;\n}\n";
+  const only = scan({ 'src/lock.ts': prompt }).findings.find((f) => f.id === 'biometric-prompt-only');
+  assert.ok(only);
+  assert.deepEqual(only.evidence, [{ file: 'src/lock.ts', line: 4 }]);
+  assert.match(only.attack.prerequisite, /Physical access/);
+  const boundJs = scan({ 'src/lock.ts': prompt, 'src/secret.ts': "import * as SecureStore from 'expo-secure-store';\nSecureStore.setItemAsync('k', v, { requireAuthentication: true });" }).findings;
+  assert.equal(boundJs.some((f) => f.id === 'biometric-prompt-only'), false);
+  const boundNative = scan({ 'src/lock.ts': prompt, 'ios/App/Vault.swift': 'let access = SecAccessControlCreateWithFlags(nil, kSecAttrAccessibleWhenUnlockedThisDeviceOnly, .biometryCurrentSet, nil)' }).findings;
+  assert.equal(boundNative.some((f) => f.id === 'biometric-prompt-only'), false);
+  assert.equal(ids("import TouchID from 'react-native-touch-id';\n// TouchID.authenticate('x')\n").includes('biometric-prompt-only'), false);
 });

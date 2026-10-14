@@ -3,7 +3,41 @@ import { lex, split, values, calls, objectProperties, declarations, resolveLocal
 export const MOBILE_SECURITY_RULES = [
   'credential-telemetry', 'credential-url', 'webview-message-eval', 'remote-code-eval',
   'sqlite-input-query', 'oauth-pkce-disabled', 'oauth-implicit-flow', 'android-fileprovider-broad',
+  'biometric-prompt-only',
 ];
+
+// Biometric prompts whose only result is a yes/no in JavaScript (OWASP MASTG local authentication,
+// "event-bound"): with physical access to a jailbroken or rooted device, instrumentation can make
+// the prompt report success. Not reported when the app binds a secret to biometrics anywhere: a
+// keychain/keystore item or key behind biometric access control, in JavaScript or native code.
+const BIOMETRIC_PROMPT = /\b(?:LocalAuthentication\.authenticateAsync|authenticateAsync|simplePrompt|TouchID\.authenticate|FingerprintScanner\.authenticate)\s*\(/;
+const BIOMETRIC_LIBS = /from\s*['"](?:expo-local-authentication|react-native-biometrics|@sbaiahmed1\/react-native-biometrics|react-native-touch-id|react-native-fingerprint-scanner)['"]|require\(\s*['"](?:expo-local-authentication|react-native-biometrics|react-native-touch-id|react-native-fingerprint-scanner)['"]/;
+const BIOMETRIC_BOUND_JS = /\b(?:createSignature|createKeys|ACCESS_CONTROL\.BIOMETRY\w*|AccessControl\.BIOMETRY\w*|requireAuthentication\s*:\s*true|authenticationPrompt\s*:)/;
+const BIOMETRIC_BOUND_NATIVE = /SecAccessControlCreateWithFlags|kSecAttrAccessControl|\.biometryCurrentSet|\.biometryAny|setUserAuthenticationRequired|BiometricPrompt\.CryptoObject/;
+function biometricChecks(root, files) {
+  // Blank comments out but keep their line breaks, so reported line numbers stay right.
+  const strip = (t) => t.replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' ')).replace(/\/\/[^\n]*/g, (c) => ' '.repeat(c.length));
+  const prompts = [];
+  for (const f of files) {
+    if (f.file.endsWith('.xml') || !BIOMETRIC_LIBS.test(f.text)) continue;
+    const code = strip(f.text);
+    if (BIOMETRIC_BOUND_JS.test(code)) return [];
+    const m = code.match(BIOMETRIC_PROMPT);
+    if (m) prompts.push({ file: f.file, line: code.slice(0, m.index).split('\n').length });
+  }
+  if (!prompts.length) return [];
+  for (const f of files) if (!f.file.endsWith('.xml') && BIOMETRIC_BOUND_JS.test(strip(f.text))) return [];
+  for (const f of sourceFiles(root, /\.(?:swift|m|mm|kt|java)$/).files) if (BIOMETRIC_BOUND_NATIVE.test(f.text)) return [];
+  const at = `${prompts[0].file}:${prompts[0].line}`;
+  return [{
+    id: 'biometric-prompt-only', severity: 'low', area: 'security', confidence: 'medium', masvs: 'AUTH',
+    title: `Biometric check is only a yes/no answer in JavaScript (${at}${prompts.length > 1 ? ` and ${prompts.length - 1} more` : ''})`,
+    detail: 'The app asks for Face ID, Touch ID or a fingerprint and trusts the success result, but no secret or key in the app is bound to biometrics (no keychain/keystore item behind biometric access control was found in JavaScript or native code). The prompt then guards the screen, not the data: secrets the app stores stay readable whenever the device is unlocked. For an app lock on non-sensitive data this can be acceptable; for money, health or credentials, bind the secret to biometrics.',
+    evidence: prompts.slice(0, 10),
+    attack: { impact: 'Someone holding the device can get past the biometric gate, or read the stored secrets directly, without the owner\'s face or finger.', prerequisite: 'Physical access to the device, and a jailbroken or rooted device with runtime instrumentation (for example Frida). Not exploitable remotely.', validation: 'On a jailbroken or rooted test device, hook the biometric API to return success and check whether protected screens and secrets become available; after the fix, the secret must stay unreadable until a real biometric match.', evidenceType: 'static-source' },
+    fix: { kind: 'security', file: prompts[0].file, line: prompts[0].line, step: 'Store the secret behind biometric access control and read it as the proof of authentication: react-native-keychain with accessControl BIOMETRY_CURRENT_SET, expo-secure-store with requireAuthentication: true, or react-native-biometrics createSignature verified by your server.' },
+  }];
+}
 const DOCS = {
   credentials: 'https://reactnative.dev/docs/security',
   webview: 'https://github.com/react-native-webview/react-native-webview/blob/master/docs/Guide.md#communicating-between-js-and-native',
@@ -219,6 +253,7 @@ export function mobileSecurity(root) {
     try { findings.push(...jsChecks(f.file, f.text)); } catch { skipped.syntax++; }
   }
   findings.push(...fileProviderChecks(files));
+  findings.push(...biometricChecks(root, files));
   return { findings, coverage: { rules: MOBILE_SECURITY_RULES, filesRead: files.length, skipped,
     method: 'Bounded static source analysis with same-block const propagation; no project execution.',
     limits: ['Not a full JavaScript/TypeScript parser or call graph.', 'Cross-file flows, dynamic configuration and complex validation are not resolved.', 'Excluded: dependencies, build outputs, tests, examples, known server/web folders, .web files, symlinks and files over 512 KiB.', 'Backend authorization, deployed rules and runtime exploitability require separate verification.'] } };
