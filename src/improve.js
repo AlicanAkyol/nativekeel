@@ -2,11 +2,12 @@ import { executionSafety } from './safety.js';
 import { buildPlan } from './plan.js';
 
 const severity = ['critical', 'high', 'medium', 'low', 'info'];
-const domains = ['security', 'stability', 'performance', 'delivery', 'upgrade', 'dependencies'];
+const domains = ['security', 'stability', 'accessibility', 'performance', 'delivery', 'upgrade', 'dependencies'];
 const UPGRADE_AREAS = new Set(['react-native', 'expo', 'new-architecture', 'native']);
 function domain(f) {
   if (f.area === 'security' || f.area === 'secret' || f.masvs || f.id === 'malicious-code') return 'security';
   if (f.area === 'crash') return 'stability';
+  if (f.area === 'accessibility') return 'accessibility';
   if (f.area === 'performance') return 'performance';
   if (f.area === 'store') return 'delivery';
   if (UPGRADE_AREAS.has(f.area)) return 'upgrade';
@@ -22,6 +23,11 @@ const guidance = {
     effect: 'Remove the reported crash or compatibility condition if the affected feature is used.',
     prerequisite: 'Confirm the resolved versions, platform and affected execution path.',
     validate: 'Reproduce the affected flow, apply one change, then repeat it in a release build on each supported platform; retain crash logs.',
+  },
+  accessibility: {
+    effect: 'Let screen reader users identify the control, or let people who enlarge text read it.',
+    prerequisite: 'Open the screen with VoiceOver (iOS) or TalkBack (Android) and confirm what is announced today.',
+    validate: 'With VoiceOver and TalkBack, check each changed control is announced with its name and role; with the largest system text size, check the screen still fits and nothing is cut off.',
   },
   performance: {
     effect: 'A potential optimization, with no measured size, memory, startup or frame-rate gain yet.',
@@ -141,13 +147,13 @@ export function buildImprovementPlan(result, { limit = 80 } = {}) {
   return {
     schemaVersion: 1, project: result.project, safety,
     conclusion: safety.blocked ? safety.warning : findings.length ? 'Review source-backed candidates, validate applicability, then measure the effect of each change.' : 'No actionable matches in the checks run. App security and quality remain unverified.',
-    ordering: 'Malware stop condition, then severity, then security/stability/performance/delivery/upgrade/dependencies. No quality score or benefit estimate.',
+    ordering: 'Malware stop condition, then severity, then security/stability/accessibility/performance/delivery/upgrade/dependencies. No quality score or benefit estimate.',
     totalActions: sorted.length, omittedActions: Math.max(0, sorted.length - actions.length), actions,
     coverage: domains.map(name => ({ domain: name, scope: 'existing static checks only', findings: findings.filter(f => domain(f) === name).length, verdict: 'not-certified' })),
     unassessed: [
       { domain: 'runtime-performance', reason: 'No device measurements collected.', evidenceNeeded: 'Repeated release startup, frame timing, memory, battery and network measurements for representative user flows.' },
       { domain: 'live-backend-authorization', reason: 'Deployed rules and account isolation were not exercised.', evidenceNeeded: 'Authorized tests with two test accounts, synthetic records and the deployed backend configuration.' },
-      { domain: 'accessibility-and-usability', reason: 'Screen reader behavior, focus, text scaling and task completion were not tested.', evidenceNeeded: 'Representative screen flows on supported devices with accessibility testing and user observation.' },
+      { domain: 'accessibility-and-usability', reason: 'Static checks cover icon-only button labels, text field labels and app-wide text scaling only. Focus order, custom components, color contrast, touch target size and task completion with a screen reader were not tested.', evidenceNeeded: 'Representative screen flows on supported devices with accessibility testing and user observation.' },
       { domain: 'reliability', reason: 'Offline use, interrupted requests, upgrades and long sessions were not exercised.', evidenceNeeded: 'Controlled lifecycle, network failure, migration and recovery tests.' },
       { domain: 'dependency-advisories', reason: result.offline ? 'Online advisory checks were skipped or unavailable.' : 'Advisory lookup coverage is limited to the scanner; absence of findings does not prove absence of vulnerabilities.', evidenceNeeded: 'Resolved release dependency inventory and current advisories, including native dependencies.' },
     ],

@@ -70,6 +70,8 @@ const WEIGHTS = {
   'default-react-host': () => 0.25,
   crash: () => 1,
   performance: () => 0.5,
+  accessibility: () => 0.5,
+  'text-defaults': () => 1,
   security: () => 1,
   'vuln-dep': (f) => (f.severity === 'critical' || f.severity === 'high' ? 1 : 0.25),
 };
@@ -591,6 +593,24 @@ export function buildPlan(result) {
         if (owned) return `\`${d.name}\`: you already use \`${owned}\`; move the remaining usage there, then \`${pm.remove} ${d.name}\`.`;
         return `\`${d.name}\`${d.alternatives.length ? `: options ${d.alternatives.map((a) => `\`${a}\``).join(', ')}` : ': look for a maintained alternative, or keep it if it does what you need'}.`;
       }),
+    });
+  }
+
+  const textDefaults = byKind('text-defaults');
+  if (textDefaults.length) {
+    phases.push({
+      title: 'Move Text defaults into your own component',
+      why: 'React 19 (React Native 0.78+) ignores Text.defaultProps in JSX, so app-wide fonts and text scaling settings silently stop applying.',
+      steps: [...textDefaults.map((t) => t.step), 'Check the main screens at the default and the largest system text size.'],
+    });
+  }
+
+  const a11y = byKind('accessibility');
+  if (a11y.length) {
+    phases.push({
+      title: 'Make it usable with a screen reader and large text',
+      why: 'Unlabeled buttons and fixed text sizes lock out people who use VoiceOver, TalkBack or larger text. In the EU, the European Accessibility Act applies to shopping and consumer banking apps since June 2025.',
+      steps: [...a11y.map((a) => a.step), 'Go through the main flows once with VoiceOver and once with TalkBack, and once at the largest text size.'],
     });
   }
 

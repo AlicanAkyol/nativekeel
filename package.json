@@ -1,8 +1,8 @@
 {
   "name": "nativekeel",
-  "version": "0.1.70",
+  "version": "0.1.71",
   "mcpName": "io.github.AlicanAkyol/nativekeel",
-  "description": "Health check for React Native and Expo apps: upgrade blockers, App Store and Google Play rejections, crash risks, security (OWASP MASVS) and performance, with a step-by-step upgrade plan.",
+  "description": "Health check for React Native and Expo apps: upgrade blockers, App Store and Google Play rejections, crash risks, security (OWASP MASVS), accessibility and performance, with a step-by-step upgrade plan.",
   "type": "module",
   "bin": {
     "nativekeel": "bin/nativekeel.js"
@@ -45,7 +45,9 @@
     "claude-code",
     "cursor",
     "codex",
-    "malware"
+    "malware",
+    "accessibility",
+    "a11y"
   ],
   "license": "MIT",
   "scripts": {

@@ -251,7 +251,7 @@ export const TOOLS = [
   {
     name: 'scan_project',
     description:
-      'Health check for a React Native or Expo project: upgrade blockers, New Architecture, Google Play and App Store rules (target SDK, 16 KB pages, Xcode 27 UIScene, privacy manifests), crash risks, OWASP MASVS security findings, leaked secrets, and signs of malware planted in the project (run it before installing or starting a project you did not write). Read-only, never runs project code; returns findings with file:line references and fixes, never source code.',
+      'Health check for a React Native or Expo project: upgrade blockers, New Architecture, Google Play and App Store rules (target SDK, 16 KB pages, Xcode 27 UIScene, privacy manifests), crash risks, accessibility (unlabeled icon buttons and text fields, text scaling), OWASP MASVS security findings, leaked secrets, and signs of malware planted in the project (run it before installing or starting a project you did not write). Read-only, never runs project code; returns findings with file:line references and fixes, never source code.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -272,7 +272,7 @@ export const TOOLS = [
   },
   {
     name: 'improve_app',
-    description: 'Prioritize existing security, crash, performance, store and dependency findings into a review plan with prerequisites, expected effects and validation. No project code runs, no automatic changes or unmeasured performance claims. Reports unassessed areas explicitly.',
+    description: 'Prioritize existing security, crash, accessibility, performance, store and dependency findings into a review plan with prerequisites, expected effects and validation. No project code runs, no automatic changes or unmeasured performance claims. Reports unassessed areas explicitly.',
     inputSchema: { type: 'object', properties: { path: { type: 'string' }, offline: { type: 'boolean' } }, required: ['path'], additionalProperties: false },
     run: improveTool,
   },
