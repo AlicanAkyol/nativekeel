@@ -40,6 +40,11 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.75</h2><p class="date">14 October 2026</p>
+<ul>
+<li><span class="tag">Accessibility</span><b>Placeholder text is checked for contrast.</b> People read the placeholder to know what to type, and WCAG treats it as text. A literal <code>placeholderTextColor</code> is compared with the input's own background or, when it has none (inputs are transparent by default), the view behind it. 226 placeholders in 55 of 871 open-source apps fall below 4.5:1, often light grey on white.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.74</h2><p class="date">14 October 2026</p>
 <ul>
 <li><span class="tag">Performance</span><b>Large JSON in the JavaScript bundle.</b> JSON files over 300 KB imported or required from app code become modules in the bundle, so every user downloads them and the app loads them with everything else. Translations for every language get &quot;load only the active language&quot;; Lottie animations get &quot;use a .lottie asset&quot;. Dynamic imports, tests, fixtures and stories do not count. Found in 19 of 871 open-source apps (up to 11 MB in one).</li>

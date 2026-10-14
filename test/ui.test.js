@@ -124,3 +124,15 @@ test('missing accessibilityRole is a note with the share of touchables', () => {
   assert.equal(r.severity, 'info');
   assert.match(r.title, /^1 of 3 touchables/);
 });
+
+test('placeholder text is checked for contrast against the input or the view behind it', () => {
+  const f = run(app({ 'src/P.tsx': `${header}export const P = () => (<View style={{ backgroundColor: '#ffffff' }}>
+    <TextInput placeholder="Email" placeholderTextColor="#999" accessibilityLabel="Email" />
+    <TextInput placeholder="Name" placeholderTextColor="#555" accessibilityLabel="Name" />
+    <TextInput placeholder="Code" placeholderTextColor="#999" style={{ backgroundColor: '#000' }} accessibilityLabel="Code" />
+    <TextInput placeholder="Note" placeholderTextColor={colors.muted} accessibilityLabel="Note" />
+  </View>);` }));
+  const c = f.find((x) => x.id === 'a11y-low-contrast');
+  assert.deepEqual(c.evidence.map((e) => `${e.at} ${e.placeholder}`), ['src/P.tsx:4 true']);
+  assert.match(c.title, /1 of them placeholder/);
+});

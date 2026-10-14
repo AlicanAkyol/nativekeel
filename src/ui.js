@@ -164,7 +164,9 @@ const PLAIN_HOSTS = new Set(['View', 'ScrollView', 'SafeAreaView', 'KeyboardAvoi
 // background; any ancestor it cannot see through (custom component, image, opacity) stops it.
 function lowContrast(tree, kinds, sheets, rel, out) {
   const visit = (el, ancestors) => {
-    if (kinds.rnName(el.name) === 'Text' && !el.spread) checkText(el, ancestors);
+    const host = kinds.rnName(el.name);
+    if (host === 'Text' && !el.spread) checkText(el, ancestors);
+    if (host === 'TextInput' && !el.spread) checkPlaceholder(el, ancestors);
     const next = [...ancestors, el];
     for (const c of el.children) {
       if (c.kind === 'element') visit(c.element, next);
@@ -182,23 +184,46 @@ function lowContrast(tree, kinds, sheets, rel, out) {
     if (!own || own.color === undefined || own.opacity !== undefined) return;
     const fg = parseColor(own.color);
     if (!fg) return;
-    let bg = null;
+    const bg = behind(ancestors);
+    if (!bg) return;
+    report(el, own, fg, bg, false);
+  };
+  // The nearest opaque literal background up the plain-view ancestors, or null if unknown.
+  const behind = (ancestors) => {
     for (let i = ancestors.length - 1; i >= 0; i--) {
       const a = ancestors[i];
       const host = kinds.rnName(a.name);
-      if (!PLAIN_HOSTS.has(host) || a.spread) return;
+      if (!PLAIN_HOSTS.has(host) || a.spread) return null;
       const st = a.attrs.get('style');
       if (!st) continue;
       const p = styleRead(st, sheets, colorProps);
-      if (!p || p.opacity !== undefined) return;
-      if (p.backgroundColor !== undefined) { bg = parseColor(p.backgroundColor); if (!bg) return; break; }
+      if (!p || p.opacity !== undefined) return null;
+      if (p.backgroundColor !== undefined) return parseColor(p.backgroundColor);
     }
+    return null;
+  };
+  // Placeholder text counts as text for contrast. Its color comes from placeholderTextColor;
+  // the background from the input's own style or, failing that, the views behind it.
+  const checkPlaceholder = (el, ancestors) => {
+    if (!el.attrs.has('placeholder')) return;
+    const c = el.attrs.get('placeholderTextColor');
+    const fg = c && parseColor(c.kind === 'string' ? `'${c.value}'` : c.kind === 'expr' ? c.raw : null);
+    if (!fg) return;
+    const style = el.attrs.get('style');
+    const own = style ? styleRead(style, sheets, colorProps) : {};
+    if (!own || own.opacity !== undefined) return;
+    let bg;
+    if (own.backgroundColor !== undefined) bg = parseColor(own.backgroundColor);
+    else bg = behind(ancestors);
     if (!bg) return;
+    report(el, own, fg, bg, true);
+  };
+  const report = (el, own, fg, bg, placeholder) => {
     const size = Number(own.fontSize);
     const bold = /bold|[6-9]00/.test(own.fontWeight || '');
     const large = size >= 24 || (size >= 18.66 && bold);
     const ratio = contrastRatio(fg, bg);
-    if (ratio < (large ? 3 : 4.5)) out.push({ at: `${rel}:${el.line}`, fg: hexOf(fg), bg: hexOf(bg), ratio: Math.round(ratio * 100) / 100, large });
+    if (ratio < (large ? 3 : 4.5)) out.push({ at: `${rel}:${el.line}`, fg: hexOf(fg), bg: hexOf(bg), ratio: Math.round(ratio * 100) / 100, large, ...(placeholder ? { placeholder: true } : {}) });
   };
   for (const el of tree) visit(el, []);
 }
@@ -345,14 +370,15 @@ export function uiChecks(project) {
 
   if (contrast.length) {
     const worst = [...contrast].sort((a, b) => a.ratio - b.ratio);
-    const list = worst.map((c) => `${c.at} (${c.fg} on ${c.bg}, ${c.ratio}:1)`);
+    const list = worst.map((c) => `${c.at} (${c.placeholder ? 'placeholder ' : ''}${c.fg} on ${c.bg}, ${c.ratio}:1)`);
+    const placeholders = contrast.filter((c) => c.placeholder).length;
     findings.push({
       id: 'a11y-low-contrast',
       severity: worst[0].ratio < 3 ? 'medium' : 'low',
       area: 'accessibility',
-      title: `${contrast.length} text style${contrast.length === 1 ? ' has' : 's have'} too little contrast with the background (${where(list)})`,
-      detail: `The text color and the background color behind it are both set in the code, and their contrast is below WCAG 2.2 AA: 4.5:1 for normal text, 3:1 for large text (24 pt, or 18.66 pt bold). The lowest is ${worst[0].ratio}:1. Low contrast text is hard to read in sunlight, on dim screens and for people with low vision. Only literal colors are compared; themed or computed colors were not checked. (WCAG 2.2: 1.4.3 Contrast (Minimum))`,
-      evidence: worst.slice(0, MAX_LOCATIONS).map((c) => ({ kind: 'source', at: c.at, color: c.fg, background: c.bg, ratio: c.ratio })),
+      title: `${contrast.length} text style${contrast.length === 1 ? ' has' : 's have'} too little contrast with the background${placeholders ? `, ${placeholders} of them placeholder${placeholders === 1 ? '' : 's'}` : ''} (${where(list)})`,
+      detail: `The text color and the background color behind it are both set in the code, and their contrast is below WCAG 2.2 AA: 4.5:1 for normal text, 3:1 for large text (24 pt, or 18.66 pt bold). The lowest is ${worst[0].ratio}:1.${placeholders ? ' Placeholder text (placeholderTextColor) is text too: people read it to know what to type.' : ''} Low contrast text is hard to read in sunlight, on dim screens and for people with low vision. Only literal colors are compared; themed or computed colors were not checked. (WCAG 2.2: 1.4.3 Contrast (Minimum))`,
+      evidence: worst.slice(0, MAX_LOCATIONS).map((c) => ({ kind: 'source', at: c.at, color: c.fg, background: c.bg, ratio: c.ratio, ...(c.placeholder ? { placeholder: true } : {}) })),
       fix: { kind: 'accessibility', step: `Darken the text or lighten the background until each pair reaches 4.5:1 (3:1 for large text): ${list.slice(0, 5).map((a) => `\`${a}\``).join(', ')}${list.length > 5 ? ` and ${list.length - 5} more` : ''}.` },
     });
   }
