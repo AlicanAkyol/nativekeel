@@ -1,6 +1,7 @@
 import test from 'node:test';
+import fs from 'node:fs';
 import assert from 'node:assert/strict';
-import { passwordLeaks, webViewRisks, androidBackup, vulnerableDependencies } from '../src/security.js';
+import { passwordLeaks, webViewRisks, androidBackup, vulnerableDependencies, tokenStorage } from '../src/security.js';
 import { lockedVersions } from '../src/lockfile.js';
 import { createRegistry } from '../src/registry.js';
 import { makeProject } from './helpers.js';
@@ -367,4 +368,17 @@ test('keychain items readable while the device is locked', async () => {
   assert.equal(run({ 'packages/react-native-keychain-9/src/index.ts': 'ACCESSIBLE.ALWAYS' }).length, 0, "a vendored library's own table");
   assert.equal(run({ 'ios/Lib/SecureStorage.m': '@"AccessibleAlways": (__bridge NSString *)kSecAttrAccessibleAlways,' }).length, 0, 'a name-to-constant table');
   assert.equal(run({ 'config/test/native.ts': "ACCESSIBLE: { ALWAYS_THIS_DEVICE_ONLY: 'x' }, use(ACCESSIBLE.ALWAYS)" }).length, 0, 'test config');
+});
+
+test('token storage: auth tokens are reported; push and invitation tokens behind constants are not', () => {
+  const root = makeProject({
+    'package.json': { name: 'x', dependencies: { 'react-native': '0.80.0' } },
+    'src/auth.ts': "import AsyncStorage from '@react-native-async-storage/async-storage';\nconst KEY = 'session';\nexport const save = (accessToken) => AsyncStorage.setItem(KEY, accessToken);",
+    'src/services/pushRegistration.ts': "import AsyncStorage from '@react-native-async-storage/async-storage';\nconst SYNCED_KEY = 'AppPushTokenSynced';\nexport const mark = (reg) => AsyncStorage.setItem(SYNCED_KEY, reg.token);",
+    'src/invites.ts': "import AsyncStorage from '@react-native-async-storage/async-storage';\nconst PENDING = 'app:pendingInvitationToken';\nexport const keep = (token) => AsyncStorage.setItem(PENDING, token);",
+  });
+  try {
+    const [f] = tokenStorage(root);
+    assert.match(f.detail, /^KEY \(src\/auth\.ts:3\)\. /);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });

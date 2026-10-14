@@ -637,7 +637,11 @@ export function tokenStorage(root) {
     for (const m of text.matchAll(/\b(?:AsyncStorage\.setItem|(?:storage|mmkv)\.set(?:String)?)\s*\(\s*([^,()]{1,60}),\s*([^;\n]{0,120})/g)) {
       if (seen.has(m.index)) continue;
       if (!/\b(?:access_?token|refresh_?token|auth_?token|id_?token|session_?token|login_?token|accessToken|refreshToken|authToken|idToken|sessionToken|loginToken|jwt|token)\b/i.test(m[2])) continue;
-      if (/push|fcm|apns|expo_?push|notif|device|firebase|messaging/i.test(m[1] + m[2])) continue;
+      // The key is often a constant: read its literal value from the same file.
+      const key = m[1].trim();
+      const constant = /^[A-Za-z_$][\w$]*$/.test(key) && text.match(new RegExp(`\\b(?:const|let|var)\\s+${key}\\s*=\\s*['"\`]([^'"\`]+)['"\`]`));
+      // Push/device tokens are not secrets; single-use invitation tokens do not sign anyone in.
+      if (/push|fcm|apns|expo_?push|notif|device|firebase|messaging|invit/i.test(`${key} ${constant ? constant[1] : ''} ${m[2]} ${path.basename(file)}`)) continue;
       hits.push(`${m[1].trim()} (${at(m.index)})`);
     }
   }
