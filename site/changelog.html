@@ -40,6 +40,12 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.83</h2><p class="date">15 October 2026</p>
+<ul>
+<li><span class="tag">CI</span><b>A comment on every pull request.</b> With <code>pr-comment: true</code> and <code>pull-requests: write</code>, the GitHub Action compares each pull request with its base commit and keeps one comment up to date: the findings this pull request adds or fixes, by severity, and the app&#39;s totals. It is edited on every push, not repeated, and no code runs. Pull requests from forks only get the job summary, because their token is read-only.</li>
+<li><span class="tag">Fix</span><b><code>verify</code> no longer reports old signing material as new.</b> The committed version was unpacked without git metadata, so committed keystores and signing passwords were missing on that side and showed up as new in every comparison (and in the MCP tool <code>verify_upgrade</code>). Files from the committed version now count as committed.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.82</h2><p class="date">15 October 2026</p>
 <ul>
 <li><span class="tag">Performance</span><b>Compare two builds.</b> <code>npx nativekeel bundle new.map --base old.map</code> shows what changed between two release builds: packages added or removed, packages that grew or shrank by 1 KB or more, and packages now bundled twice. Tested on a real Expo app: one <code>import _ from "lodash"</code> line showed up as +107 KB. The MCP tool <code>measure_bundle</code> takes the same <code>base</code>.</li>

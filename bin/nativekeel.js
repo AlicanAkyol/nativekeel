@@ -15,7 +15,7 @@ import { securityOnly } from '../src/security-review.js';
 import { buildImprovementPlan, improvementToMarkdown, improvementToText } from '../src/improve.js';
 import { SITE_URL } from '../src/config.js';
 
-const VALUE_FLAGS = new Set(['--html', '--out', '--baseline', '--save-baseline', '--brand', '--sarif', '--markdown', '--fail-on', '--path', '--base']);
+const VALUE_FLAGS = new Set(['--html', '--out', '--baseline', '--save-baseline', '--brand', '--sarif', '--markdown', '--fail-on', '--path', '--base', '--comment', '--report-url']);
 const COMMANDS = new Set(['scan', 'security', 'improve', 'bundle', 'plan', 'compare', 'compare-imports', 'prepare-imports', 'explain', 'verify', 'mcp', 'help']);
 
 function parseArgs(argv) {
@@ -161,6 +161,10 @@ async function main() {
       r = await verifyUpgrade(path.resolve(positional[0] || '.'), { base: flags.base || 'HEAD', offline: !flags.online });
     } catch (e) {
       return fail(e.message);
+    }
+    if (flags.comment) {
+      const { prComment } = await import('../src/verify.js');
+      write(flags.comment, prComment(r, { reportUrl: flags['report-url'] || null }));
     }
     if (flags.json) {
       console.log(JSON.stringify({ base: r.base, commit: r.commit, ok: r.ok, fixed: r.diff.fixed, added: r.diff.added, versions: r.diff.versions, counts: r.diff.counts, notes: r.notes }, null, 2));

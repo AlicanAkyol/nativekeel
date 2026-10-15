@@ -1,5 +1,5 @@
 name: NativeKeel
-description: 'Health check for React Native and Expo apps: upgrade blockers, store rejections, crash risks and security.'
+description: 'Health check for React Native and Expo apps: upgrade blockers, store rejections, crash risks, security and accessibility.'
 author: Alican Akyol
 branding:
   icon: anchor
@@ -20,6 +20,12 @@ inputs:
   offline:
     description: 'Make no network requests (local checks only)'
     default: 'false'
+  pr-comment:
+    description: 'On pull requests, keep one comment up to date with the findings this pull request adds or fixes (needs `pull-requests: write`)'
+    default: 'false'
+  github-token:
+    description: 'Token for the pull request comment'
+    default: ${{ github.token }}
 outputs:
   exit-code:
     description: 'Exit code of the scan (0 = nothing at or above fail-on)'
@@ -52,6 +58,29 @@ runs:
       with:
         sarif_file: ${{ runner.temp }}/nativekeel.sarif
         category: nativekeel
+    - name: Comment on the pull request
+      if: ${{ inputs.pr-comment == 'true' && github.event_name == 'pull_request' }}
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        NK_PATH: ${{ inputs.path }}
+        BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        REPO: ${{ github.repository }}
+        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      run: |
+        set +e
+        out="$RUNNER_TEMP/nativekeel-comment.md"
+        warn() { echo "::warning::NativeKeel: $1"; exit 0; }
+        git -C "$NK_PATH" fetch --no-tags --quiet --depth=1 origin "$BASE_SHA" || warn "could not fetch the base commit, so no pull request comment."
+        node "$GITHUB_ACTION_PATH/bin/nativekeel.js" verify "$NK_PATH" --base "$BASE_SHA" --comment "$out" --report-url "$RUN_URL" > /dev/null
+        [ -s "$out" ] || warn "the comparison with the base commit failed, so no pull request comment."
+        id=$(gh api "repos/$REPO/issues/$PR_NUMBER/comments" --paginate --jq '.[] | select(.body | contains("<!-- nativekeel-pr-comment -->")) | .id' 2>/dev/null | head -n 1)
+        if [ -n "$id" ]; then
+          gh api -X PATCH "repos/$REPO/issues/comments/$id" -F body=@"$out" > /dev/null || warn "could not update the pull request comment."
+        else
+          gh api -X POST "repos/$REPO/issues/$PR_NUMBER/comments" -F body=@"$out" > /dev/null || warn "could not comment. The job needs pull-requests: write; pull requests from forks only get a read-only token."
+        fi
     - name: Fail on findings
       if: ${{ steps.scan.outputs.exit-code != '0' }}
       shell: bash

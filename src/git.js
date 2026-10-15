@@ -83,7 +83,14 @@ function git(root, args, { encoding = 'utf8', maxBuffer = 64 * 1024 * 1024 } = {
   });
 }
 
+// A folder unpacked from `git archive` has no .git, but every file in it is committed by
+// definition. verify registers that list here so committed-file checks see the same files.
+const trackedOverride = new Map();
+export function setTrackedFiles(root, files) { trackedOverride.set(root, files); }
+export function clearTrackedFiles(root) { trackedOverride.delete(root); }
+
 export function gitLsFiles(root) {
+  if (trackedOverride.has(root)) return trackedOverride.get(root);
   const res = git(root, ['ls-files', '-z']);
   if (res.status !== 0 || typeof res.stdout !== 'string') return null;
   // -z: names with newlines or quotes come through unmangled.

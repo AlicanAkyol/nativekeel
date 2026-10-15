@@ -3,7 +3,7 @@ import { executionSafety } from './safety.js';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { gitArchive } from './git.js';
+import { gitArchive, setTrackedFiles, clearTrackedFiles } from './git.js';
 import { loadProject } from './project.js';
 import { analyze } from './analyze.js';
 import { compareScans } from './compare.js';
@@ -21,6 +21,9 @@ export async function verifyUpgrade(root, { base = 'HEAD', offline = true, analy
     // bsdtar and GNU tar refuse absolute paths and ".." entries by default; git archive writes neither.
     const x = spawnSync('tar', ['-x', '-f', '-', '-C', tmp], { input: archive.tar, maxBuffer: 16 * 1024 * 1024, timeout: 120000 });
     if (x.status !== 0) throw new Error('could not unpack the committed version');
+    // Everything in the archive is committed: let committed-file checks see the same files.
+    const list = spawnSync('tar', ['-t', '-f', '-'], { input: archive.tar, maxBuffer: 64 * 1024 * 1024, timeout: 120000, encoding: 'utf8' });
+    if (list.status === 0) setTrackedFiles(tmp, list.stdout.split('\n').filter((f) => f && !f.endsWith('/')).map((f) => f.replace(/^\.\//, '')));
     const options = offline ? { get: async () => null, offline: true } : analyzeOptions;
     const scanBase = () => analyze(loadProject(tmp), options);
     const before = await (readPolicy() ? withReadRoots([tmp], scanBase) : scanBase());
@@ -34,6 +37,29 @@ export async function verifyUpgrade(root, { base = 'HEAD', offline = true, analy
     }
     return { base, commit: archive.sha, diff, ok: bad.length === 0, newSerious: bad, safety: executionSafety(after.findings), notes, offline };
   } finally {
+    clearTrackedFiles(tmp);
     fs.rmSync(tmp, { recursive: true, force: true });
   }
+}
+
+// A pull request comment: what this change adds or fixes, then the app's totals. The marker
+// lets the Action update one comment instead of adding a new one on every push.
+export const PR_COMMENT_MARKER = '<!-- nativekeel-pr-comment -->';
+const ICON = { critical: '🔴', high: '🟠', medium: '🟡', low: '⚪' };
+const clean = (s) => String(s).replace(/[<>]/g, '').replace(/\s+/g, ' ').trim();
+export function prComment(r, { reportUrl = null } = {}) {
+  const { added, fixed, counts } = r.diff;
+  const order = ['critical', 'high', 'medium', 'low'];
+  const sorted = (list) => [...list].sort((a, b) => order.indexOf(a.severity) - order.indexOf(b.severity));
+  const line = (f) => `- ${ICON[f.severity] || '⚪'} **${f.severity}** · ${clean(f.title)}`;
+  const out = [PR_COMMENT_MARKER, '### NativeKeel'];
+  if (!added.length && !fixed.length) out.push('No new findings and nothing fixed compared with the base of this pull request.');
+  else out.push(`This pull request: **${added.length} new**, **${fixed.length} fixed** compared with \`${r.commit.slice(0, 7)}\`.`);
+  if (added.length) out.push('', '**New**', ...sorted(added).slice(0, 15).map(line), ...(added.length > 15 ? [`- …and ${added.length - 15} more`] : []));
+  if (fixed.length) out.push('', '**Fixed**', ...sorted(fixed).slice(0, 10).map(line), ...(fixed.length > 10 ? [`- …and ${fixed.length - 10} more`] : []));
+  const total = order.filter((s) => counts.after[s]).map((s) => `${counts.after[s]} ${s}`).join(' · ');
+  out.push('', `Whole app: ${total || 'no findings'}.${reportUrl ? ` [Full report](${reportUrl})` : ''}`);
+  if (r.safety?.blocked) out.push('', '> ⛔ This project contains code NativeKeel flags as malicious. Do not install or run it until it is reviewed.');
+  out.push('', '<sub>Static checks by [NativeKeel](https://nativekeel.com); no code was run.</sub>');
+  return out.join('\n');
 }
