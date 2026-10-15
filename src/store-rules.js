@@ -2,6 +2,7 @@ import fs from './read-boundary.js';
 import path from 'node:path';
 import { PRIVACY_SDKS } from './privacy-sdks.js';
 import { IOS_SDK_27, SCENE_WINDOW_LIBS } from './rules.js';
+import { SITE_URL } from './config.js';
 
 // App Store and Google Play review rules that code can show (checked on Apple's App Review
 // Guidelines and Google Play's policy pages, October 2026). These are common rejection reasons;
@@ -246,7 +247,7 @@ export function iosSceneLifecycle(project, now = new Date()) {
       area: 'crash',
       title: `${libs.length === 1 ? `${libs[0]} crashes` : `${libs.length} libraries crash`}: AppDelegate has no window after the move to UIScene`,
       detail: `${libs.map((l) => `${l} (${SCENE_WINDOW_LIBS[l]})`).join('; ')} ${libs.length === 1 ? 'calls' : 'call'} [UIApplication sharedApplication].delegate.window from Objective-C. With the scene life cycle the window lives in SceneDelegate, and an AppDelegate without a window property throws "-[AppDelegate window]: unrecognized selector sent to instance", which ends the app. Reproduced on the React Native 0.88 template.`,
-      fix: { kind: 'crash', step: 'Add `var window: UIWindow?` to AppDelegate and set it in SceneDelegate (`(UIApplication.shared.delegate as? AppDelegate)?.window = window`) until the libraries use RCTKeyWindow() / RCTPresentedViewController().' },
+      fix: { kind: 'crash', step: `Add \`var window: UIWindow?\` to AppDelegate and set it in SceneDelegate (\`(UIApplication.shared.delegate as? AppDelegate)?.window = window\`) until the libraries use RCTKeyWindow() / RCTPresentedViewController(). Each library's status and fix: ${SITE_URL}/fix/appdelegate-window-unrecognized-selector` },
     });
   }
   // Adopted: URL and universal-link handlers must move to the scene delegate.

@@ -27,7 +27,7 @@ h1{font-size:28px;line-height:1.25;margin:0 0 6px}h2{font-size:18px;margin:28px 
 code{font:14px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--code);padding:1px 5px;border-radius:5px}
 pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow-x:auto}pre code{background:none;padding:0;white-space:pre-wrap}
 .cta{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:28px 0}.cta code{font-size:15px}
-.meta{font-size:14px;color:var(--muted)}ul.list li{margin:8px 0}</style>
+.meta{font-size:14px;color:var(--muted)}ul.list li{margin:8px 0}table{border-collapse:collapse;width:100%;font-size:15px;margin:12px 0;display:block;overflow-x:auto}th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}th{font-weight:600}</style>
 </head>
 <body><main>
 <p class="meta"><a href="/">NativeKeel</a></p>
@@ -39,6 +39,7 @@ pre{background:var(--code);border:1px solid var(--line);border-radius:10px;paddi
 <li><a href="/fix/expo-packages-should-be-updated">The following packages should be updated for best compatibility with the installed expo version</a><br><span class="meta">What Expo's "packages should be updated for best compatibility with the installed expo version" warning means, when it causes crashes, and the one-command fix.</span></li>
 <li><a href="/fix/imagebackground-safeareaview-deprecated">ImageBackground is deprecated and will be removed in a future release</a><br><span class="meta">React Native 0.87 deprecated ImageBackground (and 0.81 SafeAreaView). Why SafeAreaView already misbehaves on Android 15, and drop-in replacements for both.</span></li>
 <li><a href="/fix/text-defaultprops-react-19">Text.defaultProps has no effect after upgrading to React Native 0.78 (React 19)</a><br><span class="meta">React 19 ignores Text.defaultProps in React Native 0.78+: app-wide fonts and font-scaling limits stop applying with no error. Why, and the fix.</span></li>
+<li><a href="/fix/appdelegate-window-unrecognized-selector">-[AppDelegate window]: unrecognized selector sent to instance</a><br><span class="meta">Why a React Native or Expo app crashes with "-[AppDelegate window]: unrecognized selector" after adopting UIScene, which libraries cause it, and the fix.</span></li>
 <li><a href="/fix/supabase-rls-disabled">Supabase: RLS disabled in public (0013_rls_disabled_in_public)</a><br><span class="meta">Why a Supabase table without row level security is readable by anyone who has your React Native or Expo app, and how to enable RLS with policies.</span></li>
 <li><a href="/fix/app-store-account-deletion-5-1-1-v">Guideline 5.1.1(v): the app supports account creation but does not include an option to initiate account deletion</a><br><span class="meta">Why Apple rejects React Native and Expo apps under guideline 5.1.1(v), what counts as account deletion, and what Google Play asks for as well.</span></li>
 <li><a href="/fix/app-store-sign-in-with-apple-4-8">Guideline 4.8 - Design - Login Services</a><br><span class="meta">Why iOS apps with Google or Facebook login are rejected under App Store guideline 4.8, exceptions, and how to add Sign in with Apple in React Native and Expo.</span></li>

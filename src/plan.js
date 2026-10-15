@@ -685,7 +685,7 @@ export function planToMarkdown(result, plan) {
     phase.steps.forEach((s) => lines.push(`- [ ] ${s}`));
     lines.push('');
   });
-  lines.push('---', `No time to do it yourself? We do fixed-price upgrades on a branch of your repo: ${SITE_URL}/#services`);
+  lines.push('---', `Prefer to hand the upgrade over? ${SITE_URL}/#help`);
   return `${lines.join('\n')}\n`;
 }
 

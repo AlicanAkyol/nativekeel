@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[AppDelegate window]: unrecognized selector: RN fix</title>
+<meta name="description" content="Why a React Native or Expo app crashes with &quot;-[AppDelegate window]: unrecognized selector&quot; after adopting UIScene, which libraries cause it, and the fix.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#0b5d55">
+<link rel="canonical" href="https://nativekeel.com/fix/appdelegate-window-unrecognized-selector">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="NativeKeel">
+<meta property="og:url" content="https://nativekeel.com/fix/appdelegate-window-unrecognized-selector">
+<meta property="og:title" content="[AppDelegate window]: unrecognized selector: RN fix">
+<meta property="og:description" content="Why a React Native or Expo app crashes with &quot;-[AppDelegate window]: unrecognized selector&quot; after adopting UIScene, which libraries cause it, and the fix.">
+<meta property="og:image" content="https://nativekeel.com/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:description" content="Why a React Native or Expo app crashes with &quot;-[AppDelegate window]: unrecognized selector&quot; after adopting UIScene, which libraries cause it, and the fix.">
+<meta name="twitter:image" content="https://nativekeel.com/og.png">
+<style>:root{--bg:#fbfaf7;--text:#15171b;--muted:#5d6470;--accent:#0b5d55;--line:#e3e1db;--card:#ffffff;--code:#f1efea}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1013;--text:#e9ebef;--muted:#9aa2ad;--accent:#3cc4b4;--line:#262a31;--card:#15181d;--code:#1b1f25}}
+:root[data-theme="dark"]{--bg:#0e1013;--text:#e9ebef;--muted:#9aa2ad;--accent:#3cc4b4;--line:#262a31;--card:#15181d;--code:#1b1f25}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.65 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:760px;margin:0 auto;padding:40px 16px 64px;overflow-wrap:anywhere}
+h1{font-size:28px;line-height:1.25;margin:0 0 6px}h2{font-size:18px;margin:28px 0 6px}a{color:var(--accent)}p,li{color:var(--muted)}strong{color:var(--text)}
+code{font:14px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--code);padding:1px 5px;border-radius:5px}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow-x:auto}pre code{background:none;padding:0;white-space:pre-wrap}
+.cta{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:28px 0}.cta code{font-size:15px}
+.meta{font-size:14px;color:var(--muted)}ul.list li{margin:8px 0}table{border-collapse:collapse;width:100%;font-size:15px;margin:12px 0;display:block;overflow-x:auto}th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}th{font-weight:600}</style>
+</head>
+<body><main>
+<p class="meta"><a href="/">NativeKeel</a> · <a href="/fix/">React Native fixes</a></p>
+<h1>-[AppDelegate window]: unrecognized selector sent to instance</h1>
+<p class="meta">Updated 2026-10-10</p>
+<p>The app crashes when a library shows something (a picker, a menu, an ad, a snackbar) or right at launch:</p>
+<pre><code>-[AppDelegate window]: unrecognized selector sent to instance</code></pre>
+<p><strong>Why.</strong> With the UIKit scene life cycle the window belongs to the scene delegate, and <code>AppDelegate</code> has no <code>window</code> property at all. That is the React Native 0.88 template, Expo SDK 58, and Expo SDK 57 with <code>enableSceneSupport</code>. Apps built with the iOS 27 SDK must use scenes (<a href="/fix/uiscene-life-cycle-required-xcode-27">why</a>), so this crash arrives with the move to Xcode 27. Libraries that still find the screen with <code>[UIApplication sharedApplication].delegate.window</code> send a message the AppDelegate no longer answers.</p>
+<p><strong>Which libraries.</strong> Checked in each library's iOS source (October 2026):</p>
+<table><thead><tr><th>Library</th><th>Crashes</th><th>Fix</th></tr></thead><tbody><tr><td>@react-native-firebase/messaging</td><td>at launch</td><td><a href="https://github.com/invertase/react-native-firebase/pull/9359">upstream PR #9359</a></td></tr><tr><td>react-native-blob-util</td><td>open-in / options menu</td><td><a href="https://github.com/RonRadtke/react-native-blob-util/pull/498">PR #498</a></td></tr><tr><td>react-native-google-mobile-ads</td><td>banners, consent form, ad inspector</td><td><a href="https://github.com/invertase/react-native-google-mobile-ads/pull/911">PR #911</a> (approved)</td></tr><tr><td>react-native-image-crop-picker</td><td>opening the picker or camera</td><td><a href="https://github.com/ivpusic/react-native-image-crop-picker/pull/2257">PR #2257</a></td></tr><tr><td>react-native-date-picker</td><td>opening the modal picker</td><td><a href="https://github.com/henninghall/react-native-date-picker/pull/978">PR #978</a></td></tr><tr><td>react-native-contacts</td><td>closing the contact form</td><td><a href="https://github.com/morenoh149/react-native-contacts/pull/841">PR #841</a></td></tr><tr><td>react-native-ui-lib</td><td>KeyboardInput dismissKeyboard</td><td><a href="https://github.com/wix/react-native-ui-lib/pull/4053">PR #4053</a></td></tr><tr><td>react-native-snackbar</td><td>showing a snackbar</td><td><a href="https://github.com/cooperka/react-native-snackbar/pull/220">PR #220</a></td></tr><tr><td>react-native-print</td><td>presenting the print dialog</td><td><a href="https://github.com/christopherdro/react-native-print/pull/237">PR #237</a></td></tr><tr><td>rn-fetch-blob, react-native-youtube, react-native-safari-view</td><td>various</td><td>unmaintained: switch to a maintained fork or alternative</td></tr></tbody></table>
+<p>Upgrade once a release includes the fix. A blob-util and a google-mobile-ads crash were reproduced on a fresh React Native 0.88.0-rc.4 app in the iOS simulator; the others use the same call.</p>
+<p><strong>Quickest workaround, in your app.</strong> Give the AppDelegate its <code>window</code> property back and set it from the scene delegate, so every library finds a window without patches:</p>
+<pre><code>// AppDelegate.swift
+var window: UIWindow?
+
+// SceneDelegate.swift, after creating the window
+(UIApplication.shared.delegate as? AppDelegate)?.window = window</code></pre>
+<p><strong>Or fix the library with patch-package.</strong> In the library's iOS file, replace the window lookup with React Native's helpers from <code>&lt;React/RCTUtils.h&gt;</code>, which work with and without scenes:</p>
+<pre><code>- UIViewController *root = [UIApplication sharedApplication].delegate.window.rootViewController;
++ UIViewController *root = RCTKeyWindow().rootViewController;</code></pre>
+<p>When the code then walks <code>presentedViewController</code> to the top, <code>RCTPresentedViewController()</code> does both in one call. Add <code>#import &lt;React/RCTUtils.h&gt;</code> if the file doesn't have it, then <code>npx patch-package &lt;library&gt;</code>.</p>
+<p><strong>Find the library.</strong> The crash log names the method that sent the message. Or search your dependencies:</p>
+<pre><code>grep -rnE "delegate]?.window|delegate] window]" node_modules/*/ios node_modules/@*/*/ios</code></pre>
+<p><code>npx nativekeel</code> lists the known ones from your package.json, with when each one crashes.</p>
+<div class="cta"><strong>Check your whole app in one command:</strong> <code>npx nativekeel</code><br><span class="meta">Free, runs locally (your code is not uploaded), no account. It reports this and 80 other upgrade, store, crash and security problems.</span></div>
+<h2>Sources</h2>
+<ul><li><a href="https://developer.apple.com/documentation/technotes/tn3187-migrating-to-the-uikit-scene-based-life-cycle">Apple TN3187: Migrating to the UIKit scene-based life cycle</a></li><li><a href="https://github.com/facebook/react-native/blob/main/packages/react-native/React/Base/RCTUtils.h">React Native RCTUtils.h (RCTKeyWindow, RCTPresentedViewController)</a></li></ul>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"[AppDelegate window]: unrecognized selector: RN fix","description":"Why a React Native or Expo app crashes with \"-[AppDelegate window]: unrecognized selector\" after adopting UIScene, which libraries cause it, and the fix.","dateModified":"2026-10-10","author":{"@type":"Organization","name":"NativeKeel","url":"https://nativekeel.com"},"mainEntityOfPage":"https://nativekeel.com/fix/appdelegate-window-unrecognized-selector"}</script>
+</main></body>
+</html>

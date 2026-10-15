@@ -98,7 +98,7 @@ export function textReport(result, { color = true, verbose = false } = {}) {
     startHere(result).forEach((s, i) => out.push(`  ${i + 1}. ${cut(plain(s.step))}`));
     out.push('');
     out.push(`Next: ${c.bold('npx nativekeel plan')} writes the full step-by-step plan.`);
-    out.push(c.gray(`No time to do it yourself? Fixed-price upgrades: ${SITE_URL}/#services`));
+    out.push(c.gray(`Prefer to hand the upgrade over? ${SITE_URL}/#help`));
     out.push(c.gray(`Something wrong for your app? Tell us (no code needed): ${ISSUE_URL}`));
   } else if (!result.findings.length) {
     out.push(c.green('No matching findings. Unchecked runtime and backend risks may remain.'));

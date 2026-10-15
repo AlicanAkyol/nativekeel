@@ -30,6 +30,12 @@ function md(src) {
       const lines = para.trim().split('\n');
       if (!lines[0]) continue;
       if (lines.every((l) => l.startsWith('- '))) out.push(`<ul>${lines.map((l) => `<li>${inline(l.slice(2))}</li>`).join('')}</ul>`);
+      else if (lines.length > 2 && lines.every((l) => l.trim().startsWith('|')) && /^\|[\s:-]+(\|[\s:-]+)+\|?$/.test(lines[1].trim())) {
+        const cells = (l) => l.trim().replace(/^\||\|$/g, '').split('|').map((c) => c.trim());
+        const head = cells(lines[0]).map((c) => `<th>${inline(c)}</th>`).join('');
+        const rows = lines.slice(2).map((l) => `<tr>${cells(l).map((c) => `<td>${inline(c)}</td>`).join('')}</tr>`).join('');
+        out.push(`<table><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table>`);
+      }
       else out.push(`<p>${inline(lines.join(' '))}</p>`);
     }
   });
@@ -225,6 +231,66 @@ Do the same for \`TextInput\`, then check the main screens at the largest system
     sources: [['React 19 upgrade guide: removed defaultProps for function components', 'https://react.dev/blog/2024/04/25/react-19-upgrade-guide'], ['React Native 0.78: React 19', 'https://reactnative.dev/blog/2025/02/19/react-native-0.78']],
   },
   {
+    slug: 'appdelegate-window-unrecognized-selector',
+    error: '-[AppDelegate window]: unrecognized selector sent to instance',
+    title: '[AppDelegate window]: unrecognized selector: RN fix',
+    description: 'Why a React Native or Expo app crashes with "-[AppDelegate window]: unrecognized selector" after adopting UIScene, which libraries cause it, and the fix.',
+    body: `
+The app crashes when a library shows something (a picker, a menu, an ad, a snackbar) or right at launch:
+
+\`\`\`
+-[AppDelegate window]: unrecognized selector sent to instance
+\`\`\`
+
+**Why.** With the UIKit scene life cycle the window belongs to the scene delegate, and \`AppDelegate\` has no \`window\` property at all. That is the React Native 0.88 template, Expo SDK 58, and Expo SDK 57 with \`enableSceneSupport\`. Apps built with the iOS 27 SDK must use scenes ([why](/fix/uiscene-life-cycle-required-xcode-27)), so this crash arrives with the move to Xcode 27. Libraries that still find the screen with \`[UIApplication sharedApplication].delegate.window\` send a message the AppDelegate no longer answers.
+
+**Which libraries.** Checked in each library's iOS source (October 2026):
+
+| Library | Crashes | Fix |
+|---|---|---|
+| @react-native-firebase/messaging | at launch | [upstream PR #9359](https://github.com/invertase/react-native-firebase/pull/9359) |
+| react-native-blob-util | open-in / options menu | [PR #498](https://github.com/RonRadtke/react-native-blob-util/pull/498) |
+| react-native-google-mobile-ads | banners, consent form, ad inspector | [PR #911](https://github.com/invertase/react-native-google-mobile-ads/pull/911) (approved) |
+| react-native-image-crop-picker | opening the picker or camera | [PR #2257](https://github.com/ivpusic/react-native-image-crop-picker/pull/2257) |
+| react-native-date-picker | opening the modal picker | [PR #978](https://github.com/henninghall/react-native-date-picker/pull/978) |
+| react-native-contacts | closing the contact form | [PR #841](https://github.com/morenoh149/react-native-contacts/pull/841) |
+| react-native-ui-lib | KeyboardInput dismissKeyboard | [PR #4053](https://github.com/wix/react-native-ui-lib/pull/4053) |
+| react-native-snackbar | showing a snackbar | [PR #220](https://github.com/cooperka/react-native-snackbar/pull/220) |
+| react-native-print | presenting the print dialog | [PR #237](https://github.com/christopherdro/react-native-print/pull/237) |
+| rn-fetch-blob, react-native-youtube, react-native-safari-view | various | unmaintained: switch to a maintained fork or alternative |
+
+Upgrade once a release includes the fix. A blob-util and a google-mobile-ads crash were reproduced on a fresh React Native 0.88.0-rc.4 app in the iOS simulator; the others use the same call.
+
+**Quickest workaround, in your app.** Give the AppDelegate its \`window\` property back and set it from the scene delegate, so every library finds a window without patches:
+
+\`\`\`
+// AppDelegate.swift
+var window: UIWindow?
+
+// SceneDelegate.swift, after creating the window
+(UIApplication.shared.delegate as? AppDelegate)?.window = window
+\`\`\`
+
+**Or fix the library with patch-package.** In the library's iOS file, replace the window lookup with React Native's helpers from \`<React/RCTUtils.h>\`, which work with and without scenes:
+
+\`\`\`
+- UIViewController *root = [UIApplication sharedApplication].delegate.window.rootViewController;
++ UIViewController *root = RCTKeyWindow().rootViewController;
+\`\`\`
+
+When the code then walks \`presentedViewController\` to the top, \`RCTPresentedViewController()\` does both in one call. Add \`#import <React/RCTUtils.h>\` if the file doesn't have it, then \`npx patch-package <library>\`.
+
+**Find the library.** The crash log names the method that sent the message. Or search your dependencies:
+
+\`\`\`
+grep -rnE "delegate\]?\.window|delegate\] window\]" node_modules/*/ios node_modules/@*/*/ios
+\`\`\`
+
+\`npx nativekeel\` lists the known ones from your package.json, with when each one crashes.
+`,
+    sources: [['Apple TN3187: Migrating to the UIKit scene-based life cycle', 'https://developer.apple.com/documentation/technotes/tn3187-migrating-to-the-uikit-scene-based-life-cycle'], ['React Native RCTUtils.h (RCTKeyWindow, RCTPresentedViewController)', 'https://github.com/facebook/react-native/blob/main/packages/react-native/React/Base/RCTUtils.h']],
+  },
+  {
     slug: 'supabase-rls-disabled',
     error: 'Supabase: RLS disabled in public (0013_rls_disabled_in_public)',
     title: 'Supabase tables without row level security in React Native',
@@ -412,7 +478,7 @@ Then run prebuild again. SDK 58 has it by default. SDK 56 and earlier need an up
 **Two things break after the move.**
 
 - **Deep links and universal links** stop reaching \`AppDelegate\`. Forward \`scene(_:openURLContexts:)\` and \`scene(_:continue:)\` to \`RCTLinkingManager\` in \`SceneDelegate\`, and pass the connection options to React Native so links that launch the app arrive too. The 0.88 template does both.
-- **Libraries that read the window from the app delegate crash.** The 0.88 template's \`AppDelegate\` has no \`window\`. We reproduced \`-[AppDelegate window]: unrecognized selector sent to instance\` on that template with react-native-blob-util and react-native-google-mobile-ads, and the same Objective-C call is in about a dozen popular packages, including @react-native-firebase/messaging at launch. Until they are fixed, keep \`var window: UIWindow?\` in \`AppDelegate\` and set it from \`SceneDelegate\`.
+- **Libraries that read the window from the app delegate crash.** The 0.88 template's \`AppDelegate\` has no \`window\`. We reproduced \`-[AppDelegate window]: unrecognized selector sent to instance\` on that template with react-native-blob-util and react-native-google-mobile-ads, and the same Objective-C call is in about a dozen popular packages, including @react-native-firebase/messaging at launch. Until they are fixed, keep \`var window: UIWindow?\` in \`AppDelegate\` and set it from \`SceneDelegate\`. [Which libraries, and their fixes](/fix/appdelegate-window-unrecognized-selector).
 
 **How common it is.** 583 of the 628 open-source React Native and Expo apps with an iOS target in our scan (11 October 2026) have not adopted it yet. \`npx nativekeel\` reports it, the links that still go to \`AppDelegate\`, and the installed libraries that read the app delegate's window. A longer walkthrough, with the 15 libraries that crash after the move and the deep-link pitfall, is on [dev.to](https://dev.to/keel_alican_akyol/xcode-27-wont-launch-93-of-react-native-apps-the-uiscene-change-and-the-libraries-that-crash-2gb5).`,
     sources: [
@@ -433,7 +499,7 @@ h1{font-size:28px;line-height:1.25;margin:0 0 6px}h2{font-size:18px;margin:28px 
 code{font:14px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--code);padding:1px 5px;border-radius:5px}
 pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow-x:auto}pre code{background:none;padding:0;white-space:pre-wrap}
 .cta{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:28px 0}.cta code{font-size:15px}
-.meta{font-size:14px;color:var(--muted)}ul.list li{margin:8px 0}`;
+.meta{font-size:14px;color:var(--muted)}ul.list li{margin:8px 0}table{border-collapse:collapse;width:100%;font-size:15px;margin:12px 0;display:block;overflow-x:auto}th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}th{font-weight:600}`;
 
 const head = (title, description, url) => `<!doctype html>
 <html lang="en">
