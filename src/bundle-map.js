@@ -121,6 +121,45 @@ export function analyzeSourceMap(text) {
 }
 
 const kb = (b) => `${Math.round(b / 1024)} KB`;
+const signedKb = (b) => `${b >= 0 ? '+' : '−'}${Math.round(Math.abs(b) / 1024)} KB`;
+
+// Two measurements of the same app, before and after a change: what grew, what shrank, what
+// is new or gone, and which packages started being bundled twice. Both maps must be of the same
+// kind (both Hermes or both plain JavaScript) for the byte counts to be comparable.
+export function compareBundles(before, after) {
+  const map = (r) => new Map(r.packages.map((p) => [p.name, p.bytes]));
+  const a = map(before), b = map(after);
+  const names = new Set([...a.keys(), ...b.keys()]);
+  const changes = [...names].map((name) => ({ name, before: a.get(name) || 0, after: b.get(name) || 0 }))
+    .map((c) => ({ ...c, delta: c.after - c.before }))
+    .filter((c) => c.delta !== 0)
+    .sort((x, y) => Math.abs(y.delta) - Math.abs(x.delta));
+  const dupBefore = new Set(before.duplicates.map((d) => d.name));
+  return {
+    comparable: before.hermes === after.hermes,
+    total: { before: before.mappedBytes, after: after.mappedBytes, delta: after.mappedBytes - before.mappedBytes },
+    app: { before: before.appBytes, after: after.appBytes, delta: after.appBytes - before.appBytes },
+    added: changes.filter((c) => !c.before),
+    removed: changes.filter((c) => !c.after),
+    changed: changes.filter((c) => c.before && c.after),
+    newDuplicates: after.duplicates.filter((d) => !dupBefore.has(d.name)),
+  };
+}
+
+export function compareText(diff, beforeFile, afterFile) {
+  const out = [`JavaScript bundle: ${beforeFile} → ${afterFile}`];
+  if (!diff.comparable) out.push('! One map is Hermes bytecode and the other plain JavaScript: byte counts are not comparable.');
+  out.push(`Mapped code: ${kb(diff.total.before)} → ${kb(diff.total.after)} (${signedKb(diff.total.delta)}); your app's code ${signedKb(diff.app.delta)}`, '');
+  const row = (c) => `  ${signedKb(c.delta).padStart(9)}  ${c.name}${c.before && c.after ? ` (${kb(c.before)} → ${kb(c.after)})` : ''}`;
+  if (diff.added.length) out.push('New in the bundle:', ...diff.added.slice(0, 15).map(row), '');
+  if (diff.removed.length) out.push('No longer in the bundle:', ...diff.removed.slice(0, 15).map(row), '');
+  // Mapping boundaries shift by a few bytes between builds; under 1 KB is noise, not a change.
+  const visible = diff.changed.filter((c) => Math.abs(c.delta) >= 1024);
+  if (visible.length) out.push('Changed size:', ...visible.slice(0, 15).map(row), '');
+  if (diff.newDuplicates.length) out.push('Now bundled more than once:', ...diff.newDuplicates.slice(0, 10).map((d) => `  ${d.name}: ${d.copies.map((c) => `${c.dir} (${kb(c.bytes)})`).join(', ')}`), '');
+  if (!diff.added.length && !diff.removed.length && !visible.length && !diff.newDuplicates.length) out.push('No package changed size by 1 KB or more.');
+  return out.join('\n').trimEnd();
+}
 const pct = (b, total) => `${(100 * b / total).toFixed(1)}%`;
 
 export function bundleText(result, file) {

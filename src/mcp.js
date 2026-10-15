@@ -242,21 +242,29 @@ async function verifyTool(args, ctx) {
 }
 
 async function measureBundleTool(args) {
-  const { analyzeSourceMap, findBundleMaps } = await import('./bundle-map.js');
+  const { analyzeSourceMap, findBundleMaps, compareBundles } = await import('./bundle-map.js');
   const bounded = (await import('./read-boundary.js')).default;
   const root = resolveTarget(args.path, args.__roots);
+  const inside = (rel, label) => {
+    if (typeof rel !== 'string' || !/\.map$/.test(rel) || path.isAbsolute(rel) || rel.includes('\0')) throw new Error(`${label} must be a relative path to a .map file inside the project`);
+    const real = bounded.realpathSync(path.resolve(root, rel));
+    if (!real.startsWith(root + path.sep)) throw new Error(`${label} is outside the project folder`);
+    return path.relative(root, real);
+  };
   let file;
   if (args.map !== undefined) {
-    if (typeof args.map !== 'string' || !/\.map$/.test(args.map) || path.isAbsolute(args.map) || args.map.includes('\0')) throw new Error('map must be a relative path to a .map file inside the project');
-    const real = bounded.realpathSync(path.resolve(root, args.map));
-    if (!real.startsWith(root + path.sep)) throw new Error('map is outside the project folder');
-    file = path.relative(root, real);
+    file = inside(args.map, 'map');
   } else {
     const [found] = findBundleMaps(root);
     if (!found) return { found: false, hint: 'No release source map in the project. Android release builds write android/app/build/generated/sourcemaps/react/release/index.android.bundle.map; with Expo run npx expo export --dump-sourcemap. Then call again, or pass map.' };
     file = found.file;
   }
   const r = analyzeSourceMap(bounded.readFileSync(path.join(root, file), 'utf8'));
+  if (args.base !== undefined) {
+    const baseFile = inside(args.base, 'base');
+    const diff = compareBundles(analyzeSourceMap(bounded.readFileSync(path.join(root, baseFile), 'utf8')), r);
+    return { found: true, map: file, base: baseFile, ...diff, added: diff.added.slice(0, 30), removed: diff.removed.slice(0, 30), changed: diff.changed.filter((c) => Math.abs(c.delta) >= 1024).slice(0, 30) };
+  }
   const share = (b) => Number((100 * b / r.mappedBytes).toFixed(1));
   return {
     found: true, map: file, hermes: r.hermes, mappedBytes: r.mappedBytes,
@@ -305,8 +313,8 @@ export const TOOLS = [
   },
   {
     name: 'measure_bundle',
-    description: 'What the release JavaScript bundle of a React Native or Expo app is made of, measured from the source map a release build already wrote (Hermes bytecode maps included): bytes and share for the app code and each package, packages bundled more than once, and the largest JSON. Nothing is built or run; returns found:false with how to produce a map if there is none.',
-    inputSchema: { type: 'object', properties: { path: { type: 'string' }, map: { type: 'string', description: 'Optional .map file, relative to path' } }, required: ['path'], additionalProperties: false },
+    description: 'What the release JavaScript bundle of a React Native or Expo app is made of, measured from the source map a release build already wrote (Hermes bytecode maps included): bytes and share for the app code and each package, packages bundled more than once, and the largest JSON. With base (an older map), what was added, removed or changed size since that build. Nothing is built or run; returns found:false with how to produce a map if there is none.',
+    inputSchema: { type: 'object', properties: { path: { type: 'string' }, map: { type: 'string', description: 'Optional .map file, relative to path' }, base: { type: 'string', description: 'Optional older .map file, relative to path, to compare against' } }, required: ['path'], additionalProperties: false },
     run: (args, ctx) => measureBundleTool({ ...args, __roots: ctx.roots }),
   },
   {

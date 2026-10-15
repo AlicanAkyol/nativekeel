@@ -40,6 +40,11 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.82</h2><p class="date">15 October 2026</p>
+<ul>
+<li><span class="tag">Performance</span><b>Compare two builds.</b> <code>npx nativekeel bundle new.map --base old.map</code> shows what changed between two release builds: packages added or removed, packages that grew or shrank by 1 KB or more, and packages now bundled twice. Tested on a real Expo app: one <code>import _ from "lodash"</code> line showed up as +107 KB. The MCP tool <code>measure_bundle</code> takes the same <code>base</code>.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.81</h2><p class="date">15 October 2026</p>
 <ul>
 <li><span class="tag">Performance</span><b>Measured bytes in the findings.</b> When a release source map is present, the lodash and moment finding says how much of the measured bundle each one really takes (moment&#39;s locale files separately), or that the package is not in the bundle at all, instead of only pointing at the import.</li>

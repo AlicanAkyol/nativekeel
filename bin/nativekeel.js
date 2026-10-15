@@ -47,9 +47,10 @@ Usage
   npx nativekeel [path]          Scan an app and print the report
   npx nativekeel security [path]  Review data theft, account access and code execution risks
   npx nativekeel improve [path]  Prioritized app improvement review (--json or --out)
-  npx nativekeel bundle [path | file.map]
+  npx nativekeel bundle [path | file.map] [--base old.map]
                                  What the release JavaScript bundle is made of, measured
-                                 from the source map a release build wrote (--json)
+                                 from the source map a release build wrote; with --base,
+                                 what grew, shrank or was added since that build (--json)
   npx nativekeel plan [path]     Write a step-by-step upgrade plan
   npx nativekeel compare <before.json> <after.json>
                                  What got fixed and what is new between two scans
@@ -213,8 +214,16 @@ async function main() {
       if (!found) fail(`No release source map found in ${root}. Build a release (Android writes android/app/build/generated/sourcemaps/react/release/index.android.bundle.map; Expo: npx expo export --dump-sourcemap), or pass the .map file: nativekeel bundle path/to/index.android.bundle.map`);
       mapFile = path.join(root, found.file);
     }
+    const shown = (f) => (path.relative(process.cwd(), f).startsWith('..') ? f : path.relative(process.cwd(), f));
     const result = analyzeSourceMap(fs.readFileSync(mapFile, 'utf8'));
-    console.log(flags.json ? JSON.stringify(result, null, 2) : bundleText(result, path.relative(process.cwd(), mapFile).startsWith('..') ? mapFile : path.relative(process.cwd(), mapFile)));
+    if (flags.base) {
+      const { compareBundles, compareText } = await import('../src/bundle-map.js');
+      const baseFile = path.resolve(flags.base);
+      const diff = compareBundles(analyzeSourceMap(fs.readFileSync(baseFile, 'utf8')), result);
+      console.log(flags.json ? JSON.stringify(diff, null, 2) : compareText(diff, shown(baseFile), shown(mapFile)));
+      return 0;
+    }
+    console.log(flags.json ? JSON.stringify(result, null, 2) : bundleText(result, shown(mapFile)));
     return 0;
   }
 

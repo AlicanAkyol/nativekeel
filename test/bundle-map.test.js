@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { analyzeSourceMap, bundleChecks, findBundleMaps, annotateWithBundle } from '../src/bundle-map.js';
+import { analyzeSourceMap, bundleChecks, findBundleMaps, annotateWithBundle, compareBundles, compareText } from '../src/bundle-map.js';
 import { makeProject } from './helpers.js';
 
 const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
@@ -76,4 +76,36 @@ test('MCP measure_bundle measures a map inside the project and refuses one outsi
     const bad = await call({ map: path.relative(root, path.join(outside, 'leak.map')) });
     assert.ok(bad.result?.isError || bad.error);
   } finally { fs.rmSync(root, { recursive: true, force: true }); fs.rmSync(outside, { recursive: true, force: true }); }
+});
+
+test('comparing two builds shows what was added, removed, changed and newly duplicated', () => {
+  const before = analyzeSourceMap(mapOf(['/src/App.tsx', '/node_modules/moment/moment.js', '/node_modules/lodash/lodash.js'], [[0, 0], [1000, 1], [6000, 2], [9000, 0], [9010, 0]]));
+  const after = analyzeSourceMap(mapOf(['/src/App.tsx', '/node_modules/dayjs/dayjs.js', '/node_modules/lodash/lodash.js', '/node_modules/x/node_modules/lodash/lodash.js'], [[0, 0], [2000, 1], [4000, 2], [7000, 3], [9048, 0], [9058, 0]]));
+  const d = compareBundles(before, after);
+  assert.equal(d.comparable, true);
+  assert.deepEqual(d.added.map((c) => [c.name, c.delta]), [['dayjs', 2000]]);
+  assert.deepEqual(d.removed.map((c) => [c.name, c.delta]), [['moment', -5000]]);
+  assert.deepEqual(d.changed.map((c) => [c.name, c.before, c.after]), [['lodash', 3000, 5048]]);
+  assert.deepEqual(d.newDuplicates.map((x) => x.name), ['lodash']);
+  const text = compareText(d, 'old.map', 'new.map');
+  assert.match(text, /New in the bundle:\n\s+\+2 KB  dayjs/);
+  assert.match(text, /No longer in the bundle:\n\s+−5 KB  moment/);
+  assert.match(text, /Now bundled more than once:/);
+  assert.match(compareText(compareBundles(before, before), 'a', 'b'), /No package changed size by 1 KB or more\./);
+  assert.match(compareText(compareBundles(before, { ...after, hermes: true }), 'a', 'b'), /not comparable/);
+});
+
+test('MCP measure_bundle compares against a base map inside the project', async () => {
+  const { handle } = await import('../src/mcp.js');
+  const root = makeProject({
+    'package.json': { name: 'x', dependencies: { 'react-native': '0.80.0' } },
+    'old.map': mapOf(['/src/App.tsx', '/node_modules/moment/moment.js'], [[0, 0], [100, 1], [5100, 0], [5110, 0]]),
+    'new.map': mapOf(['/src/App.tsx', '/node_modules/dayjs/dayjs.js'], [[0, 0], [100, 1], [2148, 0], [2158, 0]]),
+  });
+  try {
+    const res = await handle({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'measure_bundle', arguments: { path: root, map: 'new.map', base: 'old.map' } } }, { version: 'test', roots: [fs.realpathSync(root)] });
+    const d = JSON.parse(res.result.content[0].text);
+    assert.deepEqual([d.added.map((c) => c.name), d.removed.map((c) => c.name)], [['dayjs'], ['moment']]);
+    assert.equal(d.total.delta, -2952);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
