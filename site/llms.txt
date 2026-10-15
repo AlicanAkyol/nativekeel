@@ -34,7 +34,7 @@
 
 ## Try it
 
-- [Check a package.json in the browser](https://nativekeel.com/check): dependency-level checks and an upgrade plan, run in the page; the full scan is `npx nativekeel`.
+- [Check a package.json in the browser](https://nativekeel.com/check/): dependency-level checks and an upgrade plan, run in the page; the full scan is `npx nativekeel`.
 
 ## Contact
 
