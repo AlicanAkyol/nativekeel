@@ -5,6 +5,7 @@ import { gitLsFiles } from './git.js';
 import { checkArchive, findBuiltArtifact } from './elf-align.js';
 import { PAGE_SIZE_16K, PLATFORM_MINIMUMS } from './rules.js';
 import { installedVersion as installedVersionOf } from './project.js';
+import { SITE_URL } from './config.js';
 
 // Checks on native project files: store requirements and security settings that live
 // outside package.json. Every check returns findings in the same shape as analyze.js.
@@ -202,7 +203,7 @@ export function nativeChecks(project, { rnLatest = null, now = new Date() } = {}
         severity: archOn ? 'critical' : 'high',
         area: 'native',
         title: `iOS AppDelegate is missing RCTAppDependencyProvider (${path.relative(root, delegates[0])})`,
-        detail: `Required since React Native 0.77. Without it, library Fabric components fall back to the legacy interop layer and send RCTEventEmitter events, which are not registered with the New Architecture: "RCTEventEmitter.receiveEvent() ... has not been registered as callable", logged in Debug, a launch crash in Release.${archOn ? '' : ' It will surface as soon as the New Architecture is turned on.'} Add the import and \`self.dependencyProvider = [RCTAppDependencyProvider new];\` before calling super.`,
+        detail: `Required since React Native 0.77. Without it, library Fabric components fall back to the legacy interop layer and send RCTEventEmitter events, which are not registered with the New Architecture: "RCTEventEmitter.receiveEvent() ... has not been registered as callable", logged in Debug, a launch crash in Release.${archOn ? '' : ' It will surface as soon as the New Architecture is turned on.'} Add the import and \`self.dependencyProvider = [RCTAppDependencyProvider new];\` before calling super (Swift and per-version snippets: ${SITE_URL}/fix/rcteventemitter-receiveevent-not-registered).`,
         fix: { kind: 'app-dependency-provider', file: path.relative(root, delegates[0]) },
       });
     }

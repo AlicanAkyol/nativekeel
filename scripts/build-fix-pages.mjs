@@ -291,6 +291,54 @@ grep -rnE "delegate\]?\.window|delegate\] window\]" node_modules/*/ios node_modu
     sources: [['Apple TN3187: Migrating to the UIKit scene-based life cycle', 'https://developer.apple.com/documentation/technotes/tn3187-migrating-to-the-uikit-scene-based-life-cycle'], ['React Native RCTUtils.h (RCTKeyWindow, RCTPresentedViewController)', 'https://github.com/facebook/react-native/blob/main/packages/react-native/React/Base/RCTUtils.h']],
   },
   {
+    slug: 'rcteventemitter-receiveevent-not-registered',
+    error: 'Failed to call into JavaScript module method RCTEventEmitter.receiveEvent(). Module has not been registered as callable.',
+    title: 'RCTEventEmitter.receiveEvent() not callable in React Native',
+    description: '"Failed to call into JavaScript module method RCTEventEmitter.receiveEvent()" after a React Native 0.77+ upgrade: the missing AppDelegate line and the fix.',
+    body: `
+After upgrading to React Native 0.77 or later with the New Architecture, a screen that uses a library's native component fails with:
+
+\`\`\`
+Error: Failed to call into JavaScript module method RCTEventEmitter.receiveEvent(). Module has not been registered as callable. Registered callable JavaScript modules (n = 9): AppRegistry, HMRClient, ...
+\`\`\`
+
+It often shows up right after wrapping the app in a provider such as \`SafeAreaProvider\`, and removing the provider makes it go away, so it looks like a bug in that library. In Release builds it can be a crash at launch.
+
+**Why.** Since React Native 0.77, \`AppDelegate\` must hand third-party Fabric components to React Native through \`RCTAppDependencyProvider\`. The release notes call it "a new line in the community template that, if missed, can cause some runtime issues". Without it, library components fall back to the legacy interop layer, which sends events through \`RCTEventEmitter\`, a module the New Architecture never registers. Projects upgraded by hand, or whose AppDelegate was customised, often miss the line.
+
+**Fix.** Add it to your AppDelegate.
+
+Objective-C (\`AppDelegate.mm\`), before calling \`super\`:
+
+\`\`\`
+#import <ReactAppDependencyProvider/RCTAppDependencyProvider.h>
+
+self.dependencyProvider = [RCTAppDependencyProvider new];
+\`\`\`
+
+Swift, React Native 0.77 and 0.78 (\`class AppDelegate: RCTAppDelegate\`):
+
+\`\`\`
+import ReactAppDependencyProvider
+
+self.dependencyProvider = RCTAppDependencyProvider()
+\`\`\`
+
+Swift, React Native 0.79 and later (\`RCTReactNativeFactory\`):
+
+\`\`\`
+import ReactAppDependencyProvider
+
+delegate.dependencyProvider = RCTAppDependencyProvider()
+\`\`\`
+
+Then \`cd ios && pod install\` and rebuild. Clearing caches or reinstalling pods alone does not fix it.
+
+**Check your project.** \`npx nativekeel\` reports an AppDelegate without \`RCTAppDependencyProvider\` on React Native 0.77 and later, before the error appears.
+`,
+    sources: [['React Native 0.77 release notes: RCTAppDependencyProvider', 'https://reactnative.dev/blog/2025/01/21/version-0.77#rctappdependencyprovider'], ['React Native template 0.81: AppDelegate.swift', 'https://github.com/react-native-community/template/blob/0.81-stable/template/ios/HelloWorld/AppDelegate.swift']],
+  },
+  {
     slug: 'supabase-rls-disabled',
     error: 'Supabase: RLS disabled in public (0013_rls_disabled_in_public)',
     title: 'Supabase tables without row level security in React Native',

@@ -40,6 +40,11 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.86</h2><p class="date">15 October 2026</p>
+<ul>
+<li><span class="tag">Fix guide</span><b>"Failed to call into JavaScript module method RCTEventEmitter.receiveEvent()".</b> A new page explains this React Native 0.77+ error (often blamed on SafeAreaProvider): the AppDelegate is missing <code>RCTAppDependencyProvider</code>. It gives the line for Objective-C, Swift on 0.77–0.78 and Swift on 0.79+. The finding that detects it links to the page.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.85</h2><p class="date">15 October 2026</p>
 <ul>
 <li><span class="tag">Fix guide</span><b>"-[AppDelegate window]: unrecognized selector".</b> A new page lists the libraries that crash this way after the move to UIScene, when each one crashes and its fix (pull requests sent to image-crop-picker, ui-lib, date-picker, contacts, snackbar and print today), plus a one-line workaround in your own AppDelegate. The crash finding links to it.</li>
