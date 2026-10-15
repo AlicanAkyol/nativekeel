@@ -8,6 +8,7 @@ import { nativeChecks } from './native.js';
 import { stabilityChecks } from './stability.js';
 import { performanceChecks } from './performance.js';
 import { uiChecks } from './ui.js';
+import { bundleChecks } from './bundle-map.js';
 import { vulnerableDependencies, passwordLeaks, webViewRisks, androidBackup, exportedComponents, plainHttpCalls, cloudRules, insecureTls, weakCrypto, tokenStorage, reverseEngineering, expoConfigSecrets, aiKeysInBundle, clipboardSecrets, keychainAccessibility, deepLinks, supabaseRls, playRestrictedPermissions, masvsOf, MASVS_GROUPS } from './security.js';
 import { mobileSecurity } from './mobile-security.js';
 import { nativeSecurity } from './native-security.js';
@@ -495,6 +496,9 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
   // Screen reader labels and text scaling.
   const ui = uiChecks(project);
   for (const f of ui.findings) add(f);
+  // Measured bundle composition, when a release build left its source map behind.
+  const bundle = bundleChecks(project.root);
+  for (const f of bundle.findings) add(f);
 
   // Packages off the versions the Expo SDK pins (what `npx expo install --check` reports). Older
   // than the SDK expects is a common build failure or launch crash; newer is usually a choice the
@@ -617,6 +621,7 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
     mobileSecurityCoverage: mobile.coverage,
     nativeSecurityCoverage: native.coverage,
     accessibilityCoverage: ui.coverage,
+    bundleMeasurement: bundle.measured,
     scannedAt: now.toISOString(),
     project: {
       name: project.name,

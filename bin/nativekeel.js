@@ -16,7 +16,7 @@ import { buildImprovementPlan, improvementToMarkdown, improvementToText } from '
 import { SITE_URL } from '../src/config.js';
 
 const VALUE_FLAGS = new Set(['--html', '--out', '--baseline', '--save-baseline', '--brand', '--sarif', '--markdown', '--fail-on', '--path', '--base']);
-const COMMANDS = new Set(['scan', 'security', 'improve', 'plan', 'compare', 'compare-imports', 'prepare-imports', 'explain', 'verify', 'mcp', 'help']);
+const COMMANDS = new Set(['scan', 'security', 'improve', 'bundle', 'plan', 'compare', 'compare-imports', 'prepare-imports', 'explain', 'verify', 'mcp', 'help']);
 
 function parseArgs(argv) {
   const flags = {};
@@ -47,6 +47,9 @@ Usage
   npx nativekeel [path]          Scan an app and print the report
   npx nativekeel security [path]  Review data theft, account access and code execution risks
   npx nativekeel improve [path]  Prioritized app improvement review (--json or --out)
+  npx nativekeel bundle [path | file.map]
+                                 What the release JavaScript bundle is made of, measured
+                                 from the source map a release build wrote (--json)
   npx nativekeel plan [path]     Write a step-by-step upgrade plan
   npx nativekeel compare <before.json> <after.json>
                                  What got fixed and what is new between two scans
@@ -200,6 +203,20 @@ async function main() {
 
   const root = path.resolve(positional[0] || '.');
   const brand = flags.brand || null;
+
+  if (command === 'bundle') {
+    const { analyzeSourceMap, bundleText, findBundleMaps } = await import('../src/bundle-map.js');
+    let mapFile;
+    if (/\.map$/.test(root)) mapFile = root;
+    else {
+      const [found] = findBundleMaps(root);
+      if (!found) fail(`No release source map found in ${root}. Build a release (Android writes android/app/build/generated/sourcemaps/react/release/index.android.bundle.map; Expo: npx expo export --dump-sourcemap), or pass the .map file: nativekeel bundle path/to/index.android.bundle.map`);
+      mapFile = path.join(root, found.file);
+    }
+    const result = analyzeSourceMap(fs.readFileSync(mapFile, 'utf8'));
+    console.log(flags.json ? JSON.stringify(result, null, 2) : bundleText(result, path.relative(process.cwd(), mapFile).startsWith('..') ? mapFile : path.relative(process.cwd(), mapFile)));
+    return 0;
+  }
 
   if (command === 'improve') {
     const plan = buildImprovementPlan(await runScan(root, flags));
