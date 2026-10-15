@@ -54,6 +54,12 @@ test('text report without color has no escape codes', () => {
   assert.match(text, /3 critical/);
 });
 
+test('text report: contact line only when a deadline finding is critical or high', () => {
+  assert.match(textReport(result, { color: false }), /send this report to hello@nativekeel\.com/);
+  const noDeadline = { ...result, findings: result.findings.filter((f) => f.area === 'secret') };
+  assert.ok(!textReport(noDeadline, { color: false }).includes('hello@nativekeel.com'));
+});
+
 test('SARIF: valid shape, levels, stable fingerprints, file locations', async () => {
   const { sarifReport } = await import('../src/report-sarif.js');
   const sarif = sarifReport(result, { version: '1.2.3' });

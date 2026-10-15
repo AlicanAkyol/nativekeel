@@ -1,8 +1,10 @@
 import { SEVERITIES, countBySeverity } from './analyze.js';
-import { SITE_URL } from './config.js';
+import { CONTACT_EMAIL } from './config.js';
 import { startHere } from './plan.js';
 
 const ISSUE_URL = 'https://github.com/AlicanAkyol/nativekeel/issues/new?template=false-alarm.yml';
+// Findings with an outside deadline (store rules, end of support, removed architecture).
+const DEADLINE_IDS = /^(rn-unsupported|expo-unsupported|new-arch-disabled|play-target-sdk|android-16kb|ios-uiscene-required|ios-privacy-manifest)/;
 
 export function textReport(result, { color = true, verbose = false } = {}) {
   const paint = (code) => (s) => (color ? `\x1b[${code}m${s}\x1b[0m` : s);
@@ -98,7 +100,9 @@ export function textReport(result, { color = true, verbose = false } = {}) {
     startHere(result).forEach((s, i) => out.push(`  ${i + 1}. ${cut(plain(s.step))}`));
     out.push('');
     out.push(`Next: ${c.bold('npx nativekeel plan')} writes the full step-by-step plan.`);
-    out.push(c.gray(`Prefer to hand the upgrade over? ${SITE_URL}/#help`));
+    if (result.findings.some((f) => (f.severity === 'critical' || f.severity === 'high') && DEADLINE_IDS.test(f.id))) {
+      out.push(`Short on time before a store deadline? We take on a few upgrades at a time: send this report to ${c.bold(CONTACT_EMAIL)}.`);
+    }
     out.push(c.gray(`Something wrong for your app? Tell us (no code needed): ${ISSUE_URL}`));
   } else if (!result.findings.length) {
     out.push(c.green('No matching findings. Unchecked runtime and backend risks may remain.'));
