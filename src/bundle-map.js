@@ -91,12 +91,13 @@ export function analyzeSourceMap(text) {
 
   const packages = new Map();
   const copies = new Map();
-  let app = 0;
+  let app = 0, momentLocales = 0;
   const json = [];
   map.sources.forEach((source, k) => {
     const b = bytes[k];
     if (!b) return;
     if (/\.json$/.test(source)) json.push({ source, bytes: b });
+    if (/node_modules\/moment\/(?:min\/)?locale\//.test(source)) momentLocales += b;
     const p = packageOf(String(source));
     if (!p) { app += b; return; }
     packages.set(p.name, (packages.get(p.name) || 0) + b);
@@ -112,6 +113,7 @@ export function analyzeSourceMap(text) {
     sources: map.sources.length,
     mappedBytes: mapped,
     appBytes: app,
+    momentLocales,
     packages: [...packages].map(([name, b]) => ({ name, bytes: b })).sort((a, b) => b.bytes - a.bytes),
     duplicates,
     json: json.sort((a, b) => b.bytes - a.bytes),
@@ -136,10 +138,10 @@ export function bundleText(result, file) {
 // may describe a different dependency set, so the finding says how old it is.
 export function bundleChecks(root) {
   const [newest] = findBundleMaps(root);
-  if (!newest) return { findings: [], measured: null };
+  if (!newest) return { findings: [], measured: null, analysis: null };
   let result;
-  try { result = analyzeSourceMap(fs.readFileSync(path.join(root, newest.file), 'utf8')); } catch { return { findings: [], measured: null }; }
-  if (!result.mappedBytes) return { findings: [], measured: null };
+  try { result = analyzeSourceMap(fs.readFileSync(path.join(root, newest.file), 'utf8')); } catch { return { findings: [], measured: null, analysis: null }; }
+  if (!result.mappedBytes) return { findings: [], measured: null, analysis: null };
   let stale = false;
   try { stale = fs.statSync(path.join(root, 'package.json')).mtimeMs > newest.mtime; } catch { /* no package.json */ }
   const when = new Date(newest.mtime).toISOString().slice(0, 10);
@@ -166,5 +168,27 @@ export function bundleChecks(root) {
       fix: { kind: 'performance', step: `Find why each copy is installed (\`npm ls ${dups[0].name}\` or \`yarn why ${dups[0].name}\`), then align the versions or add a resolution/override so one copy remains. Rebuild and run \`npx nativekeel bundle\` to confirm.` },
     });
   }
-  return { findings, measured: { file: newest.file, mappedBytes: result.mappedBytes, stale } };
+  return { findings, measured: { file: newest.file, mappedBytes: result.mappedBytes, stale }, analysis: result };
+}
+
+// Adds what the release bundle actually contains to source-pattern findings, so a review starts
+// from measured bytes instead of a guess. Absent from the bundle is reported too.
+export function annotateWithBundle(findings, bundle) {
+  if (!bundle?.analysis) return;
+  const r = bundle.analysis;
+  const bytesOf = (name) => r.packages.find((p) => p.name === name)?.bytes || 0;
+  const heavy = findings.find((f) => f.id === 'perf-heavy-imports');
+  if (heavy) {
+    const notes = [];
+    for (const name of ['lodash', 'moment']) {
+      if (!new RegExp(`\\b${name}\\b`).test(heavy.title)) continue;
+      const b = bytesOf(name);
+      if (!b) notes.push(`${name} is not in the measured bundle`);
+      else notes.push(`${name} is ${kb(b)} (${pct(b, r.mappedBytes)}) of the measured bundle${name === 'moment' && r.momentLocales ? `, ${kb(r.momentLocales)} of it locale files` : ''}`);
+    }
+    if (notes.length) {
+      heavy.detail += ` Measured in ${bundle.measured.file}${bundle.measured.stale ? ' (older than package.json)' : ''}: ${notes.join('; ')}.`;
+      heavy.evidence = [...(heavy.evidence || []), { kind: 'artifact', file: bundle.measured.file, packages: ['lodash', 'moment'].map((n) => ({ name: n, bytes: bytesOf(n) })) }];
+    }
+  }
 }

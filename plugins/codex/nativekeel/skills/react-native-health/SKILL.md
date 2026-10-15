@@ -17,6 +17,7 @@ Use the `nativekeel` MCP tools. If they are not available in this session, run t
 | Add or update a library | `check_library` with the package name and the project's React Native version |
 | Know what is wrong with the project, prepare a release | `scan_project` |
 | Review data theft, account access or other security risks | `security_audit` (CLI fallback: `npx nativekeel security <path> --json`) |
+| Find out what makes the app or its JavaScript bundle big or slow to load | `measure_bundle` (needs a release source map; it says how to produce one) |
 | Install or start a project they cloned, downloaded or were sent | `scan_project` before any install, start, build or test command |
 | Check an upgrade or dependency change before committing | `verify_upgrade` (compares with HEAD) |
 | Fix a build, launch, crash or store-review error | `explain_error` with the message (and `path`), before searching the web or changing versions |

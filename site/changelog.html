@@ -40,6 +40,12 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.81</h2><p class="date">15 October 2026</p>
+<ul>
+<li><span class="tag">Performance</span><b>Measured bytes in the findings.</b> When a release source map is present, the lodash and moment finding says how much of the measured bundle each one really takes (moment&#39;s locale files separately), or that the package is not in the bundle at all, instead of only pointing at the import.</li>
+<li><span class="tag">AI agents</span><b>MCP tool <code>measure_bundle</code>.</b> Claude Code, Codex and other MCP clients can ask what the release bundle is made of: the app&#39;s share, each package&#39;s share, packages bundled twice and the largest JSON. The map must be inside the project folder the server may read.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.80</h2><p class="date">15 October 2026</p>
 <ul>
 <li><span class="tag">Performance</span><b>Measure the release bundle.</b> <code>npx nativekeel bundle</code> reads the source map a release build already wrote (Android Gradle writes one under <code>android/app/build/generated/sourcemaps/react/release/</code>; Expo with <code>npx expo export --dump-sourcemap</code>) and shows how much of the shipped code is your app and each package, measured rather than guessed. Hermes bytecode maps work too. The normal scan reports the composition when it finds a map, and packages bundled twice (two versions of the same library) with their measured size. Nothing is built or run; strings and bytecode metadata have no source and are left out.</li>

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { analyzeSourceMap, bundleChecks, findBundleMaps } from '../src/bundle-map.js';
+import { analyzeSourceMap, bundleChecks, findBundleMaps, annotateWithBundle } from '../src/bundle-map.js';
 import { makeProject } from './helpers.js';
 
 const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
@@ -46,4 +46,34 @@ test('the scan finds the release map a build left behind and reports measured du
 test('no map, no bundle findings', () => {
   const root = makeProject({ 'package.json': { name: 'x', dependencies: { 'react-native': '0.80.0' } } });
   try { assert.deepEqual(bundleChecks(root).findings, []); } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('heavy-import findings get the measured bundle bytes, or say the package is not in the bundle', () => {
+  const analysis = analyzeSourceMap(mapOf(['/src/App.tsx', '/node_modules/lodash/lodash.js', '/node_modules/moment/moment.js', '/node_modules/moment/locale/de.js'], [[0, 0], [1000, 1], [3048, 2], [4072, 3], [5096, 0], [5100, 0]]));
+  const bundle = { analysis, measured: { file: 'dist/x.hbc.map', mappedBytes: analysis.mappedBytes, stale: false } };
+  const findings = [{ id: 'perf-heavy-imports', title: 'Review root imports of lodash and moment', detail: 'Source pattern.', evidence: [] }];
+  annotateWithBundle(findings, bundle);
+  assert.match(findings[0].detail, /Measured in dist\/x\.hbc\.map: lodash is 2 KB \(40\.2%\) of the measured bundle; moment is 2 KB \(40\.2%\) of the measured bundle, 1 KB of it locale files\./);
+  const onlyApp = { analysis: analyzeSourceMap(mapOf(['/src/App.tsx'], [[0, 0], [100, 0]])), measured: { file: 'm.map', stale: true } };
+  const f2 = [{ id: 'perf-heavy-imports', title: 'Review root imports of lodash', detail: 'Source pattern.' }];
+  annotateWithBundle(f2, onlyApp);
+  assert.match(f2[0].detail, /Measured in m\.map \(older than package\.json\): lodash is not in the measured bundle\./);
+});
+
+test('MCP measure_bundle measures a map inside the project and refuses one outside it', async () => {
+  const { handle } = await import('../src/mcp.js');
+  const root = makeProject({ 'package.json': { name: 'x', dependencies: { 'react-native': '0.80.0' } }, 'dist/app.js.map': mapOf(sources, [[0, 0], [100, 1], [5100, 2], [8100, 0], [8110, 0]]) });
+  const outside = makeProject({ 'leak.map': mapOf(sources, [[0, 0], [10, 0]]) });
+  const call = (args) => handle({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'measure_bundle', arguments: { path: root, ...args } } }, { version: 'test', roots: [fs.realpathSync(root)] });
+  try {
+    const ok = await call({ map: 'dist/app.js.map' });
+    const data = JSON.parse(ok.result.content[0].text);
+    assert.equal(data.found, true);
+    assert.deepEqual(data.packages.map((p) => p.name), ['lodash']);
+    assert.equal(data.duplicates[0].name, 'lodash');
+    const none = JSON.parse((await call({})).result.content[0].text);
+    assert.equal(none.found, false);
+    const bad = await call({ map: path.relative(root, path.join(outside, 'leak.map')) });
+    assert.ok(bad.result?.isError || bad.error);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); fs.rmSync(outside, { recursive: true, force: true }); }
 });

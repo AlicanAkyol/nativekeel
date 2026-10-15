@@ -241,6 +241,33 @@ async function verifyTool(args, ctx) {
   };
 }
 
+async function measureBundleTool(args) {
+  const { analyzeSourceMap, findBundleMaps } = await import('./bundle-map.js');
+  const bounded = (await import('./read-boundary.js')).default;
+  const root = resolveTarget(args.path, args.__roots);
+  let file;
+  if (args.map !== undefined) {
+    if (typeof args.map !== 'string' || !/\.map$/.test(args.map) || path.isAbsolute(args.map) || args.map.includes('\0')) throw new Error('map must be a relative path to a .map file inside the project');
+    const real = bounded.realpathSync(path.resolve(root, args.map));
+    if (!real.startsWith(root + path.sep)) throw new Error('map is outside the project folder');
+    file = path.relative(root, real);
+  } else {
+    const [found] = findBundleMaps(root);
+    if (!found) return { found: false, hint: 'No release source map in the project. Android release builds write android/app/build/generated/sourcemaps/react/release/index.android.bundle.map; with Expo run npx expo export --dump-sourcemap. Then call again, or pass map.' };
+    file = found.file;
+  }
+  const r = analyzeSourceMap(bounded.readFileSync(path.join(root, file), 'utf8'));
+  const share = (b) => Number((100 * b / r.mappedBytes).toFixed(1));
+  return {
+    found: true, map: file, hermes: r.hermes, mappedBytes: r.mappedBytes,
+    note: 'Code bytes attributed from the source map; strings and bytecode metadata have no source and are not included.',
+    app: { bytes: r.appBytes, percent: share(r.appBytes) },
+    packages: r.packages.slice(0, 30).map((p) => ({ name: p.name, bytes: p.bytes, percent: share(p.bytes) })),
+    duplicates: r.duplicates.slice(0, 10),
+    largestJson: r.json.slice(0, 10).map((j) => ({ source: j.source, bytes: j.bytes })),
+  };
+}
+
 async function improveTool(args, ctx) {
   const root = resolveTarget(args.path, ctx.roots);
   const result = await analyze(loadProject(root), args.offline ? { get: async () => null, offline: true } : ctx.analyzeOptions || {});
@@ -275,6 +302,12 @@ export const TOOLS = [
     description: 'Prioritize existing security, crash, accessibility, performance, store and dependency findings into a review plan with prerequisites, expected effects and validation. No project code runs, no automatic changes or unmeasured performance claims. Reports unassessed areas explicitly.',
     inputSchema: { type: 'object', properties: { path: { type: 'string' }, offline: { type: 'boolean' } }, required: ['path'], additionalProperties: false },
     run: improveTool,
+  },
+  {
+    name: 'measure_bundle',
+    description: 'What the release JavaScript bundle of a React Native or Expo app is made of, measured from the source map a release build already wrote (Hermes bytecode maps included): bytes and share for the app code and each package, packages bundled more than once, and the largest JSON. Nothing is built or run; returns found:false with how to produce a map if there is none.',
+    inputSchema: { type: 'object', properties: { path: { type: 'string' }, map: { type: 'string', description: 'Optional .map file, relative to path' } }, required: ['path'], additionalProperties: false },
+    run: (args, ctx) => measureBundleTool({ ...args, __roots: ctx.roots }),
   },
   {
     name: 'upgrade_plan',
