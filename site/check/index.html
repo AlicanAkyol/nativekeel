@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Check your React Native package.json online · NativeKeel</title>
+<meta name="description" content="Paste your package.json and check a React Native or Expo app in your browser: upgrade blockers, abandoned libraries and an upgrade plan. Nothing to install.">
+<link rel="canonical" href="https://nativekeel.com/check">
+<meta property="og:title" content="Check your React Native package.json online · NativeKeel">
+<meta property="og:description" content="Paste your package.json and check a React Native or Expo app in your browser: upgrade blockers, abandoned libraries and an upgrade plan. Nothing to install.">
+<meta property="og:url" content="https://nativekeel.com/check"><meta property="og:type" content="website"><meta property="og:image" content="https://nativekeel.com/og.png">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:description" content="Paste your package.json and check a React Native or Expo app in your browser: upgrade blockers, abandoned libraries and an upgrade plan. Nothing to install.">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"NativeKeel package.json check","url":"https://nativekeel.com/check","applicationCategory":"DeveloperApplication","operatingSystem":"Any (runs in the browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Paste your package.json and check a React Native or Expo app in your browser: upgrade blockers, abandoned libraries and an upgrade plan. Nothing to install."}</script>
+<style>
+:root{color-scheme:light dark;--bg:#fbfaf7;--fg:#15171b;--muted:#5d6470;--line:#e4e2dc;--accent:#0b5d55;--card:#fff}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.65 system-ui,sans-serif}main{max-width:920px;margin:auto;padding:32px 24px 70px}a{color:var(--accent)}nav{display:flex;justify-content:space-between;gap:20px;font-size:15px}h1{font-size:clamp(34px,5vw,54px);line-height:1.1;letter-spacing:-1.5px;max-width:780px;margin-top:64px}h2{margin-top:48px;line-height:1.25}p{max-width:780px}.lead{font-size:21px;color:var(--muted)}pre{overflow:auto;background:#12151a;color:#d9dee6;padding:22px;border-radius:12px;font-size:15px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.card{padding:22px;border:1px solid var(--line);border-radius:12px;background:var(--card)}h3{margin:0 0 10px}.card p{margin:0;color:var(--muted)}.example{border-left:4px solid var(--accent);padding:4px 0 4px 22px}.note{color:var(--muted)}footer{margin-top:60px;border-top:1px solid var(--line);padding-top:20px;font-size:14px}@media(max-width:620px){.grid{grid-template-columns:1fr}main{padding:24px 18px}h1{margin-top:42px}}@media(prefers-color-scheme:dark){:root{--bg:#0e1013;--fg:#e9ebef;--muted:#9aa2ad;--line:#262b32;--accent:#3cc4b4;--card:#161a1f}}
+textarea{width:100%;min-height:220px;font:13.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--fg)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:12px 0}
+.btn{display:inline-block;padding:10px 16px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--fg);font-weight:600;cursor:pointer;text-decoration:none}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn[disabled]{opacity:.6;cursor:wait}
+.counts{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 16px}
+.pill{border:1px solid var(--line);border-radius:999px;padding:3px 12px;font-weight:600;font-size:14px}
+.sev-critical{color:#b42318}.sev-high{color:#b54708}.sev-medium{color:#8a6d00}.sev-low{color:var(--muted)}
+.finding{border:1px solid var(--line);border-left:4px solid var(--line);border-radius:10px;padding:12px 14px;margin:10px 0;background:var(--card)}
+.finding.critical{border-left-color:#b42318}.finding.high{border-left-color:#b54708}.finding.medium{border-left-color:#c9a300}
+.finding h3{margin:0 0 4px;font-size:16px}.finding p{margin:4px 0}.finding .fix{font-size:15px}
+.status{color:var(--muted);font-size:15px}
+details summary{cursor:pointer;font-weight:600}
+</style></head><body><main>
+<nav><a href="/">NativeKeel</a><a href="/sample-report.html">Sample report</a><a href="/ai-agents.html">Use with your coding agent</a></nav>
+<h1>Check your React Native app’s package.json</h1>
+<p class="lead">Paste a React Native or Expo <code>package.json</code>. NativeKeel checks it right here in your browser: unsupported versions, libraries that block the New Architecture or are no longer maintained, major updates, and an upgrade plan in the order to do it.</p>
+<p class="status">Your file stays in this tab. The page only asks npm, React Native Directory and unpkg about the package names in it, the same lookups the CLI makes.</p>
+<label for="pkg"><strong>package.json</strong></label>
+<textarea id="pkg" spellcheck="false" placeholder='{ "dependencies": { "react-native": "0.77.1", ... } }'></textarea>
+<details><summary>Expo app? Add app.json (optional)</summary><textarea id="app" spellcheck="false" style="min-height:120px" placeholder='{ "expo": { ... } }'></textarea></details>
+<div class="row"><button class="btn primary" id="run" type="button">Check</button><button class="btn" id="example" type="button">Try an example</button><span class="status" id="status"></span></div>
+<section id="out" aria-live="polite"></section>
+<h2>What this page does not check</h2>
+<p>Only what a package.json shows. The full scan also reads your code and native projects: leaked keys, OWASP MASVS security findings, known vulnerabilities in the exact versions you ship, Google Play and App Store settings, crash risks in native files, accessibility, and your release bundle. Run it locally, nothing to install:</p>
+<pre><code>npx nativekeel</code></pre>
+<p>Prefer to hand the upgrade over? <a href="/#help">Expert help</a>.</p>
+</main>
+<script type="module">
+import { runCheck } from '/check/checker.js';
+const $ = (id) => document.getElementById(id);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
+const EXAMPLE = JSON.stringify({ name: 'example-app', dependencies: { 'react-native': '0.77.1', react: '18.3.1', 'react-native-fs': '^2.20.0', 'react-native-fast-image': '^8.6.3', '@react-native-community/push-notification-ios': '^1.11.0', 'react-native-reanimated': '^3.16.0', '@react-navigation/native': '^6.1.18' } }, null, 2);
+$('example').onclick = () => { $('pkg').value = EXAMPLE; $('run').click(); };
+const ORDER = ['critical', 'high', 'medium', 'low', 'info'];
+$('run').onclick = async () => {
+  const out = $('out'); out.replaceChildren(); const text = $('pkg').value.trim();
+  if (!text) { $('status').textContent = 'Paste a package.json first.'; return; }
+  try { JSON.parse(text); } catch { $('status').textContent = 'That is not valid JSON.'; return; }
+  $('run').disabled = true; $('status').textContent = 'Checking… (a few seconds: it looks up each package)';
+  try {
+    const { result, plan } = await runCheck({ packageJson: text, appJson: $('app').value });
+    const findings = [...result.findings].sort((a, b) => ORDER.indexOf(a.severity) - ORDER.indexOf(b.severity));
+    const shown = findings.filter((f) => f.severity !== 'info');
+    const p = result.project || {};
+    out.append(el('h2', '', 'Result'), el('p', 'status', [p.reactNative && `React Native ${p.reactNative}`, p.expo && `Expo SDK ${p.expo}`, `${(result.deps || []).length} dependencies checked`].filter(Boolean).join(' · ')));
+    const counts = el('div', 'counts');
+    for (const s of ['critical', 'high', 'medium', 'low']) { const n = shown.filter((f) => f.severity === s).length; counts.append(el('span', `pill sev-${s}`, `${n} ${s}`)); }
+    out.append(counts);
+    if (!shown.length) out.append(el('p', '', 'No problems found in the dependencies. Run npx nativekeel for the full scan of your code and native projects.'));
+    for (const f of shown) {
+      const card = el('div', `finding ${f.severity}`);
+      card.append(el('h3', '', f.title), el('p', `sev-${f.severity}`, f.severity.toUpperCase()), el('p', '', f.detail || ''));
+      if (f.fix && f.fix.step) card.append(el('p', 'fix', `Fix: ${f.fix.step.replace(/`/g, '')}`));
+      out.append(card);
+    }
+    if (plan && plan.phases && plan.phases.length) {
+      const d = el('details'); d.append(el('summary', '', `Upgrade plan (${plan.phases.length} steps)`));
+      plan.phases.forEach((ph, i) => { d.append(el('h3', '', `${i + 1}. ${ph.title}`), el('p', 'status', ph.why || '')); const ul = el('ul'); for (const s of ph.steps || []) ul.append(el('li', '', String(s).replace(/[`*]/g, ''))); d.append(ul); });
+      out.append(d);
+    }
+    out.append(el('p', 'status', 'Known vulnerabilities, leaked keys, store settings, native crash risks and accessibility need the full scan: npx nativekeel'));
+    $('status').textContent = '';
+  } catch (e) {
+    $('status').textContent = `Could not check it: ${e.message}`;
+  } finally { $('run').disabled = false; }
+};
+</script>
+</body></html>

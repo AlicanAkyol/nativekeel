@@ -40,6 +40,11 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.84</h2><p class="date">15 October 2026</p>
+<ul>
+<li><span class="tag">New</span><b>Check a package.json in your browser.</b> <a href="/check">nativekeel.com/check</a> runs the CLI&#39;s own analysis in the page on the package.json (and app.json) you paste: unsupported React Native and Expo versions, libraries without New Architecture support or no longer maintained, major updates, and the upgrade plan. Your file stays in the tab; the page asks npm, React Native Directory and unpkg about the package names, the same lookups the CLI makes. Known vulnerabilities and everything that needs your code (leaked keys, native files, store settings, accessibility) stay in <code>npx nativekeel</code>.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.83</h2><p class="date">15 October 2026</p>
 <ul>
 <li><span class="tag">CI</span><b>A comment on every pull request.</b> With <code>pr-comment: true</code> and <code>pull-requests: write</code>, the GitHub Action compares each pull request with its base commit and keeps one comment up to date: the findings this pull request adds or fixes, by severity, and the app&#39;s totals. It is edited on every push, not repeated, and no code runs. Pull requests from forks only get the job summary, because their token is read-only.</li>
