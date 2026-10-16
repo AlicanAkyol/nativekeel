@@ -20,6 +20,7 @@ export function markdownReport(result, { verbose = false } = {}) {
     `${ICON.critical} ${n.critical} critical · ${ICON.high} ${n.high} high · ${ICON.medium} ${n.medium} medium · ${ICON.low} ${n.low} low`,
     '',
   ];
+  if (result.ratings) lines.push(`Ratings: ${result.ratings.map((r) => `${r.label} **${r.rating}**`).join(' · ')}`, '');
 
   const main = result.findings.filter((f) => ['critical', 'high', 'medium'].includes(f.severity));
   if (main.length) {

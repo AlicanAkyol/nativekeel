@@ -40,6 +40,12 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.89</h2><p class="date">16 October 2026</p>
+<ul>
+<li><span class="tag">New</span><b>Ratings from A to E.</b> Every report (terminal, HTML, Markdown, JSON) now rates six areas the way SonarQube rates code: Security, Store, Stability, Upgrade, Performance and Accessibility. A means nothing found in that area, E at least one critical finding. Ratings follow the baseline, so CI sees what is new.</li>
+<li><span class="tag">New</span><b><code>npx nativekeel fleet</code>: every app at once.</b> Point it at a folder of client projects or a monorepo and it scans each React Native and Expo app, then shows them in one table, worst first: versions, the six ratings, critical and high counts, and the store and end-of-support deadlines each app faces. <code>--html</code> saves a page you can share (with <code>--brand</code>), <code>--markdown</code> and <code>--json</code> work too, and <code>--fail-on</code> applies across all apps.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.88</h2><p class="date">16 October 2026</p>
 <ul>
 <li><span class="tag">New check</span><b>Libraries that stop the iOS build on React Native 0.87.</b> React Native 0.87 serves its iOS headers from XCFrameworks, so a library that writes <code>#import "RCTBridge.h"</code> instead of <code>#import &lt;React/RCTBridge.h&gt;</code> fails with "file not found". NativeKeel now reads the iOS code of your installed libraries and your own: before the upgrade it lists them as work for 0.87, after it as the reason the build fails. We compiled every React Native header both ways to know exactly which imports break; among the 248 most downloaded native libraries it finds 5, including react-native-date-picker, @react-native-menu/menu and react-native-bottom-tabs. <a href="/fix/rctcomponent-h-file-not-found-react-native-0-87">Fix and workaround</a>.</li>

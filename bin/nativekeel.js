@@ -2,13 +2,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadProject } from '../src/project.js';
-import { analyze, SEVERITIES } from '../src/analyze.js';
+import { loadProject, findAppFolders } from '../src/project.js';
+import { analyze, SEVERITIES, countBySeverity } from '../src/analyze.js';
 import { textReport } from '../src/report-text.js';
 import { htmlReport } from '../src/report-html.js';
 import { sarifReport } from '../src/report-sarif.js';
 import { markdownReport } from '../src/report-md.js';
 import { buildPlan, planToMarkdown } from '../src/plan.js';
+import { ratings } from '../src/ratings.js';
 import { applyBaseline, saveBaseline } from '../src/baseline.js';
 import { compareScans, compareToMarkdown } from '../src/compare.js';
 import { securityOnly } from '../src/security-review.js';
@@ -16,7 +17,7 @@ import { buildImprovementPlan, improvementToMarkdown, improvementToText } from '
 import { SITE_URL } from '../src/config.js';
 
 const VALUE_FLAGS = new Set(['--html', '--out', '--baseline', '--save-baseline', '--brand', '--sarif', '--markdown', '--fail-on', '--path', '--base', '--comment', '--report-url']);
-const COMMANDS = new Set(['scan', 'security', 'improve', 'bundle', 'plan', 'compare', 'compare-imports', 'prepare-imports', 'explain', 'verify', 'mcp', 'help']);
+const COMMANDS = new Set(['scan', 'security', 'improve', 'bundle', 'plan', 'compare', 'compare-imports', 'prepare-imports', 'explain', 'verify', 'fleet', 'mcp', 'help']);
 
 function parseArgs(argv) {
   const flags = {};
@@ -52,6 +53,9 @@ Usage
                                  from the source map a release build wrote; with --base,
                                  what grew, shrank or was added since that build (--json)
   npx nativekeel plan [path]     Write a step-by-step upgrade plan
+  npx nativekeel fleet [folder ...]
+                                 Several apps side by side: versions, A–E ratings
+                                 and store deadlines (--html, --markdown, --json)
   npx nativekeel compare <before.json> <after.json>
                                  What got fixed and what is new between two scans
   npx nativekeel explain "<error>" [--path <app>]
@@ -105,6 +109,41 @@ function packageVersion() {
 function write(file, content) {
   fs.writeFileSync(file, content);
   process.stderr.write(`Saved ${path.resolve(file)}\n`);
+}
+
+// Every app under the given folders (or the folders themselves when they are apps).
+async function runFleet(positional, flags, failOn) {
+  const { fleetRow, sortFleet, fleetText, fleetMarkdown, fleetHtml } = await import('../src/fleet.js');
+  const apps = [];
+  for (const given of positional.length ? positional : ['.']) {
+    const dir = path.resolve(given);
+    try {
+      loadProject(dir);
+      apps.push(dir);
+    } catch {
+      for (const a of findAppFolders(dir, 4)) apps.push(path.join(dir, a));
+    }
+  }
+  if (!apps.length) fail('No React Native or Expo app found in the given folders.');
+  const rows = [];
+  for (const dir of [...new Set(apps)]) {
+    const rel = path.relative(process.cwd(), dir) || '.';
+    try {
+      const project = loadProject(dir);
+      if (!flags.json) process.stderr.write(`Scanning ${rel}${flags.offline ? ' (offline)' : ''} …\n`);
+      const result = await analyze(project, flags.offline ? { get: async () => null, offline: true } : {});
+      rows.push({ ...fleetRow(result, rel), counts: countBySeverity(result.findings) });
+    } catch (e) {
+      rows.push({ app: path.basename(dir), path: rel, error: e.message.split('\n')[0] });
+    }
+  }
+  const sorted = sortFleet(rows);
+  if (flags.html) write(flags.html, fleetHtml(sorted, { brand: flags.brand || null }));
+  if (flags.markdown) write(flags.markdown, fleetMarkdown(sorted));
+  console.log(flags.json ? JSON.stringify({ tool: 'nativekeel', scannedAt: new Date().toISOString(), apps: sorted }, null, 2) : fleetText(sorted, { color: process.stdout.isTTY }));
+  if (failOn === 'never') return 0;
+  const threshold = SEVERITIES.indexOf(failOn);
+  return sorted.some((r) => r.counts && SEVERITIES.slice(0, threshold + 1).some((s) => r.counts[s] > 0)) ? 1 : 0;
 }
 
 async function main() {
@@ -251,6 +290,7 @@ async function main() {
 
   const failOn = flags['fail-on'] || 'critical';
   if (!['critical', 'high', 'medium', 'low', 'never'].includes(failOn)) fail('--fail-on must be one of critical, high, medium, low, never');
+  if (command === 'fleet') return runFleet(positional, flags, failOn);
   let result = await runScan(root, flags);
   if (command === 'security') result = securityOnly(result);
   if (flags['save-baseline']) {
@@ -266,6 +306,9 @@ async function main() {
   }
 
   if (command === 'security') result = securityOnly(result);
+  // Ratings follow what is shown (after the baseline); a security-only report rates nothing else.
+  if (command === 'security') delete result.ratings;
+  else result.ratings = ratings(result.findings);
   if (flags.html) write(flags.html, htmlReport(result, { brand }));
   if (flags.markdown) write(flags.markdown, markdownReport(result, { verbose: !!flags.verbose }));
   if (flags.sarif) write(flags.sarif, `${JSON.stringify(sarifReport(result, { version: packageVersion() }), null, 2)}\n`);

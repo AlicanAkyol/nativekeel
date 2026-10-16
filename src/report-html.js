@@ -58,6 +58,8 @@ h1{font-size:26px;margin:0 0 4px}h2{font-size:19px;margin:32px 0 12px}h2 small{f
 .stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px}
 .stat b{display:block;font-size:24px}.stat span{color:var(--muted);font-size:13px}
 .stat.critical b{color:var(--critical)}.stat.high b{color:var(--high)}
+.ratings{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}.rating{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 10px;min-width:0}.rating b{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:6px;color:#fff;font-size:15px;flex:none}.rating span{font-size:13px;color:var(--muted);overflow-wrap:normal;word-break:normal}.rA b,.rB b{background:#2e7d32}.rC b{background:#8a6d00}.rD b{background:#b26a00}.rE b{background:#c62828}
+@media (max-width:560px){.ratings{grid-template-columns:repeat(2,1fr)}}
 .facts{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin-top:12px;display:flex;flex-wrap:wrap;gap:6px 24px;font-size:14px}
 ul.list{list-style:none;padding:0;margin:0;display:grid;gap:8px}
 main{overflow-wrap:anywhere}code{overflow-wrap:anywhere;word-break:break-word}.f>div,.sg,.stats>*{min-width:0}.facts{display:flex;flex-wrap:wrap;gap:6px 16px}
@@ -86,6 +88,7 @@ footer{margin-top:40px;color:var(--muted);font-size:13px}a{color:var(--accent)}
 <div class="stat"><b>${n.medium}</b><span>medium</span></div>
 <div class="stat"><b>${n.low}</b><span>low</span></div>
 </div>
+${result.ratings ? `<div class="ratings" aria-label="Ratings by area: A means nothing found, E means a critical finding">${result.ratings.map((r) => `<div class="rating r${r.rating}"><b>${r.rating}</b><span>${esc(r.label)}</span></div>`).join('')}</div>` : ''}
 <div class="facts">
 ${p.reactNative ? `<span>React Native <b>${esc(p.reactNative)}</b>${result.latest.reactNative ? ` (latest ${esc(result.latest.reactNative)})` : ''}</span>` : ''}
 ${p.expo ? `<span>Expo SDK <b>${esc(p.expo.split('.')[0])}</b></span>` : ''}

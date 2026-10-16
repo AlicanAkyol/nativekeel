@@ -1,4 +1,5 @@
 import fs from './read-boundary.js';
+import { ratings } from './ratings.js';
 import { validPackageName } from './package-name.js';
 import path from 'node:path';
 import { cleanVersion, findPackageDir, installedVersion, versionFromSpec } from './project.js';
@@ -642,6 +643,7 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
     findings,
   };
   result.securityReview = securityOverview(result);
+  result.ratings = ratings(findings);
   return result;
 }
 
