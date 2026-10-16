@@ -40,16 +40,16 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
-<div class="rel"><h2>0.1.87</h2><p class="date">15 October 2026</p>
-<ul>
-<li><span class="tag">Report</span><b>Help line only when there is a deadline.</b> The terminal report used to end with a link to the help page on every scan with serious findings. Now it shows one line with the contact address, and only when a critical or high finding has an outside deadline: Play target SDK, 16 KB pages, Xcode 27 UIScene, unsupported React Native or Expo, or New Architecture off. CI, JSON, SARIF and MCP output are unchanged.</li>
-</ul></div>
-
-<div class="rel"><h2>0.1.87</h2><p class="date">16 October 2026</p>
+<div class="rel"><h2>0.1.88</h2><p class="date">16 October 2026</p>
 <ul>
 <li><span class="tag">New check</span><b>Libraries that stop the iOS build on React Native 0.87.</b> React Native 0.87 serves its iOS headers from XCFrameworks, so a library that writes <code>#import "RCTBridge.h"</code> instead of <code>#import &lt;React/RCTBridge.h&gt;</code> fails with "file not found". NativeKeel now reads the iOS code of your installed libraries and your own: before the upgrade it lists them as work for 0.87, after it as the reason the build fails. We compiled every React Native header both ways to know exactly which imports break; among the 248 most downloaded native libraries it finds 5, including react-native-date-picker, @react-native-menu/menu and react-native-bottom-tabs. <a href="/fix/rctcomponent-h-file-not-found-react-native-0-87">Fix and workaround</a>.</li>
 <li><span class="tag">Crash</span>On React Native 0.87 and later, code that still uses <code>InteractionManager</code> is reported as a crash with the file and line (it was only listed as upcoming work before). <a href="/fix/interactionmanager-removed-react-native-0-87">How to move to requestIdleCallback</a>.</li>
 <li><span class="tag">Explain</span><code>nativekeel explain</code> recognises any "'RCT….h' file not found" and the development-build InteractionManager message.</li>
+</ul></div>
+
+<div class="rel"><h2>0.1.87</h2><p class="date">15 October 2026</p>
+<ul>
+<li><span class="tag">Report</span><b>Help line only when there is a deadline.</b> The terminal report used to end with a link to the help page on every scan with serious findings. Now it shows one line with the contact address, and only when a critical or high finding has an outside deadline: Play target SDK, 16 KB pages, Xcode 27 UIScene, unsupported React Native or Expo, or New Architecture off. CI, JSON, SARIF and MCP output are unchanged.</li>
 </ul></div>
 
 <div class="rel"><h2>0.1.86</h2><p class="date">15 October 2026</p>
