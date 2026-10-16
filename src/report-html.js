@@ -89,6 +89,7 @@ footer{margin-top:40px;color:var(--muted);font-size:13px}a{color:var(--accent)}
 <div class="stat"><b>${n.low}</b><span>low</span></div>
 </div>
 ${result.ratings ? `<div class="ratings" aria-label="Ratings by area: A means nothing found, E means a critical finding">${result.ratings.map((r) => `<div class="rating r${r.rating}"><b>${r.rating}</b><span>${esc(r.label)}</span></div>`).join('')}</div>` : ''}
+${result.settings && result.settings.ignored.length ? `<p class="meta">${result.settings.ignored.length} finding${result.settings.ignored.length === 1 ? '' : 's'} ignored by <code>${esc(result.settings.file)}</code>: ${result.settings.ignored.map((i) => `${esc(i.id)} (${esc(i.reason)})`).join('; ')}</p>` : ''}
 <div class="facts">
 ${p.reactNative ? `<span>React Native <b>${esc(p.reactNative)}</b>${result.latest.reactNative ? ` (latest ${esc(result.latest.reactNative)})` : ''}</span>` : ''}
 ${p.expo ? `<span>Expo SDK <b>${esc(p.expo.split('.')[0])}</b></span>` : ''}

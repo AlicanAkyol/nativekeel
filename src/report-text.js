@@ -70,6 +70,10 @@ export function textReport(result, { color = true, verbose = false } = {}) {
     out.push('');
   }
 
+  if (result.settings && result.settings.ignored.length) {
+    const ig = result.settings.ignored;
+    out.push(c.gray(`${result.settings.file}: ${ig.length} finding${ig.length === 1 ? '' : 's'} ignored by the team (${ig.slice(0, 3).map((i) => `${i.id}: ${i.reason}`).join('; ')}${ig.length > 3 ? '; …' : ''}).`));
+  }
   if (result.baseline) {
     out.push(c.gray(`Baseline ${result.baseline.file}: ${result.baseline.suppressed} known findings hidden${result.baseline.fixed.length ? `, ${result.baseline.fixed.length} fixed since` : ''}.`));
   }

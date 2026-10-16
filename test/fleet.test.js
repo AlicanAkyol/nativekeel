@@ -35,7 +35,8 @@ test('fleet: apps in a folder (monorepo or client folders), worst first, one tab
   const res = run(['fleet', root, '--offline', '--json']);
   assert.equal(res.status, 1, 'a critical finding in any app fails, like a single scan');
   const out = JSON.parse(res.stdout);
-  assert.deepEqual(out.apps.map((a) => a.path), [path.relative(process.cwd(), path.join(root, 'clients/leaky')), path.relative(process.cwd(), path.join(root, 'clients/clean'))]);
+  assert.deepEqual(out.apps.map((a) => a.path), [path.join(path.basename(root), 'clients/leaky'), path.join(path.basename(root), 'clients/clean')], 'outside the current folder: shown from the given folder');
+  assert.deepEqual(JSON.parse(run(['fleet', 'clients', '--offline', '--json'], { cwd: root }).stdout).apps.map((a) => a.path), ['clients/leaky', 'clients/clean']);
   assert.equal(out.apps[0].ratings.find((x) => x.key === 'security').rating, 'E');
   assert.equal(run(['fleet', root, '--offline', '--fail-on', 'never']).status, 0);
   const html = path.join(root, 'fleet.html');

@@ -1,5 +1,6 @@
 import fs from './read-boundary.js';
 import { ratings } from './ratings.js';
+import { readSettings, applySettings } from './settings.js';
 import { validPackageName } from './package-name.js';
 import path from 'node:path';
 import { cleanVersion, findPackageDir, installedVersion, versionFromSpec } from './project.js';
@@ -104,7 +105,7 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
   // Requests that failed even after retries (rate limits, network): reported, never hidden.
   const net = { failed: 0, deadline: Date.now() + (Number(process.env.NATIVEKEEL_NETWORK_BUDGET_MS) || 90000) };
   const registry = createRegistry(get || ((url, headers, body) => fetchJson(url, headers, net, { body })));
-  const findings = [];
+  let findings = [];
   const add = (f) => findings.push(f);
 
   // Packages from the same monorepo (workspace:, link:, file:, portal:) are developed in the repo:
@@ -618,6 +619,10 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
     if (f.severity !== 'info') security[g]++;
   }
   findings.sort((a, b) => SEVERITIES.indexOf(a.severity) - SEVERITIES.indexOf(b.severity));
+  const settings = readSettings(project.root);
+  const applied = applySettings(findings, settings);
+  findings = applied.findings;
+  if (settings) warnings.push(...settings.warnings);
   const result = {
     tool: 'nativekeel',
     mobileSecurityCoverage: mobile.coverage,
@@ -641,6 +646,7 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
     warnings,
     deps,
     findings,
+    ...(settings ? { settings: { file: settings.file, failOn: settings.failOn, ignored: applied.ignored } } : {}),
   };
   result.securityReview = securityOverview(result);
   result.ratings = ratings(findings);

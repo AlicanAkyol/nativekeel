@@ -9,8 +9,8 @@ inputs:
     description: 'App folder (where package.json is)'
     default: .
   fail-on:
-    description: 'Fail at this severity or above (critical, high, medium, low, never)'
-    default: critical
+    description: 'Fail at this severity or above (critical, high, medium, low, never). Default: failOn in .nativekeel.json, else critical'
+    default: ''
   baseline:
     description: 'Baseline file; only findings not in it are reported'
     default: ''
@@ -42,7 +42,8 @@ runs:
         NK_SARIF: ${{ inputs.sarif }}
         NK_OFFLINE: ${{ inputs.offline }}
       run: |
-        args=("$NK_PATH" --fail-on "$NK_FAIL_ON" --markdown "$RUNNER_TEMP/nativekeel.md")
+        args=("$NK_PATH" --markdown "$RUNNER_TEMP/nativekeel.md")
+        [ -n "$NK_FAIL_ON" ] && args+=(--fail-on "$NK_FAIL_ON")
         [ -n "$NK_BASELINE" ] && args+=(--baseline "$NK_BASELINE")
         [ "$NK_SARIF" = "true" ] && args+=(--sarif "$RUNNER_TEMP/nativekeel.sarif")
         [ "$NK_OFFLINE" = "true" ] && args+=(--offline)

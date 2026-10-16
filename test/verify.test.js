@@ -113,5 +113,10 @@ test('pull request comment lists new and fixed findings by severity, with the ma
   assert.match(md, /\*\*2 new\*\*, \*\*1 fixed\*\* compared with `abcdef1`/);
   assert.ok(md.indexOf('Stripe key') < md.indexOf('Small img thing'));
   assert.match(md, /Whole app: 1 critical · 2 medium · 1 low\. \[Full report\]\(https:\/\/github\.com\/o\/r\/actions\/runs\/9\)/);
-  assert.match(prComment({ commit: 'abc1234', diff: { added: [], fixed: [], counts: { after: {} } } }), /No new findings and nothing fixed/);
+  assert.match(md, /Quality gate: ❌ failed\*\*, 1 new critical or high finding\./);
+  const clean = prComment({ commit: 'abc1234', diff: { added: [], fixed: [], counts: { after: {} } } });
+  assert.match(clean, /No new findings and nothing fixed/);
+  assert.match(clean, /Quality gate: ✅ passed/);
+  const rated = prComment({ ...r, ratings: { before: [{ key: 'security', label: 'Security', rating: 'B' }, { key: 'store', label: 'Store', rating: 'D' }], after: [{ key: 'security', label: 'Security', rating: 'E' }, { key: 'store', label: 'Store', rating: 'D' }] } });
+  assert.match(rated, /Ratings: Security \*\*E\*\* \(was B\) · Store \*\*D\*\*$/m);
 });

@@ -87,6 +87,9 @@ Plan options
 The scan exits with code 1 when a critical issue is found (see --fail-on), so it
 can gate CI.
 
+Team settings: a committed .nativekeel.json sets failOn and lists accepted
+findings, each with a reason: {"failOn":"high","ignore":[{"id":"flipper","reason":"..."}]}
+
 Privacy: your code never leaves your machine. Without --offline, the only
 requests are package-name lookups on registry.npmjs.org and
 reactnative.directory. Secret values are always masked.  ${SITE_URL}`;
@@ -115,24 +118,35 @@ function write(file, content) {
 async function runFleet(positional, flags, failOn) {
   const { fleetRow, sortFleet, fleetText, fleetMarkdown, fleetHtml } = await import('../src/fleet.js');
   const apps = [];
+  // Shown relative to the current folder, or from the given folder's name when it is elsewhere.
+  const labels = new Map();
+  const label = (dir, given) => {
+    const rel = path.relative(process.cwd(), dir) || '.';
+    return rel.startsWith('..') ? path.join(path.basename(given), path.relative(given, dir)) : rel;
+  };
   for (const given of positional.length ? positional : ['.']) {
     const dir = path.resolve(given);
+    let found = [];
     try {
       loadProject(dir);
-      apps.push(dir);
+      found = [dir];
     } catch {
-      for (const a of findAppFolders(dir, 4)) apps.push(path.join(dir, a));
+      found = findAppFolders(dir, 4).map((a) => path.join(dir, a));
+    }
+    for (const app of found) {
+      apps.push(app);
+      if (!labels.has(app)) labels.set(app, label(app, dir));
     }
   }
   if (!apps.length) fail('No React Native or Expo app found in the given folders.');
   const rows = [];
   for (const dir of [...new Set(apps)]) {
-    const rel = path.relative(process.cwd(), dir) || '.';
+    const rel = labels.get(dir);
     try {
       const project = loadProject(dir);
       if (!flags.json) process.stderr.write(`Scanning ${rel}${flags.offline ? ' (offline)' : ''} …\n`);
       const result = await analyze(project, flags.offline ? { get: async () => null, offline: true } : {});
-      rows.push({ ...fleetRow(result, rel), counts: countBySeverity(result.findings) });
+      rows.push({ ...fleetRow(result, rel), counts: countBySeverity(result.findings), failOn: (result.settings && result.settings.failOn) || null });
     } catch (e) {
       rows.push({ app: path.basename(dir), path: rel, error: e.message.split('\n')[0] });
     }
@@ -141,9 +155,12 @@ async function runFleet(positional, flags, failOn) {
   if (flags.html) write(flags.html, fleetHtml(sorted, { brand: flags.brand || null }));
   if (flags.markdown) write(flags.markdown, fleetMarkdown(sorted));
   console.log(flags.json ? JSON.stringify({ tool: 'nativekeel', scannedAt: new Date().toISOString(), apps: sorted }, null, 2) : fleetText(sorted, { color: process.stdout.isTTY }));
-  if (failOn === 'never') return 0;
-  const threshold = SEVERITIES.indexOf(failOn);
-  return sorted.some((r) => r.counts && SEVERITIES.slice(0, threshold + 1).some((s) => r.counts[s] > 0)) ? 1 : 0;
+  // --fail-on applies to every app; without it, each app's own .nativekeel.json decides.
+  const fails = (r) => {
+    const level = failOn || r.failOn || 'critical';
+    return level !== 'never' && SEVERITIES.slice(0, SEVERITIES.indexOf(level) + 1).some((s) => r.counts[s] > 0);
+  };
+  return sorted.some((r) => r.counts && fails(r)) ? 1 : 0;
 }
 
 async function main() {
@@ -288,10 +305,11 @@ async function main() {
     return 0;
   }
 
-  const failOn = flags['fail-on'] || 'critical';
-  if (!['critical', 'high', 'medium', 'low', 'never'].includes(failOn)) fail('--fail-on must be one of critical, high, medium, low, never');
-  if (command === 'fleet') return runFleet(positional, flags, failOn);
+  if (flags['fail-on'] && !['critical', 'high', 'medium', 'low', 'never'].includes(flags['fail-on'])) fail('--fail-on must be one of critical, high, medium, low, never');
+  if (command === 'fleet') return runFleet(positional, flags, flags['fail-on']);
   let result = await runScan(root, flags);
+  // --fail-on wins over the team's .nativekeel.json, which wins over the default.
+  const failOn = flags['fail-on'] || (result.settings && result.settings.failOn) || 'critical';
   if (command === 'security') result = securityOnly(result);
   if (flags['save-baseline']) {
     const count = saveBaseline(flags['save-baseline'], result);

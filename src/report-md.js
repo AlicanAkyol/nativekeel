@@ -20,6 +20,7 @@ export function markdownReport(result, { verbose = false } = {}) {
     `${ICON.critical} ${n.critical} critical · ${ICON.high} ${n.high} high · ${ICON.medium} ${n.medium} medium · ${ICON.low} ${n.low} low`,
     '',
   ];
+  if (result.settings && result.settings.ignored.length) lines.push(`${result.settings.ignored.length} finding${result.settings.ignored.length === 1 ? '' : 's'} ignored by \`${result.settings.file}\` (each with a reason).`, '');
   if (result.ratings) lines.push(`Ratings: ${result.ratings.map((r) => `${r.label} **${r.rating}**`).join(' · ')}`, '');
 
   const main = result.findings.filter((f) => ['critical', 'high', 'medium'].includes(f.severity));
