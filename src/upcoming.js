@@ -1,5 +1,6 @@
 import fs from './read-boundary.js';
 import path from 'node:path';
+import { unprefixedReactImports } from './react-headers.js';
 
 // What changes in the React Native and Expo versions ahead of the project, matched against its
 // own code: only the changes that touch this app are reported, each with file:line. Includes the
@@ -35,7 +36,7 @@ export const CHANGES = [
   { id: 'rn87-polyfills', rn: 87, kind: 'removed', title: '`react-native/rn-get-polyfills` and `@react-native/core-cli-utils` are gone', action: 'Use `@react-native/js-polyfills`.', code: [/react-native\/rn-get-polyfills|@react-native\/core-cli-utils/], config: true, source: RN_087 },
   { id: 'rn87-initialize-core', rn: 87, kind: 'removed', title: '`react-native/Libraries/Core/InitializeCore` is deprecated', action: 'Use `react-native/setup-env`.', code: [/react-native\/Libraries\/Core\/InitializeCore/], config: true, source: RN_087 },
   { id: 'rn87-metro-yaml', rn: 87, kind: 'tooling', title: 'Metro no longer reads YAML or `.es6` config files', action: 'Move the Metro config to `metro.config.js` (TypeScript and ESM configs are now supported).', files: [/^metro\.config\.(?:ya?ml|es6)$|^\.metro\.config\.ya?ml$/], source: RN_087 },
-  { id: 'rn87-bare-includes', rn: 87, kind: 'removed', title: 'Bare-form React header includes no longer resolve', action: 'Write `#import <React/RCTAppDelegate.h>` instead of `#import <RCTAppDelegate.h>`.', native: [/#import\s*<RCT\w+\.h>/], source: RN_087 },
+  { id: 'rn87-bare-includes', rn: 87, kind: 'removed', title: 'React headers imported without `React/` stop the iOS build', action: 'Write `#import <React/RCTBridge.h>` instead of `#import "RCTBridge.h"` or `#import <RCTBridge.h>`; for a library, update it or patch it (patch-package).', reactHeaders: true, source: RN_087 },
   { id: 'rn87-node', rn: 87, kind: 'tooling', title: 'Node.js 22.13 or newer is required', action: 'Update `.nvmrc`, `engines` and the CI Node version to 22.13+ (or 24.3+). Expo SDK 58 also rejects odd-numbered Node releases.', node: true, source: RN_087 },
 
   // Expo SDK 58 (beta)
@@ -70,25 +71,6 @@ function codeFiles(root) {
     }
   };
   walk(root, 0);
-  return out;
-}
-
-function nativeFiles(root) {
-  const out = [];
-  const walk = (dir, depth) => {
-    let entries = [];
-    try {
-      entries = fs.readdirSync(dir, { withFileTypes: true });
-    } catch {
-      return;
-    }
-    for (const e of entries) {
-      if (e.isDirectory()) {
-        if (depth < 5 && !/^(Pods|build|DerivedData|\..*)$/.test(e.name)) walk(path.join(dir, e.name), depth + 1);
-      } else if (/\.(m|mm|h)$/.test(e.name)) out.push(path.join(dir, e.name));
-    }
-  };
-  walk(path.join(root, 'ios'), 0);
   return out;
 }
 
@@ -169,13 +151,10 @@ export function upcomingChanges(project) {
       }
     }
     if (c.ts && !isTs && !hits.length) continue;
-    if (c.native && !project.managed) {
-      for (const f of nativeFiles(root)) {
-        const text = read(f);
-        const m = c.native[0].exec(text);
-        if (m) hits.push(`${path.relative(root, f).split(path.sep).join('/')}:${lineOf(text, m.index)}`);
-        if (hits.length >= 5) break;
-      }
+    if (c.reactHeaders) {
+      const { libraries, app } = unprefixedReactImports(project);
+      for (const l of libraries) hits.push(`${l.name}${l.version ? ` ${l.version}` : ''} (${l.hits[0].file}:${l.hits[0].line})`);
+      for (const h of app) hits.push(`${h.file}:${h.line}`);
     }
     if (c.files) {
       for (const name of fs.readdirSync(root)) if (c.files[0].test(name)) hits.push(name);

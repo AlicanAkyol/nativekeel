@@ -196,6 +196,7 @@ Add \`overflow: 'hidden'\` to the outer style if you used \`borderRadius\`.
   },
   {
     slug: 'text-defaultprops-react-19',
+    updated: '2026-10-15',
     error: 'Text.defaultProps has no effect after upgrading to React Native 0.78 (React 19)',
     title: 'Text.defaultProps not working in React Native 0.78+',
     description: 'React 19 ignores Text.defaultProps in React Native 0.78+: app-wide fonts and font-scaling limits stop applying with no error. Why, and the fix.',
@@ -232,6 +233,7 @@ Do the same for \`TextInput\`, then check the main screens at the largest system
   },
   {
     slug: 'appdelegate-window-unrecognized-selector',
+    updated: '2026-10-15',
     error: '-[AppDelegate window]: unrecognized selector sent to instance',
     title: '[AppDelegate window]: unrecognized selector: RN fix',
     description: 'Why a React Native or Expo app crashes with "-[AppDelegate window]: unrecognized selector" after adopting UIScene, which libraries cause it, and the fix.',
@@ -292,6 +294,7 @@ grep -rnE "delegate\]?\.window|delegate\] window\]" node_modules/*/ios node_modu
   },
   {
     slug: 'rcteventemitter-receiveevent-not-registered',
+    updated: '2026-10-15',
     error: 'Failed to call into JavaScript module method RCTEventEmitter.receiveEvent(). Module has not been registered as callable.',
     title: 'RCTEventEmitter.receiveEvent() not callable in React Native',
     description: '"Failed to call into JavaScript module method RCTEventEmitter.receiveEvent()" after a React Native 0.77+ upgrade: the missing AppDelegate line and the fix.',
@@ -337,6 +340,95 @@ Then \`cd ios && pod install\` and rebuild. Clearing caches or reinstalling pods
 **Check your project.** \`npx nativekeel\` reports an AppDelegate without \`RCTAppDependencyProvider\` on React Native 0.77 and later, before the error appears.
 `,
     sources: [['React Native 0.77 release notes: RCTAppDependencyProvider', 'https://reactnative.dev/blog/2025/01/21/version-0.77#rctappdependencyprovider'], ['React Native template 0.81: AppDelegate.swift', 'https://github.com/react-native-community/template/blob/0.81-stable/template/ios/HelloWorld/AppDelegate.swift']],
+  },
+  {
+    slug: 'interactionmanager-removed-react-native-0-87',
+    updated: '2026-10-16',
+    error: 'InteractionManager has been removed from react-native core.',
+    title: 'InteractionManager removed in React Native 0.87: the fix',
+    description: 'React Native 0.87 removed InteractionManager. The error in debug and release builds, and how to move runAfterInteractions to requestIdleCallback.',
+    body: `
+After upgrading to React Native 0.87 (or Expo SDK 58), code that waits for animations with \`InteractionManager\` stops working. A development build shows a red screen:
+
+\`\`\`
+Invariant Violation: InteractionManager has been removed from react-native core. Please refactor long tasks into smaller ones, and use 'requestIdleCallback' instead.
+\`\`\`
+
+A release build has no such message: the import is \`undefined\`, so the first call fails with \`TypeError: Cannot read property 'runAfterInteractions' of undefined\` and the screen (or the app) crashes.
+
+**Why.** The React Native 0.87 release notes list it under API removals: "Removed \`InteractionManager\` — use \`requestIdleCallback\` instead." The development message comes from a getter React Native 0.87 keeps on the \`react-native\` export only in development builds.
+
+**Fix.** \`requestIdleCallback\` is a global in React Native; there is nothing to import.
+
+\`\`\`
+- import { InteractionManager } from 'react-native';
+-
+- const task = InteractionManager.runAfterInteractions(() => loadData());
+- return () => task.cancel();
++ const id = requestIdleCallback(() => loadData());
++ return () => cancelIdleCallback(id);
+\`\`\`
+
+\`runAfterInteractions\` also returned a promise-like task (\`.then()\`, \`.done()\`). If your code awaited it, wrap the callback: \`await new Promise((resolve) => requestIdleCallback(resolve))\`. \`createInteractionHandle\` and \`clearInteractionHandle\` are gone with it; split the long work into smaller steps instead, as the error message suggests.
+
+If the call is inside a library rather than your code, update the library; patch it (patch-package) only if no release has the change yet.
+
+**Check your project.** \`npx nativekeel\` lists the files that use \`InteractionManager\`: before the upgrade as work for 0.87, and after it as a crash with the file and line.
+`,
+    sources: [['React Native 0.87 release notes: API removals', 'https://reactnative.dev/blog/2026/08/11/react-native-0.87#api-removals'], ['React Native 0.87.1 index.js (the development error)', 'https://github.com/facebook/react-native/blob/v0.87.1/packages/react-native/index.js']],
+  },
+  {
+    slug: 'rctcomponent-h-file-not-found-react-native-0-87',
+    updated: '2026-10-16',
+    error: "'RCTComponent.h' file not found",
+    title: "'RCTBridge.h' file not found after React Native 0.87",
+    description: "iOS build fails with 'RCTComponent.h' or 'RCTBridge.h' file not found after React Native 0.87: which libraries cause it, the fix and a workaround.",
+    body: `
+After upgrading to React Native 0.87 or 0.88 (Expo SDK 58), the iOS build stops inside a library:
+
+\`\`\`
+node_modules/react-native-date-picker/ios/DatePicker.m:7:9: error: 'RCTComponent.h' file not found
+node_modules/@react-native-menu/menu/ios/MenuViewManager.mm:3:9: 'RCTBridge.h' file not found
+\`\`\`
+
+**Why.** React Native 0.87 ships its iOS headers as header-only XCFrameworks. The release notes: "The one consumer-facing change is bare-form angle includes — if you import a React Native header without its namespace, add it". We compiled every \`RCT*.h\` header of React Native 0.87.1 on its own, in both setups:
+
+| Import | Default (prebuilt React Native) | React Native built from source |
+|---|---|---|
+| \`#import <React/RCTBridge.h>\` | works | works |
+| \`#import "RCTBridge.h"\` | **file not found** | works |
+| \`#import <RCTBridge.h>\` | **file not found** | **file not found** |
+
+A few headers still resolve in quotes (\`RCTFabricComponentsPlugins.h\`, \`RCTComponentViewHelpers.h\` and the CoreModules headers), which is why many Fabric libraries are unaffected. An import inside an \`#if __has_include(...)\` fallback is also fine: the compiler takes the \`<React/...>\` branch.
+
+**Libraries that hit it.** From the 248 most downloaded React Native libraries with iOS code, checked on 16 October 2026:
+
+| Library (version) | Import | Status |
+|---|---|---|
+| react-native-date-picker 5.0.13 | "RCTComponent.h", "RCTConvert.h" | [issue #974](https://github.com/henninghall/react-native-date-picker/issues/974), not released |
+| @react-native-menu/menu 2.0.0 | "RCTBridge.h" | [issue #1221](https://github.com/react-native-menu/menu/issues/1221), not released |
+| react-native-bottom-tabs 1.4.0 | "RCTConversions.h" | [fixed on main](https://github.com/callstack/react-native-bottom-tabs/issues/584), next release |
+| react-native-ios-context-menu 3.2.1 | "RCTBridge.h" | same import, no report yet |
+| react-native-ios-utilities 5.2.0 | "RCTBridge.h" | same import, no report yet |
+
+**Fix.** Update the library if a release has the change. Otherwise add the namespace yourself and keep it with patch-package:
+
+\`\`\`
+- #import "RCTComponent.h"
++ #import <React/RCTComponent.h>
+\`\`\`
+
+\`\`\`
+npx patch-package react-native-date-picker
+\`\`\`
+
+If your own iOS code (AppDelegate, native modules) has the same imports, change them the same way.
+
+**Workaround while you wait.** Building React Native from source still resolves the quoted form, at the cost of much slower clean builds. Bare CLI: \`RCT_USE_PREBUILT_RNCORE=0 bundle exec pod install\`. Expo: set \`buildReactNativeFromSource: true\` under \`ios\` in the \`expo-build-properties\` plugin, then prebuild again. It does not help with \`#import <RCTBridge.h>\`.
+
+**Check your project.** \`npx nativekeel\` reads the iOS sources of your installed libraries and your own code. Before the upgrade it lists them as work for 0.87; after it, as the reason the build fails, with file and line.
+`,
+    sources: [['React Native 0.87 release notes: Headers Breaking Changes', 'https://reactnative.dev/blog/2026/08/11/react-native-0.87#headers-breaking-changes'], ['Expo: expo-build-properties, buildReactNativeFromSource', 'https://docs.expo.dev/versions/latest/sdk/build-properties/']],
   },
   {
     slug: 'supabase-rls-disabled',
@@ -575,14 +667,14 @@ const head = (title, description, url) => `<!doctype html>
 fs.mkdirSync(path.join(SITE, 'fix'), { recursive: true });
 for (const p of PAGES) {
   const url = `${BASE}/fix/${p.slug}`;
-  const ld = { '@context': 'https://schema.org', '@type': 'TechArticle', headline: p.title, description: p.description, dateModified: UPDATED, author: { '@type': 'Organization', name: 'NativeKeel', url: BASE }, mainEntityOfPage: url };
+  const ld = { '@context': 'https://schema.org', '@type': 'TechArticle', headline: p.title, description: p.description, dateModified: p.updated || UPDATED, author: { '@type': 'Organization', name: 'NativeKeel', url: BASE }, mainEntityOfPage: url };
   const html = `${head(p.title, p.description, url)}
 <body><main>
 <p class="meta"><a href="/">NativeKeel</a> · <a href="/fix/">React Native fixes</a></p>
 <h1>${esc(p.error)}</h1>
-<p class="meta">Updated ${UPDATED}</p>
+<p class="meta">Updated ${p.updated || UPDATED}</p>
 ${md(p.body)}
-<div class="cta"><strong>Check your whole app in one command:</strong> <code>npx nativekeel</code><br><span class="meta">Free, runs locally (your code is not uploaded), no account. It reports this and 80 other upgrade, store, crash and security problems.</span></div>
+<div class="cta"><strong>Check your whole app in one command:</strong> <code>npx nativekeel</code><br><span class="meta">Free, runs locally (your code is not uploaded), no account. It reports this along with the other upgrade, store, crash and security problems it checks for.</span></div>
 <h2>Sources</h2>
 <ul>${p.sources.map(([t, u]) => `<li><a href="${u}">${esc(t)}</a></li>`).join('')}</ul>
 <script type="application/ld+json">${JSON.stringify(ld).replace(/</g, '\\u003c')}</script>

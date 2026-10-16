@@ -13,6 +13,8 @@ test('upcoming: React Native 0.87 removals found in app code, with file:line', (
     'src/A.tsx': "import { InteractionManager, StatusBar, Modal } from 'react-native';\nimport x from 'react-native/Libraries/Utilities/codegenNativeComponent';\nexport const A = () => (<>\n<StatusBar translucent />\n<Modal animated={false} />\n<ScrollView keyboardShouldPersistTaps={true} />\n</>);\nInteractionManager.runAfterInteractions(() => {});\n",
     'ios/App/AppDelegate.h': '#import <RCTAppDelegate.h>\n',
     'android/build.gradle': '',
+    'node_modules/react-native/package.json': { name: 'react-native', version: '0.86.3' },
+    'node_modules/react-native/Libraries/AppDelegate/RCTAppDelegate.h': '',
   });
   const changes = upcomingChanges(loadProject(root));
   const got = changes.map((c) => c.id);

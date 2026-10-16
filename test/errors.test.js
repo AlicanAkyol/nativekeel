@@ -38,7 +38,8 @@ test('explain_error: each known error is recognised from its real message', () =
 });
 
 test('explain_error: both forms of the removed-API message', () => {
-  assert.equal(explainError('ART has been removed from React Native. ')[0].id, 'removed-from-core');
+  assert.equal(explainError('ART has been removed from React Native. ')[0].id, 'removed-from-core');  assert.equal(explainError("Invariant Violation: InteractionManager has been removed from react-native core. Please refactor long tasks into smaller ones, and use 'requestIdleCallback' instead.")[0].id, 'interaction-manager-removed');
+  assert.equal(explainError("MenuViewManager.mm:3:9 'RCTBridge.h' file not found")[0].id, 'rctcomponent-header-not-found');
 });
 
 test('explain_error: unrelated text matches nothing', () => {

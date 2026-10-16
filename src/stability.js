@@ -329,7 +329,10 @@ const REMOVED_FROM_CORE = {
   ImagePickerIOS: 'react-native-image-picker',
   ProgressViewIOS: '@react-native-community/progress-view',
   ART: 'react-native-svg',
+  InteractionManager: 'requestIdleCallback (a global, no import)',
 };
+// Removed later than the rest (0.72/0.74); before that version the upcoming-changes check covers them.
+const REMOVED_IN = { InteractionManager: 87 };
 const REMOVED_PROP_TYPES = ['ViewPropTypes', 'ColorPropType', 'EdgeInsetsPropType', 'PointPropType'];
 // Deprecated in core and announced for removal (RN index.js warnOnce, checked 0.78-0.87).
 // They still work; moving now avoids a crash when they are removed.
@@ -362,6 +365,7 @@ export function removedCoreImports(project) {
     }
   };
   walk(root);
+  const minor = project.rnVersion ? Number(project.rnVersion.split('.')[1]) : null;
   for (const file of files) {
     const text = readText(file) || '';
     if (!text.includes("'react-native'") && !text.includes('"react-native"')) continue;
@@ -373,6 +377,7 @@ export function removedCoreImports(project) {
       for (const raw of b.names.split(',')) {
         const name = raw.trim().replace(/^type\s+/, '').split(/\s+as\s+/)[0].trim();
         const at = () => `${path.relative(root, file)}:${text.slice(0, b.index).split('\n').length}`;
+        if (REMOVED_IN[name] && !(minor !== null && minor >= REMOVED_IN[name])) continue;
         if ((REMOVED_FROM_CORE[name] || REMOVED_PROP_TYPES.includes(name)) && !used.has(name)) used.set(name, at());
         // Referenced anywhere besides the import itself? An import alone is harmless (undefined).
         if (REMOVED_FROM_CORE[name] || REMOVED_PROP_TYPES.includes(name)) {
@@ -383,7 +388,6 @@ export function removedCoreImports(project) {
       }
     }
   }
-  const minor = project.rnVersion ? Number(project.rnVersion.split('.')[1]) : null;
   const findings = [];
   if (deprecated.size) {
     const names = [...deprecated.keys()];
@@ -403,9 +407,10 @@ export function removedCoreImports(project) {
     });
   }
   if (!used.size) return findings;
-  const removedNow = (n) => (REMOVED_PROP_TYPES.includes(n) ? minor >= 74 : minor >= 72);
+  const removedNow = (n) => (REMOVED_IN[n] ? minor >= REMOVED_IN[n] : REMOVED_PROP_TYPES.includes(n) ? minor >= 74 : minor >= 72);
   const crashesNow = [...used.keys()].some((n) => removedNow(n) && referenced.has(n));
   const importOnly = [...used.keys()].every((n) => !referenced.has(n));
+  const moved = [...used.keys()].filter((n) => n !== 'InteractionManager');
   const list = [...used].map(([n, at]) => `${n} (${at}${referenced.has(n) ? '' : ', imported but not used'}) → ${REMOVED_FROM_CORE[n] || 'deprecated-react-native-prop-types'}`);
   return [
     ...findings,
@@ -417,7 +422,7 @@ export function removedCoreImports(project) {
         ? `${used.size} unused import${used.size === 1 ? '' : 's'} of APIs removed from React Native core`
         : `${used.size} import${used.size === 1 ? '' : 's'} of APIs removed from React Native core${crashesNow ? '' : ' (they break when you upgrade)'}`,
       detail: `${list.slice(0, 6).join('; ')}${list.length > 6 ? '; …' : ''}. On current React Native these imports are undefined in release builds (development builds throw "has been removed from react-native core"), so ${importOnly ? 'an import that is never used is harmless: delete it' : 'the code that calls them fails at that point. Install the replacement and change the import'}.`,
-      fix: { kind: 'crash', step: `Move ${[...used.keys()].map((n) => `\`${n}\``).join(', ')} off 'react-native' to their community packages (${[...new Set([...used.keys()].map((n) => REMOVED_FROM_CORE[n] || 'deprecated-react-native-prop-types'))].slice(0, 4).join(', ')}).` },
+      fix: { kind: 'crash', step: [moved.length ? `Move ${moved.map((n) => `\`${n}\``).join(', ')} off 'react-native' to their community packages (${[...new Set(moved.map((n) => REMOVED_FROM_CORE[n] || 'deprecated-react-native-prop-types'))].slice(0, 4).join(', ')}).` : '', used.has('InteractionManager') ? 'Replace `InteractionManager.runAfterInteractions(fn)` with `requestIdleCallback(fn)`.' : ''].filter(Boolean).join(' ') },
     },
   ];
 }

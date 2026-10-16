@@ -6,6 +6,7 @@ import { checkArchive, findBuiltArtifact } from './elf-align.js';
 import { PAGE_SIZE_16K, PLATFORM_MINIMUMS } from './rules.js';
 import { installedVersion as installedVersionOf } from './project.js';
 import { SITE_URL } from './config.js';
+import { unprefixedReactImports } from './react-headers.js';
 
 // Checks on native project files: store requirements and security settings that live
 // outside package.json. Every check returns findings in the same shape as analyze.js.
@@ -205,6 +206,26 @@ export function nativeChecks(project, { rnLatest = null, now = new Date() } = {}
         title: `iOS AppDelegate is missing RCTAppDependencyProvider (${path.relative(root, delegates[0])})`,
         detail: `Required since React Native 0.77. Without it, library Fabric components fall back to the legacy interop layer and send RCTEventEmitter events, which are not registered with the New Architecture: "RCTEventEmitter.receiveEvent() ... has not been registered as callable", logged in Debug, a launch crash in Release.${archOn ? '' : ' It will surface as soon as the New Architecture is turned on.'} Add the import and \`self.dependencyProvider = [RCTAppDependencyProvider new];\` before calling super (Swift and per-version snippets: ${SITE_URL}/fix/rcteventemitter-receiveevent-not-registered).`,
         fix: { kind: 'app-dependency-provider', file: path.relative(root, delegates[0]) },
+      });
+    }
+  }
+
+  // React Native 0.87+: React headers imported without "React/" are not found and the iOS build
+  // stops. Libraries are the usual source; before 0.87 the upcoming-changes check reports them.
+  if ((hasIos || project.managed) && rn !== null && rn >= 87) {
+    const { libraries, app } = unprefixedReactImports(project);
+    const where = [
+      ...libraries.map((l) => `${l.name}${l.version ? ` ${l.version}` : ''} (${l.hits[0].file}:${l.hits[0].line} ${l.hits[0].header})`),
+      ...app.slice(0, 3).map((h) => `${h.file}:${h.line} ${h.header}`),
+    ];
+    if (where.length) {
+      add({
+        id: 'ios-unprefixed-react-imports',
+        severity: 'critical',
+        area: 'native',
+        title: `iOS build fails: ${libraries.length ? `${libraries.length === 1 ? 'a library imports' : `${libraries.length} libraries import`}` : 'your code imports'} React headers without "React/"`,
+        detail: `${where.join('; ')}. Since React Native 0.87 these headers come from XCFrameworks and resolve only as <React/...>, so Xcode stops with "'RCT….h' file not found". ${libraries.length ? 'Update the library if a release fixes it; otherwise patch the import (patch-package) until it does. ' : ''}Write the import as #import <React/RCTBridge.h> (an import inside #if __has_include(...) is fine).${[...libraries.flatMap((l) => l.hits), ...app].every((h) => h.header.startsWith('"')) ? ' Until then, building React Native from source (RCT_USE_PREBUILT_RNCORE=0 pod install) still resolves the quoted form; it makes clean builds slower.' : ''} Details and library status: ${SITE_URL}/fix/rctcomponent-h-file-not-found-react-native-0-87`,
+        fix: { kind: 'known-issue', severity: 'critical', title: 'React headers imported without "React/" stop the iOS build', detail: `Change them to the <React/...> form${libraries.length ? ` in ${libraries.map((l) => l.name).join(', ')} (update the library, or patch-package until a release fixes it)` : ''}${app.length ? `${libraries.length ? ' and' : ''} in ${[...new Set(app.map((h) => h.file))].slice(0, 3).join(', ')}` : ''}.` },
       });
     }
   }

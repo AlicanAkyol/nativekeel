@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>'RCTBridge.h' file not found after React Native 0.87</title>
+<meta name="description" content="iOS build fails with 'RCTComponent.h' or 'RCTBridge.h' file not found after React Native 0.87: which libraries cause it, the fix and a workaround.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#0b5d55">
+<link rel="canonical" href="https://nativekeel.com/fix/rctcomponent-h-file-not-found-react-native-0-87">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="NativeKeel">
+<meta property="og:url" content="https://nativekeel.com/fix/rctcomponent-h-file-not-found-react-native-0-87">
+<meta property="og:title" content="'RCTBridge.h' file not found after React Native 0.87">
+<meta property="og:description" content="iOS build fails with 'RCTComponent.h' or 'RCTBridge.h' file not found after React Native 0.87: which libraries cause it, the fix and a workaround.">
+<meta property="og:image" content="https://nativekeel.com/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:description" content="iOS build fails with 'RCTComponent.h' or 'RCTBridge.h' file not found after React Native 0.87: which libraries cause it, the fix and a workaround.">
+<meta name="twitter:image" content="https://nativekeel.com/og.png">
+<style>:root{--bg:#fbfaf7;--text:#15171b;--muted:#5d6470;--accent:#0b5d55;--line:#e3e1db;--card:#ffffff;--code:#f1efea}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1013;--text:#e9ebef;--muted:#9aa2ad;--accent:#3cc4b4;--line:#262a31;--card:#15181d;--code:#1b1f25}}
+:root[data-theme="dark"]{--bg:#0e1013;--text:#e9ebef;--muted:#9aa2ad;--accent:#3cc4b4;--line:#262a31;--card:#15181d;--code:#1b1f25}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.65 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:760px;margin:0 auto;padding:40px 16px 64px;overflow-wrap:anywhere}
+h1{font-size:28px;line-height:1.25;margin:0 0 6px}h2{font-size:18px;margin:28px 0 6px}a{color:var(--accent)}p,li{color:var(--muted)}strong{color:var(--text)}
+code{font:14px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--code);padding:1px 5px;border-radius:5px}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow-x:auto}pre code{background:none;padding:0;white-space:pre-wrap}
+.cta{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:28px 0}.cta code{font-size:15px}
+.meta{font-size:14px;color:var(--muted)}ul.list li{margin:8px 0}table{border-collapse:collapse;width:100%;font-size:15px;margin:12px 0;display:block;overflow-x:auto}th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}th{font-weight:600}</style>
+</head>
+<body><main>
+<p class="meta"><a href="/">NativeKeel</a> · <a href="/fix/">React Native fixes</a></p>
+<h1>'RCTComponent.h' file not found</h1>
+<p class="meta">Updated 2026-10-16</p>
+<p>After upgrading to React Native 0.87 or 0.88 (Expo SDK 58), the iOS build stops inside a library:</p>
+<pre><code>node_modules/react-native-date-picker/ios/DatePicker.m:7:9: error: 'RCTComponent.h' file not found
+node_modules/@react-native-menu/menu/ios/MenuViewManager.mm:3:9: 'RCTBridge.h' file not found</code></pre>
+<p><strong>Why.</strong> React Native 0.87 ships its iOS headers as header-only XCFrameworks. The release notes: "The one consumer-facing change is bare-form angle includes — if you import a React Native header without its namespace, add it". We compiled every <code>RCT*.h</code> header of React Native 0.87.1 on its own, in both setups:</p>
+<table><thead><tr><th>Import</th><th>Default (prebuilt React Native)</th><th>React Native built from source</th></tr></thead><tbody><tr><td><code>#import &lt;React/RCTBridge.h&gt;</code></td><td>works</td><td>works</td></tr><tr><td><code>#import "RCTBridge.h"</code></td><td><strong>file not found</strong></td><td>works</td></tr><tr><td><code>#import &lt;RCTBridge.h&gt;</code></td><td><strong>file not found</strong></td><td><strong>file not found</strong></td></tr></tbody></table>
+<p>A few headers still resolve in quotes (<code>RCTFabricComponentsPlugins.h</code>, <code>RCTComponentViewHelpers.h</code> and the CoreModules headers), which is why many Fabric libraries are unaffected. An import inside an <code>#if __has_include(...)</code> fallback is also fine: the compiler takes the <code>&lt;React/...&gt;</code> branch.</p>
+<p><strong>Libraries that hit it.</strong> From the 248 most downloaded React Native libraries with iOS code, checked on 16 October 2026:</p>
+<table><thead><tr><th>Library (version)</th><th>Import</th><th>Status</th></tr></thead><tbody><tr><td>react-native-date-picker 5.0.13</td><td>"RCTComponent.h", "RCTConvert.h"</td><td><a href="https://github.com/henninghall/react-native-date-picker/issues/974">issue #974</a>, not released</td></tr><tr><td>@react-native-menu/menu 2.0.0</td><td>"RCTBridge.h"</td><td><a href="https://github.com/react-native-menu/menu/issues/1221">issue #1221</a>, not released</td></tr><tr><td>react-native-bottom-tabs 1.4.0</td><td>"RCTConversions.h"</td><td><a href="https://github.com/callstack/react-native-bottom-tabs/issues/584">fixed on main</a>, next release</td></tr><tr><td>react-native-ios-context-menu 3.2.1</td><td>"RCTBridge.h"</td><td>same import, no report yet</td></tr><tr><td>react-native-ios-utilities 5.2.0</td><td>"RCTBridge.h"</td><td>same import, no report yet</td></tr></tbody></table>
+<p><strong>Fix.</strong> Update the library if a release has the change. Otherwise add the namespace yourself and keep it with patch-package:</p>
+<pre><code>- #import "RCTComponent.h"
++ #import &lt;React/RCTComponent.h&gt;</code></pre>
+<pre><code>npx patch-package react-native-date-picker</code></pre>
+<p>If your own iOS code (AppDelegate, native modules) has the same imports, change them the same way.</p>
+<p><strong>Workaround while you wait.</strong> Building React Native from source still resolves the quoted form, at the cost of much slower clean builds. Bare CLI: <code>RCT_USE_PREBUILT_RNCORE=0 bundle exec pod install</code>. Expo: set <code>buildReactNativeFromSource: true</code> under <code>ios</code> in the <code>expo-build-properties</code> plugin, then prebuild again. It does not help with <code>#import &lt;RCTBridge.h&gt;</code>.</p>
+<p><strong>Check your project.</strong> <code>npx nativekeel</code> reads the iOS sources of your installed libraries and your own code. Before the upgrade it lists them as work for 0.87; after it, as the reason the build fails, with file and line.</p>
+<div class="cta"><strong>Check your whole app in one command:</strong> <code>npx nativekeel</code><br><span class="meta">Free, runs locally (your code is not uploaded), no account. It reports this along with the other upgrade, store, crash and security problems it checks for.</span></div>
+<h2>Sources</h2>
+<ul><li><a href="https://reactnative.dev/blog/2026/08/11/react-native-0.87#headers-breaking-changes">React Native 0.87 release notes: Headers Breaking Changes</a></li><li><a href="https://docs.expo.dev/versions/latest/sdk/build-properties/">Expo: expo-build-properties, buildReactNativeFromSource</a></li></ul>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"'RCTBridge.h' file not found after React Native 0.87","description":"iOS build fails with 'RCTComponent.h' or 'RCTBridge.h' file not found after React Native 0.87: which libraries cause it, the fix and a workaround.","dateModified":"2026-10-16","author":{"@type":"Organization","name":"NativeKeel","url":"https://nativekeel.com"},"mainEntityOfPage":"https://nativekeel.com/fix/rctcomponent-h-file-not-found-react-native-0-87"}</script>
+</main></body>
+</html>

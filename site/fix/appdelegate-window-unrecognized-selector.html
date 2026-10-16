@@ -32,7 +32,7 @@ pre{background:var(--code);border:1px solid var(--line);border-radius:10px;paddi
 <body><main>
 <p class="meta"><a href="/">NativeKeel</a> · <a href="/fix/">React Native fixes</a></p>
 <h1>-[AppDelegate window]: unrecognized selector sent to instance</h1>
-<p class="meta">Updated 2026-10-10</p>
+<p class="meta">Updated 2026-10-15</p>
 <p>The app crashes when a library shows something (a picker, a menu, an ad, a snackbar) or right at launch:</p>
 <pre><code>-[AppDelegate window]: unrecognized selector sent to instance</code></pre>
 <p><strong>Why.</strong> With the UIKit scene life cycle the window belongs to the scene delegate, and <code>AppDelegate</code> has no <code>window</code> property at all. That is the React Native 0.88 template, Expo SDK 58, and Expo SDK 57 with <code>enableSceneSupport</code>. Apps built with the iOS 27 SDK must use scenes (<a href="/fix/uiscene-life-cycle-required-xcode-27">why</a>), so this crash arrives with the move to Xcode 27. Libraries that still find the screen with <code>[UIApplication sharedApplication].delegate.window</code> send a message the AppDelegate no longer answers.</p>
@@ -52,9 +52,9 @@ var window: UIWindow?
 <p><strong>Find the library.</strong> The crash log names the method that sent the message. Or search your dependencies:</p>
 <pre><code>grep -rnE "delegate]?.window|delegate] window]" node_modules/*/ios node_modules/@*/*/ios</code></pre>
 <p><code>npx nativekeel</code> lists the known ones from your package.json, with when each one crashes.</p>
-<div class="cta"><strong>Check your whole app in one command:</strong> <code>npx nativekeel</code><br><span class="meta">Free, runs locally (your code is not uploaded), no account. It reports this and 80 other upgrade, store, crash and security problems.</span></div>
+<div class="cta"><strong>Check your whole app in one command:</strong> <code>npx nativekeel</code><br><span class="meta">Free, runs locally (your code is not uploaded), no account. It reports this along with the other upgrade, store, crash and security problems it checks for.</span></div>
 <h2>Sources</h2>
 <ul><li><a href="https://developer.apple.com/documentation/technotes/tn3187-migrating-to-the-uikit-scene-based-life-cycle">Apple TN3187: Migrating to the UIKit scene-based life cycle</a></li><li><a href="https://github.com/facebook/react-native/blob/main/packages/react-native/React/Base/RCTUtils.h">React Native RCTUtils.h (RCTKeyWindow, RCTPresentedViewController)</a></li></ul>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"[AppDelegate window]: unrecognized selector: RN fix","description":"Why a React Native or Expo app crashes with \"-[AppDelegate window]: unrecognized selector\" after adopting UIScene, which libraries cause it, and the fix.","dateModified":"2026-10-10","author":{"@type":"Organization","name":"NativeKeel","url":"https://nativekeel.com"},"mainEntityOfPage":"https://nativekeel.com/fix/appdelegate-window-unrecognized-selector"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"[AppDelegate window]: unrecognized selector: RN fix","description":"Why a React Native or Expo app crashes with \"-[AppDelegate window]: unrecognized selector\" after adopting UIScene, which libraries cause it, and the fix.","dateModified":"2026-10-15","author":{"@type":"Organization","name":"NativeKeel","url":"https://nativekeel.com"},"mainEntityOfPage":"https://nativekeel.com/fix/appdelegate-window-unrecognized-selector"}</script>
 </main></body>
 </html>

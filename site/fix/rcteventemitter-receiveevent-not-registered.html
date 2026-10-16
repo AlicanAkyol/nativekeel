@@ -32,7 +32,7 @@ pre{background:var(--code);border:1px solid var(--line);border-radius:10px;paddi
 <body><main>
 <p class="meta"><a href="/">NativeKeel</a> · <a href="/fix/">React Native fixes</a></p>
 <h1>Failed to call into JavaScript module method RCTEventEmitter.receiveEvent(). Module has not been registered as callable.</h1>
-<p class="meta">Updated 2026-10-10</p>
+<p class="meta">Updated 2026-10-15</p>
 <p>After upgrading to React Native 0.77 or later with the New Architecture, a screen that uses a library's native component fails with:</p>
 <pre><code>Error: Failed to call into JavaScript module method RCTEventEmitter.receiveEvent(). Module has not been registered as callable. Registered callable JavaScript modules (n = 9): AppRegistry, HMRClient, ...</code></pre>
 <p>It often shows up right after wrapping the app in a provider such as <code>SafeAreaProvider</code>, and removing the provider makes it go away, so it looks like a bug in that library. In Release builds it can be a crash at launch.</p>
@@ -52,9 +52,9 @@ self.dependencyProvider = RCTAppDependencyProvider()</code></pre>
 delegate.dependencyProvider = RCTAppDependencyProvider()</code></pre>
 <p>Then <code>cd ios &amp;&amp; pod install</code> and rebuild. Clearing caches or reinstalling pods alone does not fix it.</p>
 <p><strong>Check your project.</strong> <code>npx nativekeel</code> reports an AppDelegate without <code>RCTAppDependencyProvider</code> on React Native 0.77 and later, before the error appears.</p>
-<div class="cta"><strong>Check your whole app in one command:</strong> <code>npx nativekeel</code><br><span class="meta">Free, runs locally (your code is not uploaded), no account. It reports this and 80 other upgrade, store, crash and security problems.</span></div>
+<div class="cta"><strong>Check your whole app in one command:</strong> <code>npx nativekeel</code><br><span class="meta">Free, runs locally (your code is not uploaded), no account. It reports this along with the other upgrade, store, crash and security problems it checks for.</span></div>
 <h2>Sources</h2>
 <ul><li><a href="https://reactnative.dev/blog/2025/01/21/version-0.77#rctappdependencyprovider">React Native 0.77 release notes: RCTAppDependencyProvider</a></li><li><a href="https://github.com/react-native-community/template/blob/0.81-stable/template/ios/HelloWorld/AppDelegate.swift">React Native template 0.81: AppDelegate.swift</a></li></ul>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"RCTEventEmitter.receiveEvent() not callable in React Native","description":"\"Failed to call into JavaScript module method RCTEventEmitter.receiveEvent()\" after a React Native 0.77+ upgrade: the missing AppDelegate line and the fix.","dateModified":"2026-10-10","author":{"@type":"Organization","name":"NativeKeel","url":"https://nativekeel.com"},"mainEntityOfPage":"https://nativekeel.com/fix/rcteventemitter-receiveevent-not-registered"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"RCTEventEmitter.receiveEvent() not callable in React Native","description":"\"Failed to call into JavaScript module method RCTEventEmitter.receiveEvent()\" after a React Native 0.77+ upgrade: the missing AppDelegate line and the fix.","dateModified":"2026-10-15","author":{"@type":"Organization","name":"NativeKeel","url":"https://nativekeel.com"},"mainEntityOfPage":"https://nativekeel.com/fix/rcteventemitter-receiveevent-not-registered"}</script>
 </main></body>
 </html>

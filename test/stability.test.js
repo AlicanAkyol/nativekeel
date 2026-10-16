@@ -100,6 +100,11 @@ test('APIs removed from React Native core: crash now or after the upgrade', () =
   assert.match(importOnly.title, /unused import/);
   assert.equal(src('0.85.0', "import { DatePickerAndroid } from 'react-native';\n/* old: DatePickerAndroid.open() */\n{/* DatePickerAndroid */}").severity, 'low', 'mentions in comments are not uses');
   assert.equal(src('0.80.0', "import { View, Text } from 'react-native';\nimport AsyncStorage from '@react-native-async-storage/async-storage';"), undefined);
+  const im = "import { InteractionManager } from 'react-native';\nInteractionManager.runAfterInteractions(() => load());";
+  assert.equal(src('0.86.0', im), undefined, 'before 0.87 InteractionManager works; the upcoming-changes check covers it');
+  const imNow = src('0.87.1', im);
+  assert.equal(imNow.severity, 'high');
+  assert.match(imNow.detail, /InteractionManager \(src\/A\.js:1\) → requestIdleCallback/);
 });
 
 test('APIs deprecated in React Native core (removal announced): low, with the replacement', () => {
