@@ -192,6 +192,8 @@ npx nativekeel fleet ~/clients --base fleet-2026-10.json       # next month: wha
 
 With `--base`, every app shows what changed since that run ("Security D→B, critical 2→0"), and new or removed apps are listed. `npx nativekeel compare before.json after.json` does the same for one app, ratings included.
 
+Every app in a GitHub organization, monthly: copy [`examples/fleet-workflow.yml`](examples/fleet-workflow.yml) to `.github/workflows/` in any repository of the organization. On the 1st of each month it clones the repositories on the runner, scans them, compares with last month and writes the table to the run summary, with `fleet.html` and `fleet.json` kept as the run's artifact. Private repositories need a read-only `FLEET_TOKEN` secret; NativeKeel uploads nothing.
+
 In a pull request, the GitHub Action's comment (`pr-comment: true`) starts with a quality gate (passed when the change adds no critical or high finding) and the ratings, with what changed.
 
 A `.nativekeel.json` next to `package.json` keeps the team's decisions in the repository: the gate level, and findings the team has accepted, each with a reason. `--fail-on` still wins. Ignored findings stay listed in the report, and malware warnings cannot be ignored.

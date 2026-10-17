@@ -114,6 +114,9 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding:24px 0 40px;colo
 npx nativekeel fleet ~/clients --base fleet-2026-10.json     # next month</code></pre>
   <p>Each app shows what moved ("Security E→C, critical 4→2"), which apps are new and which are gone. A monthly report for a client is one command. Nothing is stored anywhere except the file you keep.</p>
 
+  <h2>Every app in your GitHub organization, every month</h2>
+  <p>Copy <a href="https://github.com/AlicanAkyol/nativekeel/blob/main/examples/fleet-workflow.yml"><code>examples/fleet-workflow.yml</code></a> to <code>.github/workflows/</code> in any repository of the organization. On the 1st of each month it clones the repositories on the GitHub runner, scans every React Native and Expo app it finds, compares with last month and writes the table to the run summary. The shareable page and next month's baseline are kept as the run's artifact. Private repositories need a read-only token as a secret; NativeKeel uploads nothing.</p>
+
   <h2>A quality gate in every pull request</h2>
   <p>The GitHub Action keeps one comment up to date on each pull request:</p>
 <pre><code>### NativeKeel

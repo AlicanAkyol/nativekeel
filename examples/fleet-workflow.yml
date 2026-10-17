@@ -1,0 +1,74 @@
+# NativeKeel fleet: every React Native and Expo app in your GitHub organization, once a month.
+# Copy to .github/workflows/nativekeel-fleet.yml in any repository of the organization.
+#
+# Each run clones the repositories (shallow), scans them with `npx nativekeel fleet`, compares
+# with the previous run's results and writes the table to the run summary. fleet.html (a page
+# you can share) and fleet.json (next month's baseline) are kept as the run's artifact.
+#
+# Private repositories: add a fine-grained token with read access to their contents as the
+# FLEET_TOKEN secret. Without it, only repositories this repository's token can read are scanned.
+# Code is cloned onto the GitHub runner only; NativeKeel uploads nothing.
+name: NativeKeel fleet
+
+on:
+  schedule:
+    - cron: '0 6 1 * *'   # 06:00 UTC on the 1st of every month
+  workflow_dispatch:
+    inputs:
+      repos:
+        description: 'Only these repositories (owner/name, space-separated). Empty: every repository of the owner.'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+  actions: read   # to download the previous run's results
+
+jobs:
+  fleet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Clone the repositories
+        env:
+          GH_TOKEN: ${{ secrets.FLEET_TOKEN || github.token }}
+          OWNER: ${{ github.repository_owner }}
+          REPOS: ${{ inputs.repos }}
+        run: |
+          mkdir -p apps
+          if [ -n "$REPOS" ]; then
+            printf '%s\n' $REPOS > repos.txt
+          else
+            gh repo list "$OWNER" --limit 500 --no-archived --source --json nameWithOwner -q '.[].nameWithOwner' > repos.txt
+          fi
+          while read -r repo; do
+            [ -n "$repo" ] || continue
+            dir="apps/${repo#*/}"
+            gh repo clone "$repo" "$dir" -- --depth 1 --quiet 2>/dev/null || echo "::warning::could not clone $repo"
+          done < repos.txt
+          echo "$(wc -l < repos.txt | tr -d ' ') repositories listed"
+
+      - name: Download the previous run's results
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          id=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow "$GITHUB_WORKFLOW" --status success --limit 1 --json databaseId -q '.[0].databaseId')
+          if [ -n "$id" ]; then gh run download "$id" --repo "$GITHUB_REPOSITORY" --name nativekeel-fleet --dir last || echo "No earlier results to compare with."; fi
+
+      - name: Scan
+        run: |
+          base=()
+          [ -f last/fleet.json ] && base=(--base last/fleet.json)
+          npx -y nativekeel@latest fleet apps "${base[@]}" --json --html fleet.html --markdown fleet.md --fail-on never > fleet.json
+          cat fleet.md >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: nativekeel-fleet
+          path: |
+            fleet.json
+            fleet.html
+          retention-days: 90
