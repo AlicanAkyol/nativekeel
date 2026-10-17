@@ -30,14 +30,16 @@ test('backend admin: bundled admin credentials and server SDKs in app code', () 
 test('secrets: database URLs with passwords and Hasura admin secrets, not local or placeholder ones', () => {
   const root = makeProject({
     'package.json': { name: 'x' },
+    // Fake values, assembled at run time so the file itself holds no complete credential-shaped
+    // string (GitHub secret scanning flagged the plain form, 2026-10-18).
     'src/a.ts': [
-      "const prod = 'postgres://app:Xk92jfLq7@db.prod-cluster.acme-corp.io:5432/main';",
-      "const mongo = 'mongodb+srv://user:Zq81kslW2@cluster0.ab12c.mongodb.net/app';",
-      "const local = 'postgres://app:Xk92jfLq7@localhost:5432/main';",
-      "const docker = 'postgres://app:Xk92jfLq7@db:5432/main';",
+      `const prod = '${['postgres://app', 'Xk92jfLq7@db.prod-cluster.acme-corp.io:5432/main'].join(':')}';`,
+      `const mongo = '${['mongodb+srv://user', 'Zq81kslW2@cluster0.ab12c.' + 'mongodb.net/app'].join(':')}';`,
+      `const local = '${['postgres://app', 'Xk92jfLq7@localhost:5432/main'].join(':')}';`,
+      `const docker = '${['postgres://app', 'Xk92jfLq7@db:5432/main'].join(':')}';`,
       "const ph = 'postgres://app:password@db.prod.io/main';",
       "const br = 'postgresql://postgres:[YOUR_PASSWORD]@db.abc.supabase.co:5432/postgres';",
-      "headers: { 'x-hasura-admin-secret': 'hz8Kq2mN0pL4' }",
+      `headers: { '${'x-hasura-' + 'admin-secret'}': 'hz8Kq2mN0pL4' }`,
     ].join('\n'),
   });
   const ids = scanSecrets(root).map((s) => s.id || s.rule || s.type);
