@@ -18,7 +18,8 @@ test('upcoming: React Native 0.87 removals found in app code, with file:line', (
   });
   const changes = upcomingChanges(loadProject(root));
   const got = changes.map((c) => c.id);
-  for (const id of ['rn87-interaction-manager', 'rn87-statusbar-props', 'rn87-modal-animated', 'rn87-keyboard-persist-boolean', 'rn87-deep-imports', 'rn87-bare-includes', 'rn87-node']) assert.ok(got.includes(id), id);
+  for (const id of ['rn87-interaction-manager', 'rn87-statusbar-props', 'rn87-modal-animated', 'rn87-keyboard-persist-boolean', 'rn87-deep-imports', 'rn87-node']) assert.ok(got.includes(id), id);
+  assert.ok(!got.includes('rn87-bare-includes'), 'the app\'s own <RCTAppDelegate.h> resolves in the app target');
   assert.deepEqual(changes.find((c) => c.id === 'rn87-interaction-manager').hits, ['src/A.tsx:1']);
   assert.match(changes.find((c) => c.id === 'rn87-node').hits[0], /engines\.node: 20/);
 });

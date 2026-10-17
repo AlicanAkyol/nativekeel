@@ -35,11 +35,17 @@ test('react headers: unguarded imports without React/ are found; fallbacks, own 
 test('react headers: building from source resolves the quoted form, not the bare angle form', () => {
   const r = unprefixedReactImports(loadProject(app('0.87.1', {
     'ios/Podfile': "ENV['RCT_USE_PREBUILT_RNCORE'] = '0'\nplatform :ios, '15.1'\n",
-    'ios/App/AppDelegate.mm': '#import <RCTBridge.h>\n',
+    ...lib('angle', { 'ios/A.m': '#import <RCTBridge.h>\n' }),
+    'package.json': { name: 'app', dependencies: { 'react-native': '0.87.1', picker: '1.0.0', angle: '1.0.0' } },
   })));
   assert.equal(r.prebuilt, false);
-  assert.deepEqual(r.libraries, []);
-  assert.deepEqual(r.app.map((h) => `${h.file}:${h.line}`), ['ios/App/AppDelegate.mm:1']);
+  assert.deepEqual(r.libraries.map((l) => l.name), ['angle'], 'quoted picker resolves from source; the bare angle form does not');
+});
+
+test('react headers: the app\'s own files are never reported (they resolve in the app target)', () => {
+  const r = unprefixedReactImports(loadProject(app('0.87.1', { 'ios/App/AppDelegate.h': '#import <RCTAppDelegate.h>\n#import "RCTBridge.h"\n' })));
+  assert.deepEqual(r.app, []);
+  assert.deepEqual(r.libraries.map((l) => l.name), ['picker']);
 });
 
 test('react headers: a build failure on 0.87+, a planned change before it', () => {
@@ -50,10 +56,4 @@ test('react headers: a build failure on 0.87+, a planned change before it', () =
   assert.equal(nativeChecks(loadProject(app('0.86.3'))).find((f) => f.id === 'ios-unprefixed-react-imports'), undefined);
   const ahead = upcomingChanges(loadProject(app('0.86.3'))).find((c) => c.id === 'rn87-bare-includes');
   assert.deepEqual(ahead.hits, ['picker 1.0.0 (ios/DatePicker.m:2)']);
-});
-
-test('react headers: without node_modules, the bare angle form in app code is still found', () => {
-  const root = makeProject({ 'package.json': { name: 'app', dependencies: { 'react-native': '0.86.3' } }, 'ios/App/AppDelegate.h': '#import <RCTAppDelegate.h>\n#import "RCTBridge.h"\n' });
-  const r = unprefixedReactImports(loadProject(root));
-  assert.deepEqual(r.app.map((h) => h.header), ['<RCTAppDelegate.h>']);
 });

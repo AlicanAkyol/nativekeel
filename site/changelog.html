@@ -40,6 +40,11 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.98</h2><p class="date">18 October 2026</p>
+<ul>
+<li><span class="tag">Fewer false alarms</span><b>React header imports in your own app code are no longer reported.</b> The React Native 0.87 header check also flagged <code>#import &lt;RCTAppDelegate.h&gt;</code> in an app's own AppDelegate or bridging header. We compiled those forms in the app target of a 0.87.1 app: they still resolve there. Only libraries, which CocoaPods builds as separate targets, fail. Found while checking two open-source apps on 0.87.1 that build fine and were wrongly flagged.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.97</h2><p class="date">18 October 2026</p>
 <ul>
 <li><span class="tag">New check</span><b>Render loops.</b> State updates that run on every render freeze the screen and end in "Too many re-renders" or "Maximum update depth exceeded". NativeKeel now finds the three patterns behind them, with file and line: a handler called instead of passed (<code>onPress={setOpen(true)}</code>), an effect with no dependency array that sets a new value, and an effect that changes the state it depends on. Guarded, constant and asynchronous updates are left alone. <code>nativekeel explain</code> recognises both messages. <a href="/fix/maximum-update-depth-exceeded-react-native">Fix page</a>.</li>

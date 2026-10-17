@@ -379,7 +379,7 @@ If the call is inside a library rather than your code, update the library; patch
   },
   {
     slug: 'rctcomponent-h-file-not-found-react-native-0-87',
-    updated: '2026-10-17',
+    updated: '2026-10-18',
     error: "'RCTComponent.h' file not found",
     title: "'RCTBridge.h' file not found after React Native 0.87",
     description: "iOS build fails with 'RCTComponent.h' or 'RCTBridge.h' file not found after React Native 0.87: which libraries cause it, the fix and a workaround.",
@@ -422,11 +422,11 @@ A few headers still resolve in quotes (\`RCTFabricComponentsPlugins.h\`, \`RCTCo
 npx patch-package react-native-date-picker
 \`\`\`
 
-If your own iOS code (AppDelegate, native modules) has the same imports, change them the same way.
+Your app's own files (AppDelegate, a Swift bridging header) are not affected: compiled in the app target of a 0.87.1 app, \`<RCTAppDelegate.h>\`, \`<RCTBridge.h>\` and \`"RCTAppDelegate.h"\` all still resolve. The failure is in libraries, which CocoaPods builds as separate targets.
 
 **Workaround while you wait.** Building React Native from source still resolves the quoted form, at the cost of much slower clean builds. Bare CLI: \`RCT_USE_PREBUILT_RNCORE=0 bundle exec pod install\`. Expo: set \`buildReactNativeFromSource: true\` under \`ios\` in the \`expo-build-properties\` plugin, then prebuild again. It does not help with \`#import <RCTBridge.h>\`.
 
-**Check your project.** \`npx nativekeel\` reads the iOS sources of your installed libraries and your own code. Before the upgrade it lists them as work for 0.87; after it, as the reason the build fails, with file and line.
+**Check your project.** \`npx nativekeel\` reads the iOS sources of your installed libraries. Before the upgrade it lists them as work for 0.87; after it, as the reason the build fails, with file and line.
 `,
     sources: [['The full experiment: I compiled every React Native 0.87 header (dev.to)', 'https://dev.to/keel_alican_akyol/rctbridgeh-file-not-found-i-compiled-every-react-native-087-header-to-see-which-imports-break-22go'], ['React Native 0.87 release notes: Headers Breaking Changes', 'https://reactnative.dev/blog/2026/08/11/react-native-0.87#headers-breaking-changes'], ['Expo: expo-build-properties, buildReactNativeFromSource', 'https://docs.expo.dev/versions/latest/sdk/build-properties/']],
   },

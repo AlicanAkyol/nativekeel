@@ -9,6 +9,9 @@ import { findPackageDir } from './project.js';
 // prebuilt core, except the headers below. Headers under Libraries/ follow the release notes
 // (<RCTAppDelegate.h> → <React/RCTAppDelegate.h>); their quoted form was not tested and is not
 // reported. An import inside an `#if __has_include(...)` chain is a fallback the compiler skips.
+// Only libraries (pod targets) fail: compiled in the app target of a 0.87.1 app, <RCTAppDelegate.h>,
+// <RCTBridge.h> and "RCTAppDelegate.h" all resolve, so the app's own files are not reported
+// (checked 2026-10-18 after Zeus and Jellify, both on 0.87.1, were wrongly flagged).
 const QUOTED_OK_DIRS = new Set(['CoreModules', 'I18n', 'FBReactNativeSpec']);
 const QUOTED_OK = new Set(['RCTFabricComponentsPlugins.h', 'RCTLocalizedString.h']);
 const ANGLE_OK_DIRS = new Set(['I18n']);
@@ -78,8 +81,7 @@ function scanFiles(files, table, own, prebuilt) {
       }
       const m = l.match(/^\s*#\s*(?:import|include)\s*(["<])(RCT\w+\.h)[">]/);
       if (!m || stack.some(Boolean) || own.has(m[2])) continue;
-      // Without an installed react-native, only the bare angle form is certain to fail.
-      const t = table ? table.get(m[2]) : { quoted: true, angle: m[2] === 'RCTLocalizedString.h' };
+      const t = table.get(m[2]);
       if (!t || (m[1] === '"' ? !prebuilt || t.quoted : t.angle)) continue;
       hits.push({ file: f, line: i + 1, header: `${m[1]}${m[2]}${m[1] === '"' ? '"' : '>'}` });
       break;
@@ -121,8 +123,5 @@ export function unprefixedReactImports(project) {
       libraries.push({ name, version, hits: hits.map((h) => ({ ...h, file: path.relative(dir, h.file).split(path.sep).join('/') })) });
     }
   }
-  const appFiles = walk(path.join(root, 'ios'), 0, []);
-  const appOwn = new Set(appFiles.filter((f) => f.endsWith('.h')).map((f) => path.basename(f)));
-  const app = scanFiles(appFiles, table, appOwn, prebuilt).map((h) => ({ ...h, file: path.relative(root, h.file).split(path.sep).join('/') }));
-  return { libraries, app, prebuilt };
+  return { libraries, app: [], prebuilt };
 }

@@ -32,7 +32,7 @@ pre{background:var(--code);border:1px solid var(--line);border-radius:10px;paddi
 <body><main>
 <p class="meta"><a href="/">NativeKeel</a> · <a href="/fix/">React Native fixes</a></p>
 <h1>'RCTComponent.h' file not found</h1>
-<p class="meta">Updated 2026-10-17</p>
+<p class="meta">Updated 2026-10-18</p>
 <p>After upgrading to React Native 0.87 or 0.88 (Expo SDK 58), the iOS build stops inside a library:</p>
 <pre><code>node_modules/react-native-date-picker/ios/DatePicker.m:7:9: error: 'RCTComponent.h' file not found
 node_modules/@react-native-menu/menu/ios/MenuViewManager.mm:3:9: 'RCTBridge.h' file not found</code></pre>
@@ -45,12 +45,12 @@ node_modules/@react-native-menu/menu/ios/MenuViewManager.mm:3:9: 'RCTBridge.h' f
 <pre><code>- #import "RCTComponent.h"
 + #import &lt;React/RCTComponent.h&gt;</code></pre>
 <pre><code>npx patch-package react-native-date-picker</code></pre>
-<p>If your own iOS code (AppDelegate, native modules) has the same imports, change them the same way.</p>
+<p>Your app's own files (AppDelegate, a Swift bridging header) are not affected: compiled in the app target of a 0.87.1 app, <code>&lt;RCTAppDelegate.h&gt;</code>, <code>&lt;RCTBridge.h&gt;</code> and <code>"RCTAppDelegate.h"</code> all still resolve. The failure is in libraries, which CocoaPods builds as separate targets.</p>
 <p><strong>Workaround while you wait.</strong> Building React Native from source still resolves the quoted form, at the cost of much slower clean builds. Bare CLI: <code>RCT_USE_PREBUILT_RNCORE=0 bundle exec pod install</code>. Expo: set <code>buildReactNativeFromSource: true</code> under <code>ios</code> in the <code>expo-build-properties</code> plugin, then prebuild again. It does not help with <code>#import &lt;RCTBridge.h&gt;</code>.</p>
-<p><strong>Check your project.</strong> <code>npx nativekeel</code> reads the iOS sources of your installed libraries and your own code. Before the upgrade it lists them as work for 0.87; after it, as the reason the build fails, with file and line.</p>
+<p><strong>Check your project.</strong> <code>npx nativekeel</code> reads the iOS sources of your installed libraries. Before the upgrade it lists them as work for 0.87; after it, as the reason the build fails, with file and line.</p>
 <div class="cta"><strong>Check your whole app in one command:</strong> <code>npx nativekeel</code><br><span class="meta">Free, runs locally (your code is not uploaded), no account. It reports this along with the other upgrade, store, crash and security problems it checks for.</span></div>
 <h2>Sources</h2>
 <ul><li><a href="https://dev.to/keel_alican_akyol/rctbridgeh-file-not-found-i-compiled-every-react-native-087-header-to-see-which-imports-break-22go">The full experiment: I compiled every React Native 0.87 header (dev.to)</a></li><li><a href="https://reactnative.dev/blog/2026/08/11/react-native-0.87#headers-breaking-changes">React Native 0.87 release notes: Headers Breaking Changes</a></li><li><a href="https://docs.expo.dev/versions/latest/sdk/build-properties/">Expo: expo-build-properties, buildReactNativeFromSource</a></li></ul>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"'RCTBridge.h' file not found after React Native 0.87","description":"iOS build fails with 'RCTComponent.h' or 'RCTBridge.h' file not found after React Native 0.87: which libraries cause it, the fix and a workaround.","dateModified":"2026-10-17","author":{"@type":"Organization","name":"NativeKeel","url":"https://nativekeel.com"},"mainEntityOfPage":"https://nativekeel.com/fix/rctcomponent-h-file-not-found-react-native-0-87"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"'RCTBridge.h' file not found after React Native 0.87","description":"iOS build fails with 'RCTComponent.h' or 'RCTBridge.h' file not found after React Native 0.87: which libraries cause it, the fix and a workaround.","dateModified":"2026-10-18","author":{"@type":"Organization","name":"NativeKeel","url":"https://nativekeel.com"},"mainEntityOfPage":"https://nativekeel.com/fix/rctcomponent-h-file-not-found-react-native-0-87"}</script>
 </main></body>
 </html>
