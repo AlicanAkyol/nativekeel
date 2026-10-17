@@ -1,10 +1,17 @@
-// Cloudflare deploy config for the website only (the npm package does not include this file).
-// The site is static: Cloudflare serves the files in ./site as they are.
+// Cloudflare deploy config for the website and the team panel API (the npm package does not include this file).
+// The site is static: Cloudflare serves the files in ./site as they are. Only /api/* runs the
+// Worker in worker/index.js (team panel, closed beta), backed by the D1 database below.
 {
   "name": "nativekeel",
-  "compatibility_date": "2026-10-01",
+  "compatibility_date": "2026-05-01",
+  "main": "worker/index.js",
   "assets": {
     "directory": "./site",
-    "not_found_handling": "404-page"
-  }
+    "binding": "ASSETS",
+    "not_found_handling": "404-page",
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    { "binding": "DB", "database_name": "nativekeel-teams", "database_id": "19dd5f5c-7b61-4035-a09c-00d255b36709" }
+  ]
 }

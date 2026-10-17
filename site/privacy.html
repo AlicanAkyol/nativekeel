@@ -34,11 +34,15 @@ h1{font-size:30px;margin:0 0 4px}h2{font-size:19px;margin:28px 0 6px}p,li{color:
 <body><main>
 <p><a href="index.html">← NativeKeel</a></p>
 <h1>Privacy</h1>
-<p>Last updated 5 October 2026.</p>
+<p>Last updated 17 October 2026.</p>
 
 <h2>The command-line tool</h2>
-<p>NativeKeel runs on your machine. It does not upload your source code, reports or secrets anywhere and has no analytics or telemetry. To check versions it sends package names (for example <code>react-native-svg</code>) to the public npm registry and to React Native Directory. For the vulnerability check it sends the names and exact versions of your runtime dependencies to npm's advisory endpoint, the same request <code>npm audit</code> makes. In Expo projects without installed dependencies, it asks unpkg (a public mirror of npm packages) for the list of library versions your Expo SDK release expects, sending only the <code>expo</code> version number. Nothing else is sent. Those services' own privacy policies apply to those requests.</p>
+<p>NativeKeel runs on your machine. It does not upload your source code or secrets anywhere and has no analytics or telemetry. It sends a report only if you ask it to, with <code>--upload</code> (see the team panel below). To check versions it sends package names (for example <code>react-native-svg</code>) to the public npm registry and to React Native Directory. For the vulnerability check it sends the names and exact versions of your runtime dependencies to npm's advisory endpoint, the same request <code>npm audit</code> makes. In Expo projects without installed dependencies, it asks unpkg (a public mirror of npm packages) for the list of library versions your Expo SDK release expects, sending only the <code>expo</code> version number. Nothing else is sent. Those services' own privacy policies apply to those requests.</p>
 <p>With <code>--offline</code> it makes no network requests at all.</p>
+
+<h2>The team panel (closed beta, opt-in)</h2>
+<p>Teams in the beta can send scan results to their panel on nativekeel.com with <code>--upload</code> and their team's upload token. Only a summary is sent and stored: the app name and folder, React Native and Expo versions, the A–E ratings, the number of findings per severity, the titles of store and support deadlines, and each finding's id, severity, area and title. Finding titles can name a file and line (for example <code>src/App.js:6</code>), never its contents. No source code, finding details, secret values, file contents or package lists are sent. Without <code>--upload</code> and a token nothing is sent, and <code>--upload</code> never works together with <code>--offline</code>.</p>
+<p>The data is stored in a Cloudflare D1 database, visible only with the team's panel link. Tokens are stored as hashes. On request we delete a team's data within 7 days; write to hello@nativekeel.com.</p>
 
 <h2>When you contact or buy from us</h2>
 <p>We keep what you send us by email (name, company, email address, invoices and any report you attach) to answer you, deliver services, and meet accounting obligations. We do not sell it or use it for advertising.</p>

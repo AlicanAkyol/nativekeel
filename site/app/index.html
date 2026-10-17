@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Team panel · NativeKeel</title>
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<style>
+:root{--bg:#f7f8fa;--card:#fff;--text:#16181d;--muted:#5f6673;--line:#e3e6eb;--critical:#c62828;--high:#b26a00;--accent:#0b5d55;--soft:#e3f1ee}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1115;--card:#171a20;--text:#e8eaee;--muted:#9aa1ad;--line:#2a2f38;--critical:#ff6b6b;--high:#f0a73a;--accent:#3cc4b4;--soft:#12302c}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1360px;margin:0 auto;padding:28px 16px 48px}
+a{color:var(--accent)}
+header{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+h1{margin:0;font-size:24px}h2{font-size:18px;margin:28px 0 10px}
+.muted{color:var(--muted);font-size:13px}
+.stats{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0}
+.stats div{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 14px;min-width:130px}
+.stats b{display:block;font-size:22px}.stats span{font-size:13px;color:var(--muted)}
+.wrap{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;min-width:980px}
+th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+thead th{font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);font-weight:600}
+tbody tr{cursor:pointer}tbody tr:hover{background:var(--soft)}tbody tr:last-child td,tbody tr:last-child th{border-bottom:0}
+th.r,td.r{text-align:center;padding-left:4px;padding-right:4px}
+.g{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:6px;color:#fff;font-size:14px;font-weight:700}
+.gA,.gB{background:#2e7d32}.gC{background:#8a6d00}.gD{background:#b26a00}.gE{background:#c62828}
+.crit{color:var(--critical);font-weight:700}.high{color:var(--high);font-weight:700}
+.was{display:block;font-size:11px;color:var(--muted);font-weight:400}
+td ul{margin:0;padding-left:16px;font-size:13px}
+svg.spark{display:block;color:var(--accent)}td.v{white-space:nowrap}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-top:18px}
+.f{display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);font-size:14px}.f:last-child{border-bottom:0}
+.tag{flex:none;font:600 11px ui-monospace,monospace;text-transform:uppercase;padding:2px 7px;border-radius:999px;background:var(--soft);color:var(--accent);height:fit-content}
+.tag.critical{background:color-mix(in srgb,var(--critical) 15%,transparent);color:var(--critical)}.tag.high{background:color-mix(in srgb,var(--high) 16%,transparent);color:var(--high)}
+pre{background:#12151a;color:#d9dee6;border-radius:10px;padding:12px 14px;overflow-x:auto;font:13px/1.6 ui-monospace,monospace}
+.msg{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;max-width:640px}
+footer{margin-top:28px;color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<main id="root">
+  <div class="msg"><h1>Team panel</h1><p class="muted">Loading…</p></div>
+</main>
+<script>
+(() => {
+  const AREAS = ['Security', 'Store', 'Stability', 'Upgrade', 'Performance', 'Accessibility'];
+  const RANK = { E: 0, D: 1, C: 2, B: 3, A: 4 };
+  const root = document.getElementById('root');
+  const el = (tag, attrs = {}, ...kids) => {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (k === 'class') n.className = v; else if (k === 'text') n.textContent = v; else if (k.startsWith('on')) n.addEventListener(k.slice(2), v); else n.setAttribute(k, v);
+    }
+    for (const k of kids.flat()) if (k != null) n.append(k.nodeType ? k : document.createTextNode(String(k)));
+    return n;
+  };
+  const day = (iso) => (iso ? iso.slice(0, 10) : '');
+  const version = (s) => [s.reactNative && `RN ${s.reactNative}`, s.expo && `Expo ${String(s.expo).split('.')[0]}`].filter(Boolean).join(', ') || '?';
+  const message = (title, text, extra) => { root.replaceChildren(el('div', { class: 'msg' }, el('h1', { text: title }), el('p', { text }), extra || null)); };
+
+  // The key lives in the URL fragment, which browsers never send to the server.
+  const key = new URLSearchParams(location.hash.slice(1)).get('key');
+  if (!key) {
+    message('Team panel', 'Open the panel link you received; it ends with #key=…. The NativeKeel team panel is in closed beta.', el('p', {}, el('a', { href: '/teams', text: 'About NativeKeel for teams' })));
+    return;
+  }
+
+  // Critical + high findings over time, oldest to newest.
+  function spark(history) {
+    const pts = [...history].reverse().map((h) => (h.counts.critical || 0) + (h.counts.high || 0));
+    const W = 120, H = 28, max = Math.max(1, ...pts);
+    const ns = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('class', 'spark'); svg.setAttribute('width', W); svg.setAttribute('height', H); svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', `Critical and high findings over the last ${pts.length} scans: ${pts.join(', ')}`);
+    if (pts.length < 2) { const t = document.createElementNS(ns, 'text'); t.setAttribute('x', 0); t.setAttribute('y', 18); t.setAttribute('fill', 'currentColor'); t.setAttribute('font-size', 12); t.textContent = 'first scan'; svg.append(t); return svg; }
+    const step = W / (pts.length - 1);
+    const line = document.createElementNS(ns, 'polyline');
+    line.setAttribute('points', pts.map((p, i) => `${(i * step).toFixed(1)},${(H - 3 - (p / max) * (H - 6)).toFixed(1)}`).join(' '));
+    line.setAttribute('fill', 'none'); line.setAttribute('stroke', 'currentColor'); line.setAttribute('stroke-width', 2);
+    svg.append(line);
+    return svg;
+  }
+
+  function detail(a) {
+    const box = el('div', { class: 'panel', id: 'detail' },
+      el('h2', { text: `${a.name || a.app}` }, el('span', { class: 'muted', text: `  ${a.app} · last scan ${day(a.latest.scannedAt)}` })));
+    const order = ['critical', 'high', 'medium', 'low'];
+    const findings = [...a.latest.findings].sort((x, y) => order.indexOf(x.severity) - order.indexOf(y.severity));
+    box.append(el('h2', { text: `Findings (${findings.length})` }));
+    box.append(findings.length ? el('div', {}, findings.map((f) => el('div', { class: 'f' }, el('span', { class: `tag ${f.severity}`, text: f.severity }), el('span', { text: f.title || f.id })))) : el('p', { class: 'muted', text: 'No findings in the last scan.' }));
+    box.append(el('h2', { text: 'History' }));
+    box.append(el('div', { class: 'wrap' }, el('table', {},
+      el('thead', {}, el('tr', {}, el('th', { text: 'Scan' }), el('th', { text: 'Version' }), AREAS.map((x) => el('th', { class: 'r', text: x })), el('th', { text: 'Critical' }), el('th', { text: 'High' }))),
+      el('tbody', {}, a.history.map((h) => el('tr', {}, el('td', { text: day(h.scannedAt) }), el('td', { text: version(h) }), h.ratings.map((r) => el('td', { class: 'r' }, el('b', { class: `g g${r.rating}`, text: r.rating }))), el('td', { text: h.counts.critical || 0 }), el('td', { text: h.counts.high || 0 })))))));
+    return box;
+  }
+
+  function render(data) {
+    const worst = (a) => Math.min(...a.latest.ratings.map((r) => RANK[r.rating]));
+    const apps = [...data.apps].sort((x, y) => (y.latest.counts.critical - x.latest.counts.critical) || (y.latest.counts.high - x.latest.counts.high) || worst(x) - worst(y) || x.app.localeCompare(y.app));
+    const total = apps.reduce((t, a) => ({ c: t.c + (a.latest.counts.critical || 0), h: t.h + (a.latest.counts.high || 0), d: t.d + a.latest.deadlines.length }), { c: 0, h: 0, d: 0 });
+    const out = [
+      el('header', {}, el('h1', { text: `${data.team}: React Native apps` }), el('span', { class: 'muted', text: 'NativeKeel team panel · closed beta' })),
+      el('div', { class: 'stats' },
+        el('div', {}, el('b', { text: apps.length }), el('span', { text: 'apps' })),
+        el('div', {}, el('b', { class: total.c ? 'crit' : '', text: total.c }), el('span', { text: 'critical findings' })),
+        el('div', {}, el('b', { class: total.h ? 'high' : '', text: total.h }), el('span', { text: 'high findings' })),
+        el('div', {}, el('b', { text: total.d }), el('span', { text: 'store or support deadlines' }))),
+    ];
+    if (!apps.length) {
+      out.push(el('div', { class: 'msg' }, el('p', { text: 'No scans yet. Send the first one from CI:' }), el('pre', { text: 'NATIVEKEEL_TOKEN=<upload token> npx nativekeel fleet . --upload' })));
+    } else {
+      const detailSlot = el('div');
+      const show = (a) => { detailSlot.replaceChildren(detail(a)); detailSlot.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+      out.push(el('div', { class: 'wrap' }, el('table', {},
+        el('thead', {}, el('tr', {}, el('th', { text: 'App' }), el('th', { text: 'Version' }), AREAS.map((x) => el('th', { class: 'r', text: x })), el('th', { text: 'Critical' }), el('th', { text: 'High' }), el('th', { text: 'Trend' }), el('th', { text: 'Deadlines' }))),
+        el('tbody', {}, apps.map((a) => {
+          const prev = a.history[1];
+          const was = (k) => (prev ? Object.fromEntries(prev.ratings.map((r) => [r.key, r.rating]))[k] : null);
+          return el('tr', { onclick: () => show(a), tabindex: '0', onkeydown: (e) => { if (e.key === 'Enter') show(a); } },
+            el('th', { scope: 'row' }, a.name || a.app, el('span', { class: 'was', text: `${a.app} · ${day(a.latest.scannedAt)}` })),
+            el('td', { class: 'v', text: version(a.latest) }),
+            a.latest.ratings.map((r) => el('td', { class: 'r' }, el('b', { class: `g g${r.rating}`, title: `${r.key}: ${r.findings} findings`, text: r.rating }), was(r.key) && was(r.key) !== r.rating ? el('span', { class: 'was', text: `was ${was(r.key)}` }) : null)),
+            el('td', { class: a.latest.counts.critical ? 'crit' : '' }, a.latest.counts.critical || 0, prev && prev.counts.critical !== a.latest.counts.critical ? el('span', { class: 'was', text: `was ${prev.counts.critical}` }) : null),
+            el('td', { class: a.latest.counts.high ? 'high' : '' }, a.latest.counts.high || 0, prev && prev.counts.high !== a.latest.counts.high ? el('span', { class: 'was', text: `was ${prev.counts.high}` }) : null),
+            el('td', {}, spark(a.history)),
+            el('td', {}, a.latest.deadlines.length ? el('ul', {}, a.latest.deadlines.map((d) => el('li', { text: d }))) : el('span', { class: 'muted', text: 'none' })));
+        })))));
+      out.push(el('p', { class: 'muted', text: 'Click an app for its findings and history. "was" compares with the scan before. Trend: critical + high findings over the last scans.' }));
+      out.push(detailSlot);
+    }
+    out.push(el('footer', {}, 'Only scan summaries are stored here: no source code and no finding details. ', el('a', { href: '/teams', text: 'NativeKeel for teams' }), ' · ', el('a', { href: 'mailto:hello@nativekeel.com', text: 'hello@nativekeel.com' })));
+    root.replaceChildren(...out);
+  }
+
+  fetch('/api/v1/panel', { headers: { authorization: `Bearer ${key}` } })
+    .then(async (r) => ({ ok: r.ok, status: r.status, body: await r.json().catch(() => ({})) }))
+    .then(({ ok, status, body }) => {
+      if (ok) render(body);
+      else message('Team panel', status === 401 ? 'This panel link is not valid. Check that you copied all of it.' : `The panel could not load (${body.error || status}).`);
+    })
+    .catch(() => message('Team panel', 'The panel could not load. Check your connection and try again.'));
+})();
+</script>
+</body>
+</html>

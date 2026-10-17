@@ -74,6 +74,8 @@ Scan options
   --markdown <file>         Save a Markdown summary (for pull request comments)
   --sarif <file>            Save SARIF for GitHub code scanning
   --sonar <file>            Save issues for SonarQube (sonar.externalIssuesReportPaths)
+  --upload                  Send the scan summary (no code) to your team panel;
+                            needs NATIVEKEEL_TOKEN (closed beta)
   --verbose                 List every outdated package
   --offline                 Make no network requests (local checks only)
   --save-baseline <file>    Accept current findings as known
@@ -150,13 +152,15 @@ async function runFleet(positional, flags, failOn) {
   }
   if (!apps.length) fail('No React Native or Expo app found in the given folders.');
   const rows = [];
+  const summaries = new Map();
   for (const dir of [...new Set(apps)]) {
     const rel = labels.get(dir);
     try {
       const project = loadProject(dir);
       if (!flags.json) process.stderr.write(`Scanning ${rel}${flags.offline ? ' (offline)' : ''} …\n`);
       const result = await analyze(project, flags.offline ? { get: async () => null, offline: true } : {});
-      rows.push({ ...fleetRow(result, rel), counts: countBySeverity(result.findings), failOn: (result.settings && result.settings.failOn) || null });
+      rows.push({ ...fleetRow(result, rel), counts: countBySeverity(result.findings), failOn: (result.settings && result.settings.failOn) || null, scannedAt: result.scannedAt });
+      summaries.set(rel, result.findings);
     } catch (e) {
       rows.push({ app: path.basename(dir), path: rel, error: e.message.split('\n')[0] });
     }
@@ -166,6 +170,15 @@ async function runFleet(positional, flags, failOn) {
   if (flags.html) write(flags.html, fleetHtml(sorted, { brand: flags.brand || null, trend }));
   if (flags.markdown) write(flags.markdown, fleetMarkdown(sorted, { trend }));
   console.log(flags.json ? JSON.stringify({ tool: 'nativekeel', scannedAt: new Date().toISOString(), apps: sorted, ...(trend ? { comparedWith: trend.since, removed: trend.removed } : {}) }, null, 2) : fleetText(sorted, { color: process.stdout.isTTY, trend }));
+  if (flags.upload) {
+    const { uploadReport, summaryFindings } = await import('../src/upload.js');
+    try {
+      const r = await uploadReport({ tool: 'nativekeel', version: packageVersion(), scannedAt: new Date().toISOString(), apps: sorted.filter((a) => !a.error).map((a) => ({ ...a, was: undefined, findings: summaryFindings(summaries.get(a.path) || []) })) });
+      process.stderr.write(`Uploaded ${r.stored} app${r.stored === 1 ? '' : 's'} to the team panel (${r.team}).\n`);
+    } catch (e) {
+      process.stderr.write(`Upload to the team panel failed: ${e.message}\n`);
+    }
+  }
   // --fail-on applies to every app; without it, each app's own .nativekeel.json decides.
   const fails = (r) => {
     const level = failOn || r.failOn || 'critical';
@@ -317,6 +330,7 @@ async function main() {
   }
 
   if (flags['fail-on'] && !['critical', 'high', 'medium', 'low', 'never'].includes(flags['fail-on'])) fail('--fail-on must be one of critical, high, medium, low, never');
+  if (flags.upload && flags.offline) fail('--upload sends the scan summary to the team panel, so it cannot be combined with --offline.');
   if (command === 'fleet') return runFleet(positional, flags, flags['fail-on']);
   let result = await runScan(root, flags);
   // --fail-on wins over the team's .nativekeel.json, which wins over the default.
@@ -344,6 +358,17 @@ async function main() {
   if (flags.sonar) {
     const { sonarReport } = await import('../src/report-sonar.js');
     write(flags.sonar, `${JSON.stringify(sonarReport(result), null, 2)}\n`);
+  }
+  if (flags.upload && command !== 'security') {
+    const { uploadReport, summaryFindings } = await import('../src/upload.js');
+    const { fleetRow } = await import('../src/fleet.js');
+    try {
+      const label = result.project.name || path.basename(result.project.root);
+      const r = await uploadReport({ tool: 'nativekeel', version: packageVersion(), scannedAt: result.scannedAt, apps: [{ ...fleetRow(result, label), counts: countBySeverity(result.findings), findings: summaryFindings(result.findings) }] });
+      process.stderr.write(`Uploaded to the team panel (${r.team}).\n`);
+    } catch (e) {
+      process.stderr.write(`Upload to the team panel failed: ${e.message}\n`);
+    }
   }
   if (flags.json) console.log(JSON.stringify(result, null, 2));
   else console.log(textReport(result, { color: process.stdout.isTTY, verbose: !!flags.verbose }));

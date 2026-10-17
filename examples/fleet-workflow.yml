@@ -7,7 +7,8 @@
 #
 # Private repositories: add a fine-grained token with read access to their contents as the
 # FLEET_TOKEN secret. Without it, only repositories this repository's token can read are scanned.
-# Code is cloned onto the GitHub runner only; NativeKeel uploads nothing.
+# Code is cloned onto the GitHub runner only. NativeKeel uploads nothing, unless you add a
+# NATIVEKEEL_TOKEN secret for the team panel (closed beta): then only the scan summary is sent.
 name: NativeKeel fleet
 
 on:
@@ -59,10 +60,14 @@ jobs:
           if [ -n "$id" ]; then gh run download "$id" --repo "$GITHUB_REPOSITORY" --name nativekeel-fleet --dir last || echo "No earlier results to compare with."; fi
 
       - name: Scan
+        env:
+          NATIVEKEEL_TOKEN: ${{ secrets.NATIVEKEEL_TOKEN }}   # optional: also send the summary to your team panel
         run: |
           base=()
           [ -f last/fleet.json ] && base=(--base last/fleet.json)
-          npx -y nativekeel@latest fleet apps "${base[@]}" --json --html fleet.html --markdown fleet.md --fail-on never > fleet.json
+          upload=()
+          [ -n "$NATIVEKEEL_TOKEN" ] && upload=(--upload)
+          npx -y nativekeel@latest fleet apps "${base[@]}" "${upload[@]}" --json --html fleet.html --markdown fleet.md --fail-on never > fleet.json
           cat fleet.md >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@v7
