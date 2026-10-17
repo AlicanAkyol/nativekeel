@@ -109,6 +109,7 @@ test('APIs removed from React Native core: crash now or after the upgrade', () =
 
 test('APIs deprecated in React Native core (removal announced): low, with the replacement', () => {
   const find = (rn, code) => stabilityChecks(loadProject(makeProject({ 'package.json': { name: 'r', dependencies: { 'react-native': rn } }, 'src/A.js': code }))).find((f) => f.id === 'deprecated-core-imports');
+  assert.match(find('0.88.0', "import { InputAccessoryView } from 'react-native';").detail, /InputAccessoryView \(src\/A\.js:1, deprecated in 0\.88\) → react-native-keyboard-controller's KeyboardStickyView\. They already log/);
   const f = find('0.81.0', "import { View, ImageBackground, SafeAreaView } from 'react-native';");
   assert.equal(f.severity, 'low');
   assert.match(f.title, /ImageBackground, SafeAreaView are deprecated/);

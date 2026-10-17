@@ -12,10 +12,10 @@ const EXPO_58 = 'https://expo.dev/changelog/sdk-58-beta';
 
 // Expo SDK → React Native minor it ships (SDK 58 beta uses 0.88 release candidates).
 export const EXPO_RN = { 54: 81, 55: 83, 56: 85, 57: 86, 58: 88 };
-// Versions ahead of the latest stable release, with their status.
+// The newest release line we have entries for, and whether it is still a beta / release candidate.
 export const NEXT = {
-  expo: { sdk: 58, status: 'beta', since: '2026-09-15' },
-  rn: { minor: 88, status: 'release candidate', since: '2026-09-08' },
+  expo: { sdk: 58, status: 'stable', since: '2026-10-16' },
+  rn: { minor: 88, status: 'stable', since: '2026-10-15' },
 };
 
 const fromRn = (name) => new RegExp(`import\\s*(?:type\\s*)?(?:[\\w$]+\\s*,\\s*)?\\{[^}]*\\b${name}\\b[^}]*\\}\\s*from\\s*['"]react-native['"]`);
@@ -183,7 +183,7 @@ export function upcomingChanges(project) {
 }
 
 // Name the React Native version an SDK ships, so nobody reads "SDK 58" as "React Native 0.87".
-const versionLabel = (c) => (c.expo ? `Expo SDK ${c.expo} (${c.expo === NEXT.expo.sdk ? `${NEXT.expo.status}, ` : ''}React Native 0.${EXPO_RN[c.expo]})` : `React Native 0.${c.rn}`);
+const versionLabel = (c) => (c.expo ? `Expo SDK ${c.expo} (${c.expo === NEXT.expo.sdk && NEXT.expo.status !== 'stable' ? `${NEXT.expo.status}, ` : ''}React Native 0.${EXPO_RN[c.expo]})` : `React Native 0.${c.rn}`);
 
 export function upcomingFinding(project) {
   const changes = upcomingChanges(project);

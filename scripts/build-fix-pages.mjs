@@ -591,6 +591,7 @@ Build with \`./gradlew bundleRelease\` and upload the \`.aab\`. With Play App Si
   },
   {
     slug: 'uiscene-life-cycle-required-xcode-27',
+    updated: '2026-10-17',
     error: 'UIScene life cycle is required for apps built with this SDK',
     title: 'Xcode 27 "UIScene life cycle is required": React Native fix',
     description: 'Why a React Native or Expo app stops at launch when built with Xcode 27 and the iOS 27 SDK, the April 2027 App Store deadline, and how to adopt UIScene.',
@@ -605,7 +606,7 @@ Apple announced it in TN3187: from the first major release after iOS 26, buildin
 
 **Have you adopted it?** You have if your \`Info.plist\` has a \`UIApplicationSceneManifest\` with scene configurations, or your app delegate implements \`application(_:configurationForConnecting:options:)\`. A manifest that only sets \`UIApplicationSupportsMultipleScenes\` does not count.
 
-**React Native.** 0.88 is the first release whose template adopts it. Its \`SceneDelegate.swift\` starts React Native in the window scene, and \`Info.plist\` names it in the scene manifest. React Native 0.87 and earlier have no scene support in the template. Upgrade, then copy both from the Upgrade Helper.
+**React Native.** 0.88 (stable since 15 October 2026) is the first release that supports it: \`RCTReactNativeFactory\` gains SceneDelegate entry points (\`startReactNativeWithModuleName:inWindow:connectionOptions:\`), limited to a single scene, so keep \`UIApplicationSupportsMultipleScenes\` false. Its template adopts it. Its \`SceneDelegate.swift\` starts React Native in the window scene, and \`Info.plist\` names it in the scene manifest. React Native 0.87 and earlier have no scene support in the template. Upgrade, then copy both from the Upgrade Helper.
 
 **Expo.** On SDK 57, opt in with expo 57.0.23+ and expo-build-properties 57.0.20+:
 
@@ -621,7 +622,7 @@ Then run prebuild again. SDK 58 has it by default. SDK 56 and earlier need an up
 - **Libraries that read the window from the app delegate crash.** The 0.88 template's \`AppDelegate\` has no \`window\`. We reproduced \`-[AppDelegate window]: unrecognized selector sent to instance\` on that template with react-native-blob-util and react-native-google-mobile-ads, and the same Objective-C call is in about a dozen popular packages, including @react-native-firebase/messaging at launch. Until they are fixed, keep \`var window: UIWindow?\` in \`AppDelegate\` and set it from \`SceneDelegate\`. [Which libraries, and their fixes](/fix/appdelegate-window-unrecognized-selector).
 
 **How common it is.** 583 of the 628 open-source React Native and Expo apps with an iOS target in our scan (11 October 2026) have not adopted it yet. \`npx nativekeel\` reports it, the links that still go to \`AppDelegate\`, and the installed libraries that read the app delegate's window. A longer walkthrough, with the 15 libraries that crash after the move and the deep-link pitfall, is on [dev.to](https://dev.to/keel_alican_akyol/xcode-27-wont-launch-93-of-react-native-apps-the-uiscene-change-and-the-libraries-that-crash-2gb5).`,
-    sources: [
+    sources: [['React Native 0.88 release notes: SceneDelegate support', 'https://reactnative.dev/blog/2026/10/19/react-native-0.88#ios-scenedelegate-support'], 
       ['Apple TN3187: Migrating to the UIKit scene-based life cycle', 'https://developer.apple.com/documentation/technotes/tn3187-migrating-to-the-uikit-scene-based-life-cycle'],
       ['Apple: upcoming App Store requirements (iOS 27 SDK from April 2027)', 'https://developer.apple.com/news/?id=k1mtkt1k'],
       ['React Native 0.88 template: SceneDelegate.swift', 'https://github.com/react-native-community/template/blob/0.88-stable/template/ios/HelloWorld/SceneDelegate.swift'],

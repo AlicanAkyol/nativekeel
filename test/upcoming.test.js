@@ -33,7 +33,7 @@ test('upcoming: nothing for code that is already fine, or for a version past the
   assert.deepEqual(ids(done), []);
 });
 
-test('upcoming: Expo SDK 58 beta changes, only where the app is affected', () => {
+test('upcoming: Expo SDK 58 changes, only where the app is affected', () => {
   const root = makeProject({
     'package.json': { name: 'app', dependencies: { expo: '~57.0.23', 'react-native': '0.86.3', 'expo-notifications': '*', 'expo-sqlite': '*' }, scripts: { test: 'NODE_ENV=test expo start' } },
     'app.json': { expo: { ios: { requireFullScreen: true } } },
@@ -43,7 +43,7 @@ test('upcoming: Expo SDK 58 beta changes, only where the app is affected', () =>
   const got = changes.map((c) => c.id);
   for (const id of ['expo58-r8', 'expo58-node-env', 'expo58-file-write', 'expo58-libsql', 'expo58-notifications-foreground', 'expo58-require-full-screen']) assert.ok(got.includes(id), id);
   const [f] = upcomingFinding(loadProject(root));
-  assert.match(f.title, /Expo SDK 58 \(beta, React Native 0\.88\)/);
+  assert.match(f.title, /Expo SDK 58 \(React Native 0\.88\)/, 'stable now: no beta label');
   assert.equal(f.fix.kind, 'upcoming');
 
   const handled = makeProject({

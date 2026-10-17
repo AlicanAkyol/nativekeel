@@ -234,7 +234,7 @@ export function iosSceneLifecycle(project, now = new Date()) {
         : `Upgrade to Expo SDK 57 (with \`ios.enableSceneSupport\`) or SDK 58.`
       : rn !== null && rn < IOS_SDK_27.firstRnMinor
         ? `React Native 0.${IOS_SDK_27.firstRnMinor} is the first release whose template has scene support: upgrade, then add its SceneDelegate and the UIApplicationSceneManifest entry to Info.plist (React Native Upgrade Helper shows both).`
-        : 'Add a SceneDelegate that starts React Native in the window scene and a UIApplicationSceneManifest entry in Info.plist, as in the React Native 0.88 template.';
+        : 'React Native 0.88 supports it: move the entry point to a SceneDelegate (RCTReactNativeFactory startReactNativeWithModuleName:inWindow:connectionOptions:), forward the scene\'s URL and user-activity callbacks to RCTLinkingManager so deep links keep working, and add a UIApplicationSceneManifest entry to Info.plist with UIApplicationSupportsMultipleScenes false (one scene only in 0.88). The 0.88 template and the Upgrade Helper show SceneDelegate.swift and Info.plist.';
     return [finding(fix, ' Building with Xcode 26 keeps the app working until then.')];
   }
   // Adopted: libraries that read the app delegate's window crash without one.
