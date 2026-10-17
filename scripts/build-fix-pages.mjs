@@ -379,7 +379,7 @@ If the call is inside a library rather than your code, update the library; patch
   },
   {
     slug: 'rctcomponent-h-file-not-found-react-native-0-87',
-    updated: '2026-10-16',
+    updated: '2026-10-17',
     error: "'RCTComponent.h' file not found",
     title: "'RCTBridge.h' file not found after React Native 0.87",
     description: "iOS build fails with 'RCTComponent.h' or 'RCTBridge.h' file not found after React Native 0.87: which libraries cause it, the fix and a workaround.",
@@ -401,14 +401,14 @@ node_modules/@react-native-menu/menu/ios/MenuViewManager.mm:3:9: 'RCTBridge.h' f
 
 A few headers still resolve in quotes (\`RCTFabricComponentsPlugins.h\`, \`RCTComponentViewHelpers.h\` and the CoreModules headers), which is why many Fabric libraries are unaffected. An import inside an \`#if __has_include(...)\` fallback is also fine: the compiler takes the \`<React/...>\` branch.
 
-**Libraries that hit it.** From the 248 most downloaded React Native libraries with iOS code, checked on 16 October 2026:
+**Libraries that hit it.** From the 248 most downloaded React Native libraries with iOS code, checked on 16 October 2026 (status updated 17 October):
 
 | Library (version) | Import | Status |
 |---|---|---|
 | react-native-date-picker 5.0.13 | "RCTComponent.h", "RCTConvert.h" | [issue #974](https://github.com/henninghall/react-native-date-picker/issues/974), not released |
-| @react-native-menu/menu 2.0.0 | "RCTBridge.h" | [issue #1221](https://github.com/react-native-menu/menu/issues/1221), not released |
+| @react-native-menu/menu 2.0.0 | "RCTBridge.h" | [issue #1221](https://github.com/react-native-menu/menu/issues/1221), fix proposed in [PR #1227](https://github.com/react-native-menu/menu/pull/1227) |
 | react-native-bottom-tabs 1.4.0 | "RCTConversions.h" | [fixed on main](https://github.com/callstack/react-native-bottom-tabs/issues/584), next release |
-| react-native-ios-context-menu 3.2.1 | "RCTBridge.h" | same import, no report yet |
+| react-native-ios-context-menu 3.2.1 | "RCTBridge.h" | fix proposed in [PR #145](https://github.com/dominicstop/react-native-ios-context-menu/pull/145) |
 | react-native-ios-utilities 5.2.0 | "RCTBridge.h" | same import, no report yet |
 
 **Fix.** Update the library if a release has the change. Otherwise add the namespace yourself and keep it with patch-package:
