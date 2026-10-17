@@ -428,7 +428,7 @@ If your own iOS code (AppDelegate, native modules) has the same imports, change 
 
 **Check your project.** \`npx nativekeel\` reads the iOS sources of your installed libraries and your own code. Before the upgrade it lists them as work for 0.87; after it, as the reason the build fails, with file and line.
 `,
-    sources: [['React Native 0.87 release notes: Headers Breaking Changes', 'https://reactnative.dev/blog/2026/08/11/react-native-0.87#headers-breaking-changes'], ['Expo: expo-build-properties, buildReactNativeFromSource', 'https://docs.expo.dev/versions/latest/sdk/build-properties/']],
+    sources: [['The full experiment: I compiled every React Native 0.87 header (dev.to)', 'https://dev.to/keel_alican_akyol/rctbridgeh-file-not-found-i-compiled-every-react-native-087-header-to-see-which-imports-break-22go'], ['React Native 0.87 release notes: Headers Breaking Changes', 'https://reactnative.dev/blog/2026/08/11/react-native-0.87#headers-breaking-changes'], ['Expo: expo-build-properties, buildReactNativeFromSource', 'https://docs.expo.dev/versions/latest/sdk/build-properties/']],
   },
   {
     slug: 'supabase-rls-disabled',
