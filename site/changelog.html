@@ -40,6 +40,11 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.96</h2><p class="date">18 October 2026</p>
+<ul>
+<li><span class="tag">Expo</span><b>React Native that does not match the Expo SDK.</b> An Expo SDK's native modules are built against one React Native minor; a different one is a common cause of build failures and launch crashes. NativeKeel now compares them (found in an app with Expo 58 and React Native 0.87, where the SDK expects 0.88), and says when the installed <code>expo</code> still pins a release candidate. The informational line about React Native and the Expo SDK no longer claims they match.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.95</h2><p class="date">18 October 2026</p>
 <ul>
 <li><span class="tag">Google Play</span><b>What changes at API 36 (Android 16).</b> Google Play requires API 36 for updates since 31 August 2026, and the extension ends on 1 November. NativeKeel now reports an edge-to-edge opt-out (<code>windowOptOutEdgeToEdgeEnforcement</code>) that Android 16 ignores, so screens slide under the system bars, and notes the orientation and aspect ratio locks that tablets and foldables ignore. Games are exempt; the temporary resizability opt-out is mentioned. <a href="/fix/google-play-target-api-level">Target API level page</a> updated with the API 36 changes.</li>

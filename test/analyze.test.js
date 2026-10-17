@@ -452,6 +452,22 @@ test('Expo SDK mismatch: major differences are high, patch-only ones low', async
   assert.equal(await find('15.12.1', '31.0.20'), undefined, 'inside ~31.0.13');
 });
 
+test('Expo SDK and React Native minors that do not match are reported; a match is not', async () => {
+  const find = async (rn, pin, expoVersion = '58.0.7') => (await analyze(loadProject(makeProject({
+    'package.json': { name: 'e', dependencies: { expo: '^58.0.0', 'react-native': rn } },
+    'node_modules/expo/package.json': { version: expoVersion },
+    'node_modules/expo/bundledNativeModules.json': { 'react-native': pin },
+    'node_modules/react-native/package.json': { version: rn },
+  })), { offline: true })).findings.find((f) => f.id === 'expo-rn-mismatch');
+  const rc = await find('0.87.1', '0.88.0-rc.4');
+  assert.equal(rc.severity, 'high');
+  assert.match(rc.title, /Expo SDK 58 expects React Native 0\.88\.0-rc\.4, the app has 0\.87\.1/);
+  assert.match(rc.detail, /update expo to the latest 58\.x first/);
+  assert.doesNotMatch((await find('0.77.1', '0.88.0', '58.0.14')).detail, /release candidate/);
+  assert.equal(await find('0.88.0', '0.88.0', '58.0.14'), undefined);
+  assert.equal(await find('0.88.0', '0.88.0-rc.4'), undefined, 'same minor: the rc pin is not a mismatch');
+});
+
 test('an Expo SDK given as a major only ("^54") is still an Expo project without node_modules', async () => {
   const root = makeProject({ 'package.json': { name: 'e', dependencies: { expo: '^54', 'react-native': '0.81.4' } } });
   const p = loadProject(root);

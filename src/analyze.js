@@ -157,7 +157,7 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
         id: 'rn-via-expo',
         severity: 'info',
         area: 'react-native',
-        title: `React Native ${current} comes with Expo SDK ${majorOf(project.expoVersion)}`,
+        title: `React Native ${current} moves with the Expo SDK (${majorOf(project.expoVersion)})`,
         detail: `Latest React Native is ${rn.latest} (${behind} minor${behind === 1 ? '' : 's'} behind). Upgrading the Expo SDK upgrades React Native with it.`,
       });
     } else if (behind >= SUPPORTED_RN_MINORS) {
@@ -428,6 +428,24 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
   const expoExact = project.expoVersion ? exactOf('expo') : null;
   if (!expoPins && expoExact && !forcedOffline) expoPins = await registry.expoPins(expoExact);
   const expoSdk = project.expoVersion ? majorOf(project.expoVersion) : null;
+  // The React Native the Expo SDK's native modules are built against. A different minor is a
+  // common cause of build failures and launch crashes; the generic pin check below skips
+  // react-native, so it is compared here.
+  const expoRn = expoPins && expoPins['react-native'] ? String(expoPins['react-native']).replace(/^[~^>=\s]+/, '') : null;
+  if (expoRn && current && minorOf(expoRn) !== minorOf(current)) {
+    const rc = /-/.test(expoRn);
+    add({
+      id: 'expo-rn-mismatch',
+      severity: 'high',
+      area: 'expo',
+      title: `Expo SDK ${expoSdk} expects React Native ${expoRn}, the app has ${current}`,
+      detail: `The SDK's native modules are built against React Native 0.${minorOf(expoRn)}; a different minor is a common cause of build failures and launch crashes. Set react-native to the version the SDK expects (\`npx expo install react-native\`, or \`npx expo install --fix\` for every pinned package).${rc ? ` This expo release (${expoExact || project.expoVersion}) still pins a release candidate: update expo to the latest ${expoSdk}.x first, which pins the stable React Native.` : ''}`,
+      fix: { kind: 'crash', step: `Put react-native on the version Expo SDK ${expoSdk} expects${rc ? ' after updating expo to the latest ' + expoSdk + '.x' : ''} (\`npx expo install react-native\`).` },
+    });
+    // The "moves with the Expo SDK" note would contradict it.
+    const note = findings.findIndex((f) => f.id === 'rn-via-expo');
+    if (note >= 0) findings.splice(note, 1);
+  }
   // A React Native ahead of the latest stable (a release candidate) is not in the libraries'
   // compatibility tables yet: say so instead of calling every library incompatible.
   const aheadOfStable = !!(current && rn && rn.latest && minorOf(current) > minorOf(rn.latest));
