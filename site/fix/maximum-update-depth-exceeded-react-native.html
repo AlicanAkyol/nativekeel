@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>"Maximum update depth exceeded" in React Native: the fix</title>
+<meta name="description" content="Fix &quot;Too many re-renders&quot; and &quot;Maximum update depth exceeded&quot; in React Native: the three patterns behind the loop, with before and after code.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#0b5d55">
+<link rel="canonical" href="https://nativekeel.com/fix/maximum-update-depth-exceeded-react-native">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="NativeKeel">
+<meta property="og:url" content="https://nativekeel.com/fix/maximum-update-depth-exceeded-react-native">
+<meta property="og:title" content="&quot;Maximum update depth exceeded&quot; in React Native: the fix">
+<meta property="og:description" content="Fix &quot;Too many re-renders&quot; and &quot;Maximum update depth exceeded&quot; in React Native: the three patterns behind the loop, with before and after code.">
+<meta property="og:image" content="https://nativekeel.com/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:description" content="Fix &quot;Too many re-renders&quot; and &quot;Maximum update depth exceeded&quot; in React Native: the three patterns behind the loop, with before and after code.">
+<meta name="twitter:image" content="https://nativekeel.com/og.png">
+<style>:root{--bg:#fbfaf7;--text:#15171b;--muted:#5d6470;--accent:#0b5d55;--line:#e3e1db;--card:#ffffff;--code:#f1efea}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1013;--text:#e9ebef;--muted:#9aa2ad;--accent:#3cc4b4;--line:#262a31;--card:#15181d;--code:#1b1f25}}
+:root[data-theme="dark"]{--bg:#0e1013;--text:#e9ebef;--muted:#9aa2ad;--accent:#3cc4b4;--line:#262a31;--card:#15181d;--code:#1b1f25}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.65 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:760px;margin:0 auto;padding:40px 16px 64px;overflow-wrap:anywhere}
+h1{font-size:28px;line-height:1.25;margin:0 0 6px}h2{font-size:18px;margin:28px 0 6px}a{color:var(--accent)}p,li{color:var(--muted)}strong{color:var(--text)}
+code{font:14px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--code);padding:1px 5px;border-radius:5px}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow-x:auto}pre code{background:none;padding:0;white-space:pre-wrap}
+.cta{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:28px 0}.cta code{font-size:15px}
+.meta{font-size:14px;color:var(--muted)}ul.list li{margin:8px 0}table{border-collapse:collapse;width:100%;font-size:15px;margin:12px 0;display:block;overflow-x:auto}th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}th{font-weight:600}</style>
+</head>
+<body><main>
+<p class="meta"><a href="/">NativeKeel</a> · <a href="/fix/">React Native fixes</a></p>
+<h1>Maximum update depth exceeded</h1>
+<p class="meta">Updated 2026-10-18</p>
+<p>The screen freezes, then React stops with one of these:</p>
+<pre><code>Too many re-renders. React limits the number of renders to prevent an infinite loop.</code></pre>
+<pre><code>Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.</code></pre>
+<p><strong>Why.</strong> A state update runs on every render. The update renders the component again, which runs the update again, and React stops the loop. Three patterns cause almost all of them.</p>
+<p><strong>1. A handler that is called instead of passed.</strong> React's own docs name this the most common cause.</p>
+<pre><code>- &lt;Pressable onPress={setOpen(true)}&gt;
++ &lt;Pressable onPress={() =&gt; setOpen(true)}&gt;</code></pre>
+<p><strong>2. An effect with no dependency array that sets state.</strong> It runs after every render, and a new object or array is always a change.</p>
+<pre><code>- useEffect(() =&gt; {
+-   setItems(data.filter((d) =&gt; d.visible));
+- });
++ const items = useMemo(() =&gt; data.filter((d) =&gt; d.visible), [data]);</code></pre>
+<p>Derive the value during render (or with <code>useMemo</code>) instead of copying it into state. If it really has to be state, give the effect the dependencies it reads.</p>
+<p><strong>3. An effect that changes the state it depends on.</strong></p>
+<pre><code>- useEffect(() =&gt; {
+-   setCount(count + 1);
+- }, [count]);
++ useEffect(() =&gt; {
++   if (count &lt; limit) setCount(count + 1);
++ }, [count, limit]);</code></pre>
+<p>The same happens when a dependency is an object or function created during render: it is new every time. Move it inside the effect, or wrap it in <code>useMemo</code> / <code>useCallback</code>.</p>
+<p><strong>Check your project.</strong> <code>npx nativekeel</code> reports these three patterns with file and line. It only reports the certain cases: a setter inside an <code>if</code>, after an early return, or with a value that does not change is left alone, because React stops when the value stays the same.</p>
+<div class="cta"><strong>Check your whole app in one command:</strong> <code>npx nativekeel</code><br><span class="meta">Free, runs locally (your code is not uploaded), no account. It reports this along with the other upgrade, store, crash and security problems it checks for.</span></div>
+<h2>Sources</h2>
+<ul><li><a href="https://react.dev/reference/react/useState#im-getting-an-error-too-many-re-renders">React: "Too many re-renders" (useState troubleshooting)</a></li><li><a href="https://react.dev/reference/react/useEffect#my-effect-keeps-re-running-in-an-infinite-cycle">React: My Effect keeps re-running in an infinite cycle</a></li><li><a href="https://github.com/facebook/react/blob/main/packages/react-reconciler/src/ReactFiberWorkLoop.js">React source: the "Maximum update depth exceeded" messages</a></li></ul>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"\"Maximum update depth exceeded\" in React Native: the fix","description":"Fix \"Too many re-renders\" and \"Maximum update depth exceeded\" in React Native: the three patterns behind the loop, with before and after code.","dateModified":"2026-10-18","author":{"@type":"Organization","name":"NativeKeel","url":"https://nativekeel.com"},"mainEntityOfPage":"https://nativekeel.com/fix/maximum-update-depth-exceeded-react-native"}</script>
+</main></body>
+</html>

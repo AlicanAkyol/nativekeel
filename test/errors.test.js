@@ -28,6 +28,7 @@ const SAMPLES = {
   'invalid-hook-call': 'Error: Invalid hook call. Hooks can only be called inside of the body of a function component.',
   'codegen-eventemitter-property': "UnsupportedModulePropertyParserError: Module NativeReactNativeFs: TypeScript interfaces extending TurboModule must only contain 'FunctionTypeAnnotation's. Property 'onDownloadBegin'",
   'recycle-mounted-view': 'RCTComponentViewRegistry: Attempt to recycle a mounted view.',
+  'render-loop': 'Error: Too many re-renders. React limits the number of renders to prevent an infinite loop.',
 };
 
 test('explain_error: each known error is recognised from its real message', () => {

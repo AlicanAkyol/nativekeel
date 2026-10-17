@@ -431,6 +431,60 @@ If your own iOS code (AppDelegate, native modules) has the same imports, change 
     sources: [['The full experiment: I compiled every React Native 0.87 header (dev.to)', 'https://dev.to/keel_alican_akyol/rctbridgeh-file-not-found-i-compiled-every-react-native-087-header-to-see-which-imports-break-22go'], ['React Native 0.87 release notes: Headers Breaking Changes', 'https://reactnative.dev/blog/2026/08/11/react-native-0.87#headers-breaking-changes'], ['Expo: expo-build-properties, buildReactNativeFromSource', 'https://docs.expo.dev/versions/latest/sdk/build-properties/']],
   },
   {
+    slug: 'maximum-update-depth-exceeded-react-native',
+    updated: '2026-10-18',
+    error: 'Maximum update depth exceeded',
+    title: '"Maximum update depth exceeded" in React Native: the fix',
+    description: 'Fix "Too many re-renders" and "Maximum update depth exceeded" in React Native: the three patterns behind the loop, with before and after code.',
+    body: `
+The screen freezes, then React stops with one of these:
+
+\`\`\`
+Too many re-renders. React limits the number of renders to prevent an infinite loop.
+\`\`\`
+
+\`\`\`
+Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+\`\`\`
+
+**Why.** A state update runs on every render. The update renders the component again, which runs the update again, and React stops the loop. Three patterns cause almost all of them.
+
+**1. A handler that is called instead of passed.** React's own docs name this the most common cause.
+
+\`\`\`
+- <Pressable onPress={setOpen(true)}>
++ <Pressable onPress={() => setOpen(true)}>
+\`\`\`
+
+**2. An effect with no dependency array that sets state.** It runs after every render, and a new object or array is always a change.
+
+\`\`\`
+- useEffect(() => {
+-   setItems(data.filter((d) => d.visible));
+- });
++ const items = useMemo(() => data.filter((d) => d.visible), [data]);
+\`\`\`
+
+Derive the value during render (or with \`useMemo\`) instead of copying it into state. If it really has to be state, give the effect the dependencies it reads.
+
+**3. An effect that changes the state it depends on.**
+
+\`\`\`
+- useEffect(() => {
+-   setCount(count + 1);
+- }, [count]);
++ useEffect(() => {
++   if (count < limit) setCount(count + 1);
++ }, [count, limit]);
+\`\`\`
+
+The same happens when a dependency is an object or function created during render: it is new every time. Move it inside the effect, or wrap it in \`useMemo\` / \`useCallback\`.
+
+**Check your project.** \`npx nativekeel\` reports these three patterns with file and line. It only reports the certain cases: a setter inside an \`if\`, after an early return, or with a value that does not change is left alone, because React stops when the value stays the same.
+`,
+    sources: [['React: "Too many re-renders" (useState troubleshooting)', 'https://react.dev/reference/react/useState#im-getting-an-error-too-many-re-renders'], ['React: My Effect keeps re-running in an infinite cycle', 'https://react.dev/reference/react/useEffect#my-effect-keeps-re-running-in-an-infinite-cycle'], ['React source: the "Maximum update depth exceeded" messages', 'https://github.com/facebook/react/blob/main/packages/react-reconciler/src/ReactFiberWorkLoop.js']],
+  },
+  {
     slug: 'supabase-rls-disabled',
     error: 'Supabase: RLS disabled in public (0013_rls_disabled_in_public)',
     title: 'Supabase tables without row level security in React Native',

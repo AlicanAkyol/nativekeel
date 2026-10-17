@@ -188,6 +188,15 @@ export const ERRORS = [
     source: 'real upgrade, 2026-10-03',
   },
   {
+    id: 'render-loop',
+    match: [/Too many re-renders/, /Maximum update depth exceeded/],
+    title: 'A render loop: state is set on every render',
+    cause: 'A state update runs during every render (a handler called instead of passed, an effect without a dependency array, or an effect that changes the state it depends on), so React renders again and again until it stops.',
+    fix: ['Pass handlers as functions: onPress={() => setOpen(true)}, not onPress={setOpen(true)}.', 'Give effects a dependency array, derive values during render instead of copying them into state, and only change an effect\'s own dependency behind a condition.'],
+    related: ['crash-render-loop'],
+    page: fix('maximum-update-depth-exceeded-react-native'),
+  },
+  {
     id: 'recycle-mounted-view',
     match: [/Attempt to recycle a mounted view/],
     title: 'New Architecture: a legacy component around a Modal',

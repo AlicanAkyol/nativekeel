@@ -1,4 +1,5 @@
 import fs from './read-boundary.js';
+import { renderLoops } from './render-loops.js';
 import { upcomingFinding } from './upcoming.js';
 import path from 'node:path';
 import { cleanVersion, findPackageDir, installedVersion, versionFromSpec } from './project.js';
@@ -197,6 +198,8 @@ export function stabilityChecks(project) {
     }
   }
 
+  // State updates that run on every render.
+  for (const f of renderLoops(project)) add(f);
   return findings;
 }
 
