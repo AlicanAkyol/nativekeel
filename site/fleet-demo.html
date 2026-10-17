@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sample fleet overview · NativeKeel</title>
+<meta name="description" content="A sample NativeKeel fleet page for four fictional React Native apps: A–E ratings per area, store deadlines and what changed since last month.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<meta property="og:title" content="Sample fleet overview · NativeKeel">
+<meta property="og:description" content="A sample NativeKeel fleet page for four fictional React Native apps: A–E ratings per area, store deadlines and what changed since last month.">
+<meta property="og:image" content="https://nativekeel.com/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:description" content="A sample NativeKeel fleet page for four fictional React Native apps: A–E ratings per area, store deadlines and what changed since last month.">
+<style>
+:root{--bg:#f7f8fa;--card:#fff;--text:#16181d;--muted:#5f6673;--line:#e3e6eb;--critical:#c62828;--high:#b26a00;--accent:#0b5d55}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1115;--card:#171a20;--text:#e8eaee;--muted:#9aa1ad;--line:#2a2f38;--critical:#ff6b6b;--high:#f0a73a;--accent:#3cc4b4}}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1360px;margin:0 auto;padding:32px 16px}h1{margin:0 0 4px;font-size:26px}.muted{color:var(--muted);font-size:13px;display:block}
+.stats{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0}.stats div{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 14px;min-width:120px}.stats b{display:block;font-size:22px}.stats span{font-size:13px;color:var(--muted)}
+.wrap{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;min-width:900px}th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}thead th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600}
+tbody th{font-weight:600}td ul{margin:0;padding-left:16px;font-size:13px}td:last-child{min-width:280px}.v{white-space:nowrap}.was{display:block;font-size:11px;color:var(--muted);font-weight:400}th.r,td.r{padding-left:4px;padding-right:4px;text-align:center}thead th.r{font-size:11px;letter-spacing:0}.n{font-variant-numeric:tabular-nums}.crit{color:var(--critical);font-weight:700}.high{color:var(--high);font-weight:700}
+.g{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:6px;color:#fff;font-size:14px}.gA,.gB{background:#2e7d32}.gC{background:#8a6d00}.gD{background:#b26a00}.gE{background:#c62828}
+footer{margin-top:24px;color:var(--muted);font-size:13px}a{color:var(--accent)}
+</style>
+</head>
+<body><main>
+<p style="border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin:0 0 20px;font-size:14px">Sample for four fictional apps, generated with <code>npx nativekeel fleet clients --base last-month.json --html fleet.html</code>. <a href="/teams">For teams</a> · <a href="/">NativeKeel</a></p>
+<h1>Acme Mobile (fictional agency): React Native apps overview</h1>
+<p class="muted">Scanned 2026-10-17 03:41 UTC with NativeKeel. Worst first. "was" values are from 2026-09-17.</p>
+<div class="stats"><div><b>4</b><span>apps</span></div><div><b class="crit">9</b><span>critical findings</span></div><div><b class="high">11</b><span>high findings</span></div><div><b>7</b><span>store or support deadlines</span></div></div>
+<div class="wrap"><table>
+<thead><tr><th scope="col">App</th><th scope="col">Version</th><th scope="col" class="r">Security</th><th scope="col" class="r">Store</th><th scope="col" class="r">Stability</th><th scope="col" class="r">Upgrade</th><th scope="col" class="r">Performance</th><th scope="col" class="r">Accessibility</th><th scope="col">Critical</th><th scope="col">High</th><th scope="col">Deadlines</th></tr></thead>
+<tbody>
+<tr><th scope="row">acme-shop<span class="muted">clients/acme-shop</span></th><td class="v">RN 0.77.1<span class="muted">latest 0.88.0</span></td><td class="r"><b class="g gE" title="Security: 3 findings">E</b></td><td class="r"><b class="g gE" title="Store: 2 findings">E</b></td><td class="r"><b class="g gA" title="Stability: 0 findings">A</b></td><td class="r"><b class="g gE" title="Upgrade: 15 findings">E</b></td><td class="r"><b class="g gA" title="Performance: 0 findings">A</b></td><td class="r"><b class="g gC" title="Accessibility: 1 finding">C</b></td><td class="n crit">4</td><td class="n high">4</td><td><ul><li>React Native 0.77.1 is no longer supported</li><li>New Architecture is disabled (android + ios)</li><li>targetSdk 34 hides the app from users on newer Android versions</li></ul></td></tr>
+<tr><th scope="row">acme-notes<span class="muted">clients/acme-notes</span></th><td class="v">RN 0.77.1<span class="muted">latest 0.88.0</span></td><td class="r"><b class="g gE" title="Security: 3 findings">E</b></td><td class="r"><b class="g gB" title="Store: 1 finding">B</b><span class="was">was E</span></td><td class="r"><b class="g gA" title="Stability: 0 findings">A</b></td><td class="r"><b class="g gE" title="Upgrade: 15 findings">E</b></td><td class="r"><b class="g gA" title="Performance: 0 findings">A</b></td><td class="r"><b class="g gC" title="Accessibility: 1 finding">C</b></td><td class="n crit">3<span class="was">was 4</span></td><td class="n high">4</td><td><ul><li>React Native 0.77.1 is no longer supported</li><li>New Architecture is disabled (android + ios)</li></ul></td></tr>
+<tr><th scope="row">acme-rides<span class="muted">clients/acme-rides</span></th><td class="v">RN 0.77.1<span class="muted">latest 0.88.0</span></td><td class="r"><b class="g gC" title="Security: 1 finding">C</b><span class="was">was E</span></td><td class="r"><b class="g gB" title="Store: 1 finding">B</b><span class="was">was E</span></td><td class="r"><b class="g gA" title="Stability: 0 findings">A</b></td><td class="r"><b class="g gE" title="Upgrade: 15 findings">E</b></td><td class="r"><b class="g gA" title="Performance: 0 findings">A</b></td><td class="r"><b class="g gC" title="Accessibility: 1 finding">C</b></td><td class="n crit">2<span class="was">was 4</span></td><td class="n high">3<span class="was">was 4</span></td><td><ul><li>React Native 0.77.1 is no longer supported</li><li>New Architecture is disabled (ios)</li></ul></td></tr>
+<tr><th scope="row">acme-health<span class="muted">clients/acme-health</span></th><td class="v">RN 0.88.0, Expo 58<span class="muted">latest 0.88.0</span></td><td class="r"><b class="g gA" title="Security: 0 findings">A</b><span class="was">was D</span></td><td class="r"><b class="g gA" title="Store: 0 findings">A</b></td><td class="r"><b class="g gA" title="Stability: 0 findings">A</b></td><td class="r"><b class="g gA" title="Upgrade: 0 findings">A</b></td><td class="r"><b class="g gA" title="Performance: 0 findings">A</b></td><td class="r"><b class="g gC" title="Accessibility: 1 finding">C</b></td><td class="n">0</td><td class="n">0<span class="was">was 1</span></td><td><span class="muted">none</span></td></tr>
+</tbody></table></div>
+<footer><p>Ratings: A = nothing found in that area, B = only low findings, C = medium, D = high, E = critical. They describe what the scan found, not a guarantee. Details for one app: <code>npx nativekeel &lt;path&gt; --html report.html</code>.</p><p>Looking after many apps? Tell us what your team needs: hello@nativekeel.com · <a href="https://nativekeel.com">nativekeel.com</a></p></footer>
+</main></body></html>

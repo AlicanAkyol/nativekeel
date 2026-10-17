@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>React Native quality gate for teams · NativeKeel</title>
+<meta name="description" content="SonarQube-style A–E ratings, a quality gate in every pull request and one page for all your React Native apps. Free, open source, runs on your machine.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#0b5d55">
+<link rel="canonical" href="https://nativekeel.com/teams">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="NativeKeel">
+<meta property="og:url" content="https://nativekeel.com/teams">
+<meta property="og:title" content="React Native quality gate for teams · NativeKeel">
+<meta property="og:description" content="SonarQube-style A–E ratings, a quality gate in every pull request and one page for all your React Native apps. Free, open source, runs on your machine.">
+<meta property="og:image" content="https://nativekeel.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="NativeKeel: npx nativekeel, a free health check for React Native and Expo apps">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="React Native quality gate for teams · NativeKeel">
+<meta name="twitter:description" content="SonarQube-style A–E ratings, a quality gate in every pull request and one page for all your React Native apps. Free, open source, runs on your machine.">
+<meta name="twitter:image" content="https://nativekeel.com/og.png">
+<style>
+:root{
+  --bg:#fbfaf7;--surface:#ffffff;--text:#15171b;--muted:#5d6470;--line:#e4e2dc;
+  --accent:#0b5d55;--accent-ink:#ffffff;--accent-soft:#e3f1ee;--red:#c62828;--amber:#b26a00;
+  --code-bg:#12151a;--code-text:#d9dee6;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--bg:#0e1013;--surface:#161a1f;--text:#e9ebef;--muted:#9aa2ad;--line:#262b32;--accent:#3cc4b4;--accent-ink:#06201d;--accent-soft:#12302c;--red:#ff6b6b;--amber:#f0a73a;--code-bg:#090b0e}
+}
+:root[data-theme="dark"]{--bg:#0e1013;--surface:#161a1f;--text:#e9ebef;--muted:#9aa2ad;--line:#262b32;--accent:#3cc4b4;--accent-ink:#06201d;--accent-soft:#12302c;--red:#ff6b6b;--amber:#f0a73a;--code-bg:#090b0e}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:17px/1.7 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+.wrap{max-width:760px;margin:0 auto;padding:0 16px}
+header.top{display:flex;align-items:center;justify-content:space-between;padding:18px 0;max-width:1040px;margin:0 auto;padding-left:16px;padding-right:16px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;color:var(--text);text-decoration:none}
+.logo svg{width:28px;height:28px}
+header.top a.back{color:var(--muted);text-decoration:none;font-size:15px}
+.eyebrow{font:600 13px ui-monospace,SFMono-Regular,Menlo,monospace;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin:40px 0 8px}
+h1{font-size:clamp(30px,4.6vw,42px);line-height:1.15;letter-spacing:-.02em;margin:0 0 16px}
+.lead{font-size:20px;color:var(--muted);margin:0 0 28px}
+h2{font-size:24px;letter-spacing:-.01em;margin:48px 0 8px}
+h3{font-size:18px;margin:28px 0 6px}
+p{margin:0 0 16px}
+.facts{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:8px 0 32px}
+.fact{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px}
+.fact b{display:block;font-size:24px;line-height:1.2}
+.fact span{font-size:13px;color:var(--muted);line-height:1.4;display:block;margin-top:4px}
+.before-after{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:8px 0 24px}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px 18px;font-size:15px}
+.box h4{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.box ul{margin:0;padding-left:18px}
+pre{background:var(--code-bg);color:var(--code-text);border-radius:10px;padding:14px 16px;overflow-x:auto;font:13.5px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;margin:0 0 18px}
+code{font:14px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--accent-soft);padding:1px 5px;border-radius:5px;overflow-wrap:anywhere}
+pre code{background:none;padding:0;font-size:inherit}
+.callout{border-left:4px solid var(--accent);background:var(--surface);border-radius:0 10px 10px 0;padding:14px 18px;margin:0 0 20px;font-size:16px}
+.callout.warn{border-left-color:var(--amber)}
+.step{border-top:1px solid var(--line);padding-top:8px}
+.tag{display:inline-block;font:600 12px ui-monospace,monospace;text-transform:uppercase;letter-spacing:.05em;padding:2px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);margin-right:6px}
+.tag.red{background:color-mix(in srgb,var(--red) 14%,transparent);color:var(--red)}
+.tag.amber{background:color-mix(in srgb,var(--amber) 16%,transparent);color:var(--amber)}
+table{width:100%;border-collapse:collapse;font-size:15px;margin:0 0 24px}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+td.ok{color:var(--accent);font-weight:600;white-space:nowrap}
+.cta{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:24px;margin:48px 0}
+.cta h2{margin-top:0}
+.btn{display:inline-block;text-decoration:none;font-weight:600;padding:11px 16px;border-radius:9px;background:var(--accent);color:var(--accent-ink);margin:6px 8px 0 0}
+.btn.ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
+footer{border-top:1px solid var(--line);margin-top:56px;padding:24px 0 40px;color:var(--muted);font-size:14px}
+@media (max-width:680px){.facts{grid-template-columns:repeat(2,1fr)}.before-after{grid-template-columns:1fr}body{font-size:16px}.lead{font-size:18px}}
+</style>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "TechArticle", "headline": "React Native quality gate for teams and agencies", "description": "SonarQube-style A–E ratings, a quality gate in every pull request and one page for all your React Native apps. Free, open source, runs on your machine.", "dateModified": "2026-10-17", "author": {"@type": "Organization", "name": "NativeKeel", "url": "https://nativekeel.com/"}, "mainEntityOfPage": "https://nativekeel.com/teams"}</script>
+<style>.rate{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:6px;color:#fff;font:700 13px system-ui,sans-serif;margin-right:6px;vertical-align:middle}.rA,.rB{background:#2e7d32}.rC{background:#8a6d00}.rD{background:#b26a00}.rE{background:#c62828}.shot{display:block;border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:8px 0 18px}.shot img{display:block;width:100%;height:auto}</style>
+</head>
+<body>
+<header class="top">
+  <a class="logo" href="/">
+    <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="var(--accent)"/><path d="M16 6v16M9 22h14M11 26h10" stroke="var(--accent-ink)" stroke-width="3" stroke-linecap="round"/></svg>
+    NativeKeel
+  </a>
+  <a class="back" href="/">← Home</a>
+</header>
+
+<main class="wrap">
+  <p class="eyebrow">For teams and agencies</p>
+  <h1>Every React Native app you look after, on one page</h1>
+  <p class="lead">SonarQube rates code. NativeKeel rates what breaks mobile apps: store deadlines, upgrades that will not build, crashes, leaked keys, screens a screen reader cannot use. The same rules for every app and every pull request, free and on your own machines.</p>
+
+  <h2>A–E ratings in six areas</h2>
+  <p>Every report rates <strong>Security, Store, Stability, Upgrade, Performance and Accessibility</strong>, the way SonarQube rates code:</p>
+  <table>
+    <tr><th>Rating</th><th>Means</th></tr>
+    <tr><td><span class="rate rA">A</span></td><td>The scan found nothing in that area</td></tr>
+    <tr><td><span class="rate rB">B</span></td><td>Only low findings</td></tr>
+    <tr><td><span class="rate rC">C</span></td><td>At least one medium finding</td></tr>
+    <tr><td><span class="rate rD">D</span></td><td>At least one high finding</td></tr>
+    <tr><td><span class="rate rE">E</span></td><td>At least one critical finding: a store rejection, a build that will not finish, a crash at launch, a key anyone can extract</td></tr>
+  </table>
+  <p>A rating describes what the scan found, not a guarantee. It is in the terminal, HTML, Markdown and JSON reports.</p>
+
+  <h2>All your apps in one table</h2>
+<pre><code>npx nativekeel fleet ~/clients --html fleet.html --brand "Your agency"</code></pre>
+  <p>Point it at a folder of client projects or a monorepo. It scans every React Native and Expo app it finds and puts them in one table, worst first: versions, the six ratings, critical and high findings, and the store and end-of-support deadlines each app faces.</p>
+  <a class="shot" href="/fleet-demo"><img src="/fleet-demo.png" width="1400" height="610" alt="Fleet overview of four fictional apps: ratings per area, critical and high counts, deadlines, and what changed since last month" loading="lazy"></a>
+  <p><a href="/fleet-demo">Open the sample page</a> (four fictional apps).</p>
+
+  <h2>What changed since last month</h2>
+<pre><code>npx nativekeel fleet ~/clients --json &gt; fleet-2026-10.json   # keep this month's run
+npx nativekeel fleet ~/clients --base fleet-2026-10.json     # next month</code></pre>
+  <p>Each app shows what moved ("Security E→C, critical 4→2"), which apps are new and which are gone. A monthly report for a client is one command. Nothing is stored anywhere except the file you keep.</p>
+
+  <h2>A quality gate in every pull request</h2>
+  <p>The GitHub Action keeps one comment up to date on each pull request:</p>
+<pre><code>### NativeKeel
+Quality gate: ✅ passed, no new critical or high findings.
+
+This pull request: 0 new, 2 fixed compared with 4aef3dc.
+Ratings: Security A (was C) · Store B · Stability A · Upgrade D · Performance A · Accessibility C</code></pre>
+<pre><code># .github/workflows/nativekeel.yml
+on: pull_request
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: AlicanAkyol/nativekeel@v0
+        with:
+          pr-comment: true</code></pre>
+  <p>Already have findings you cannot fix this sprint? <code>--save-baseline</code> accepts them, and only new ones fail the build.</p>
+
+  <h2>Team decisions, in the repository</h2>
+  <p>A <code>.nativekeel.json</code> next to <code>package.json</code> sets the gate and lists findings the team has accepted, each with a reason. Ignored findings stay listed in every report, and malware warnings cannot be ignored.</p>
+<pre><code>{
+  "failOn": "high",
+  "ignore": [
+    { "id": "flipper", "reason": "Removed in the 0.80 upgrade, sprint 42" }
+  ]
+}</code></pre>
+
+  <h2>Why teams can run it on client code</h2>
+  <ul>
+    <li><strong>Your code never leaves the machine.</strong> Only package names go to npm and React Native Directory; <code>--offline</code> sends nothing.</li>
+    <li><strong>No account, no dependencies,</strong> MIT licensed, published with npm provenance.</li>
+    <li><strong>Read-only.</strong> It never runs project code, and warns before you run a project with planted malware.</li>
+  </ul>
+
+  <div class="cta">
+    <h2>Looking after many apps?</h2>
+    <p>Tell us what your team needs: a shared dashboard, scheduled runs, rules of your own. We read every message: <a href="mailto:hello@nativekeel.com">hello@nativekeel.com</a>.</p>
+    <a class="btn" href="/fleet-demo">See the sample fleet page</a><a class="btn ghost" href="/sample-report">Sample report for one app</a>
+  </div>
+
+  <footer><a href="/">NativeKeel</a> · open source, runs on your machine</footer>
+</main>
+</body>
+</html>
