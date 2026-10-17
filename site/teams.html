@@ -117,6 +117,15 @@ npx nativekeel fleet ~/clients --base fleet-2026-10.json     # next month</code>
   <h2>Every app in your GitHub organization, every month</h2>
   <p>Copy <a href="https://github.com/AlicanAkyol/nativekeel/blob/main/examples/fleet-workflow.yml"><code>examples/fleet-workflow.yml</code></a> to <code>.github/workflows/</code> in any repository of the organization. On the 1st of each month it clones the repositories on the GitHub runner, scans every React Native and Expo app it finds, compares with last month and writes the table to the run summary. The shareable page and next month's baseline are kept as the run's artifact. Private repositories need a read-only token as a secret; NativeKeel uploads nothing.</p>
 
+  <h2>Team panel (closed beta)</h2>
+  <p>Every app's latest grades, what changed since the scan before, a trend over the last scans, the deadlines each app faces and its findings, on one page your team can bookmark. CI sends a summary after each scan: the app name, versions, ratings and finding titles. No source code and no finding details leave your pipeline.</p>
+<pre><code>- uses: AlicanAkyol/nativekeel@v0
+  with:
+    panel-token: ${{ secrets.NATIVEKEEL_TOKEN }}</code></pre>
+  <a class="shot" href="/panel-demo"><img src="/panel-demo.png" width="1400" height="600" alt="NativeKeel team panel for a fictional agency: four apps with A–E ratings, what changed since the previous scan, a trend line and deadlines" loading="lazy"></a>
+  <p><a class="btn" href="/panel-demo">Open the live demo panel</a> (four fictional apps).</p>
+  <div class="callout"><strong>Join the beta.</strong> The first teams use the panel free for three months. In return, once a month, a few lines by email on what helped and what is missing (no calls). Write to <a href="mailto:hello@nativekeel.com?subject=NativeKeel%20team%20panel%20beta">hello@nativekeel.com</a> with your team name and roughly how many apps you look after.</div>
+
   <h2>A quality gate in every pull request</h2>
   <p>The GitHub Action keeps one comment up to date on each pull request:</p>
 <pre><code>### NativeKeel

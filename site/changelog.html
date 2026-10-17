@@ -40,6 +40,11 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.94</h2><p class="date">17 October 2026</p>
+<ul>
+<li><span class="tag">Teams</span><b>Team panel, closed beta.</b> With <code>--upload</code> and a team token, each scan (or <code>fleet</code> run) sends a summary to your team's page: every app's grades, what changed since the scan before, a trend over the last scans, deadlines and finding titles. No source code and no finding details are sent, and <code>--upload</code> never works with <code>--offline</code>. The GitHub Action takes a <code>panel-token</code> input, and the monthly organization workflow uploads when a <code>NATIVEKEEL_TOKEN</code> secret is set. <a href="/panel-demo">Live demo</a> · <a href="/teams">join the beta</a>. What is stored: <a href="/privacy">privacy</a>.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.93</h2><p class="date">17 October 2026</p>
 <ul>
 <li><span class="tag">SonarQube</span><b>NativeKeel findings inside SonarQube.</b> <code>npx nativekeel --sonar nativekeel-sonar.json</code> writes SonarQube's generic issue format; the scanner reads it with <code>sonar.externalIssuesReportPaths</code>. Security findings arrive as vulnerabilities, store rules and crash risks as bugs, the rest as code smells, each on its file and line, in the same project and quality gate as the rest of your code. The GitHub Action has a <code>sonar</code> input. Tested end to end on SonarQube Community Build 26.10. <a href="/sonarqube">How to set it up</a>.</li>
