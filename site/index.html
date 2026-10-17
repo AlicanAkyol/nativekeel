@@ -57,7 +57,7 @@ h1{font-size:clamp(32px,5vw,48px);line-height:1.1;letter-spacing:-.02em;margin:0
 .lead{font-size:19px;color:var(--muted);margin:0 0 28px;max-width:34em}
 .cmd{display:inline-flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 10px 10px 16px;font:15px ui-monospace,SFMono-Regular,Menlo,monospace}
 .cmd button{border:0;background:var(--accent);color:var(--accent-ink);font:600 13px system-ui,sans-serif;padding:7px 12px;border-radius:7px;cursor:pointer}
-.sub{margin-top:12px;font-size:14px;color:var(--muted)}
+.sub{margin-top:12px;font-size:14px;color:var(--muted)}.sub.works{margin-top:6px}
 .term{background:var(--term-bg);color:var(--term-text);border-radius:var(--radius);padding:18px 18px 16px;font:12.5px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;overflow-x:auto;box-shadow:0 20px 50px -25px rgba(0,0,0,.45)}
 .term .dots{display:flex;gap:6px;margin-bottom:12px}.term .dots i{width:10px;height:10px;border-radius:50%;background:#3a3f47}
 .term pre{margin:0;white-space:pre}
@@ -133,6 +133,7 @@ footer a{color:var(--muted)}
       <p class="lead">One command tells you whether your app can still upgrade and still ship: unsupported versions, New Architecture blockers, Google Play deadlines, setups that crash at runtime, performance traps, buttons screen readers cannot name, and security holes from leaked keys to vulnerable dependencies.</p>
       <div class="cmd"><span>npx nativekeel</span><button type="button" id="copy">Copy</button></div>
       <p class="sub">Free and open source. No signup. Your code never leaves your machine.<br><a href="/check/">Check a package.json in your browser →</a> · <a href="sample-report.html">See a sample report</a></p>
+      <p class="sub works">Works with <a href="/teams">GitHub Actions</a> · <a href="/sonarqube">SonarQube</a> · <a href="ai-agents.html">Claude Code, Codex and Cursor</a></p>
     </div>
     <div class="term" aria-label="Example report">
       <div class="dots"><i></i><i></i><i></i></div>

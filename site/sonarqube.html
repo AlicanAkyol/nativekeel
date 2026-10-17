@@ -91,6 +91,12 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding:24px 0 40px;colo
   <h1>React Native and Expo checks, inside SonarQube</h1>
   <p class="lead">SonarQube reads your JavaScript, Kotlin and Swift, but it does not know that Xcode 27 will not launch an app without UIScene, that Google Play hides apps with an old target SDK, or that a library stops the iOS build on React Native 0.87. NativeKeel does, and it can hand those findings to SonarQube, so they sit in the same project, the same dashboard and the same quality gate as everything else.</p>
 
+  <h2>What it looks like</h2>
+  <p>A small sample app, analyzed by SonarQube Community Build 26.10. SonarQube's own analysis found nothing in it. With NativeKeel's report imported, the same project shows 10 issues, and its Security and Reliability ratings drop to E: an AWS key shipped in the app, a target SDK that hides the app on Google Play, a committed signing password.</p>
+  <a class="shot" href="/sonarqube-summary.png"><img src="/sonarqube-summary.png" width="1200" height="660" alt="SonarQube project summary: Security E with 3 open issues, Reliability E with 2, Maintainability A with 5, all imported from NativeKeel" loading="lazy"></a>
+  <a class="shot" href="/sonarqube-issues.png"><img src="/sonarqube-issues.png" width="1200" height="860" alt="SonarQube issues list: NativeKeel findings on src/App.js, package.json and android/gradle.properties with Security and Reliability impacts and Blocker or High severity" loading="lazy"></a>
+  <p>The quality gate in this screenshot still passes because SonarQube's default gate looks at new code, and this was the project's first analysis. From the next analysis on, new NativeKeel findings count like any other new issue.</p>
+
   <h2>Two lines in your pipeline</h2>
 <pre><code>npx nativekeel --sonar nativekeel-sonar.json --fail-on never
 sonar-scanner -Dsonar.externalIssuesReportPaths=nativekeel-sonar.json</code></pre>
