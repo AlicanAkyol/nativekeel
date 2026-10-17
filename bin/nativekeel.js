@@ -53,9 +53,10 @@ Usage
                                  from the source map a release build wrote; with --base,
                                  what grew, shrank or was added since that build (--json)
   npx nativekeel plan [path]     Write a step-by-step upgrade plan
-  npx nativekeel fleet [folder ...]
+  npx nativekeel fleet [folder ...] [--base fleet.json]
                                  Several apps side by side: versions, A–E ratings
-                                 and store deadlines (--html, --markdown, --json)
+                                 and store deadlines (--html, --markdown, --json);
+                                 with --base, what changed since that run
   npx nativekeel compare <before.json> <after.json>
                                  What got fixed and what is new between two scans
   npx nativekeel explain "<error>" [--path <app>]
@@ -116,7 +117,15 @@ function write(file, content) {
 
 // Every app under the given folders (or the folders themselves when they are apps).
 async function runFleet(positional, flags, failOn) {
-  const { fleetRow, sortFleet, fleetText, fleetMarkdown, fleetHtml } = await import('../src/fleet.js');
+  const { fleetRow, sortFleet, fleetText, fleetMarkdown, fleetHtml, withTrend } = await import('../src/fleet.js');
+  let previous = null;
+  if (flags.base) {
+    try {
+      previous = JSON.parse(fs.readFileSync(flags.base, 'utf8'));
+    } catch (e) {
+      fail(`cannot read ${flags.base}: ${e.message}`);
+    }
+  }
   const apps = [];
   // Shown relative to the current folder, or from the given folder's name when it is elsewhere.
   const labels = new Map();
@@ -151,10 +160,11 @@ async function runFleet(positional, flags, failOn) {
       rows.push({ app: path.basename(dir), path: rel, error: e.message.split('\n')[0] });
     }
   }
-  const sorted = sortFleet(rows);
-  if (flags.html) write(flags.html, fleetHtml(sorted, { brand: flags.brand || null }));
-  if (flags.markdown) write(flags.markdown, fleetMarkdown(sorted));
-  console.log(flags.json ? JSON.stringify({ tool: 'nativekeel', scannedAt: new Date().toISOString(), apps: sorted }, null, 2) : fleetText(sorted, { color: process.stdout.isTTY }));
+  const trend = previous ? withTrend(sortFleet(rows), previous) : null;
+  const sorted = trend ? trend.rows : sortFleet(rows);
+  if (flags.html) write(flags.html, fleetHtml(sorted, { brand: flags.brand || null, trend }));
+  if (flags.markdown) write(flags.markdown, fleetMarkdown(sorted, { trend }));
+  console.log(flags.json ? JSON.stringify({ tool: 'nativekeel', scannedAt: new Date().toISOString(), apps: sorted, ...(trend ? { comparedWith: trend.since, removed: trend.removed } : {}) }, null, 2) : fleetText(sorted, { color: process.stdout.isTTY, trend }));
   // --fail-on applies to every app; without it, each app's own .nativekeel.json decides.
   const fails = (r) => {
     const level = failOn || r.failOn || 'critical';

@@ -94,6 +94,7 @@ test('compare: fixed, new, and version changes', async () => {
   const md = compareToMarkdown(c);
   assert.match(md, /\| React Native \| 0.77.1 \| 0.87.1 \|/);
   assert.match(md, /\| New Architecture \| off \| on \|/);
+  assert.match(md, /\| Security rating \| E \| A \|/);
   assert.match(md, /✅ React Native 0.77.1 is no longer supported/);
 });
 

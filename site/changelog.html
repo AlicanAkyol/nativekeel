@@ -40,6 +40,12 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.91</h2><p class="date">17 October 2026</p>
+<ul>
+<li><span class="tag">Fleet</span><b>What changed since last month.</b> Keep a run with <code>npx nativekeel fleet ~/clients --json &gt; fleet-2026-10.json</code>; next time, <code>--base fleet-2026-10.json</code> shows per app what changed ("Security D→B, critical 2→0"), which apps are new and which are gone, in the terminal, the HTML page and Markdown. Nothing is stored anywhere but the file you keep.</li>
+<li><span class="tag">Compare</span><code>npx nativekeel compare before.json after.json</code> now includes the A–E rating of each area before and after.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.90</h2><p class="date">16 October 2026</p>
 <ul>
 <li><span class="tag">Teams</span><b>Quality gate in pull requests.</b> The GitHub Action's pull request comment now starts with "Quality gate: passed" or "failed" (failed when the change adds a critical or high finding), and shows the A–E ratings with what changed ("Security E (was B)").</li>

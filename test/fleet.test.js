@@ -56,3 +56,28 @@ test('fleet: output escapes app data and keeps apps that could not be scanned', 
   assert.ok(!html.includes('<script>') && html.includes('Target SDK &lt;36&gt;'));
   assert.match(fleetMarkdown(rows), /b\\\|&lt;script&gt;/);
 });
+
+test('fleet --base: what changed per app since an earlier run, new apps and apps that are gone', () => {
+  const root = makeProject({
+    'clients/a/package.json': { name: 'a', dependencies: { 'react-native': '0.80.0' } },
+    'clients/a/app.json': '{}',
+    'clients/b/package.json': { name: 'b', dependencies: { 'react-native': '0.80.0' } },
+    'clients/b/app.json': '{}',
+  });
+  const first = run(['fleet', 'clients', '--offline', '--json', '--fail-on', 'never'], { cwd: root }).stdout;
+  const old = JSON.parse(first);
+  old.apps.push({ app: 'retired', path: 'clients/retired', ratings: ratings([]), critical: 0, high: 0, deadlines: [] });
+  fs.writeFileSync(path.join(root, 'old.json'), JSON.stringify(old));
+  fs.writeFileSync(path.join(root, 'clients/a/src.js'), `export const k = '${FAKE_AWS_ID}';\n`);
+  fs.mkdirSync(path.join(root, 'clients/c'));
+  fs.writeFileSync(path.join(root, 'clients/c/package.json'), JSON.stringify({ name: 'c', dependencies: { 'react-native': '0.80.0' } }));
+  fs.writeFileSync(path.join(root, 'clients/c/app.json'), '{}');
+  const text = run(['fleet', 'clients', '--offline', '--base', 'old.json', '--fail-on', 'never'], { cwd: root }).stdout.replace(/\x1b\[\d+m/g, '');
+  assert.match(text, /since the last run: Security A→E, critical 0→1/);
+  assert.match(text, /new since the last run/);
+  assert.match(text, /1 changed \(0 better\), 1 new, gone: clients\/retired/);
+  const json = JSON.parse(run(['fleet', 'clients', '--offline', '--base', 'old.json', '--json', '--fail-on', 'never'], { cwd: root }).stdout);
+  assert.deepEqual(json.removed, ['clients/retired']);
+  assert.equal(json.apps.find((x) => x.app === 'a').was.ratings.security, 'A');
+  assert.equal(run(['fleet', 'clients', '--offline', '--base', 'missing.json'], { cwd: root }).status, 2);
+});

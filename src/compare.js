@@ -1,4 +1,5 @@
 import { SEVERITIES, countBySeverity } from './analyze.js';
+import { ratings } from './ratings.js';
 
 // Compares two scans (from `--json`): what got fixed, what is new, how versions moved.
 // Used for monthly Care reports and before/after case studies.
@@ -21,6 +22,7 @@ export function compareScans(before, after) {
       native: [before.deps.filter((d) => d.native).length, after.deps.filter((d) => d.native).length],
     },
     dates: [before.scannedAt, after.scannedAt],
+    ratings: { before: ratings(before.findings), after: ratings(after.findings) },
   };
 }
 
@@ -36,6 +38,9 @@ export function compareToMarkdown(c, { title = 'Health report: before and after'
       row('Native modules', c.versions.native),
     ].filter(Boolean),
   );
+  if (c.ratings) {
+    c.ratings.after.forEach((x, i) => lines.push(`| ${x.label} rating | ${c.ratings.before[i].rating} | ${x.rating} |`));
+  }
   for (const sev of SEVERITIES.filter((s) => s !== 'info')) {
     lines.push(`| ${sev[0].toUpperCase()}${sev.slice(1)} findings | ${c.counts.before[sev]} | ${c.counts.after[sev]} |`);
   }
