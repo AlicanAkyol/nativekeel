@@ -16,7 +16,7 @@ import { securityOnly } from '../src/security-review.js';
 import { buildImprovementPlan, improvementToMarkdown, improvementToText } from '../src/improve.js';
 import { SITE_URL } from '../src/config.js';
 
-const VALUE_FLAGS = new Set(['--html', '--out', '--baseline', '--save-baseline', '--brand', '--sarif', '--markdown', '--fail-on', '--path', '--base', '--comment', '--report-url']);
+const VALUE_FLAGS = new Set(['--html', '--out', '--baseline', '--save-baseline', '--brand', '--sarif', '--markdown', '--fail-on', '--sonar', '--path', '--base', '--comment', '--report-url']);
 const COMMANDS = new Set(['scan', 'security', 'improve', 'bundle', 'plan', 'compare', 'compare-imports', 'prepare-imports', 'explain', 'verify', 'fleet', 'mcp', 'help']);
 
 function parseArgs(argv) {
@@ -73,6 +73,7 @@ Scan options
   --html <file>             Save a shareable HTML report
   --markdown <file>         Save a Markdown summary (for pull request comments)
   --sarif <file>            Save SARIF for GitHub code scanning
+  --sonar <file>            Save issues for SonarQube (sonar.externalIssuesReportPaths)
   --verbose                 List every outdated package
   --offline                 Make no network requests (local checks only)
   --save-baseline <file>    Accept current findings as known
@@ -340,6 +341,10 @@ async function main() {
   if (flags.html) write(flags.html, htmlReport(result, { brand }));
   if (flags.markdown) write(flags.markdown, markdownReport(result, { verbose: !!flags.verbose }));
   if (flags.sarif) write(flags.sarif, `${JSON.stringify(sarifReport(result, { version: packageVersion() }), null, 2)}\n`);
+  if (flags.sonar) {
+    const { sonarReport } = await import('../src/report-sonar.js');
+    write(flags.sonar, `${JSON.stringify(sonarReport(result), null, 2)}\n`);
+  }
   if (flags.json) console.log(JSON.stringify(result, null, 2));
   else console.log(textReport(result, { color: process.stdout.isTTY, verbose: !!flags.verbose }));
   if (failOn === 'never') return 0;

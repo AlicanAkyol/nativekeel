@@ -9,7 +9,7 @@ const LEVEL = { critical: 'error', high: 'error', medium: 'warning', low: 'note'
 
 // Where a finding lives: its own file/line when known, otherwise the package.json line that
 // declares the dependency, otherwise the top of package.json.
-function locate(result, finding, pkgLines) {
+export function locate(result, finding, pkgLines) {
   const fix = finding.fix || {};
   if (finding.evidence?.[0]?.file) return { uri: finding.evidence[0].file, line: finding.evidence[0].line || 1 };
   if (fix.file) return { uri: fix.file, line: fix.line || 1 };
