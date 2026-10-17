@@ -48,7 +48,8 @@ a{color:var(--accent)}
 header.top{display:flex;align-items:center;justify-content:space-between;padding:18px 0}
 .logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;color:var(--text);text-decoration:none}
 .logo svg{width:28px;height:28px}
-nav a{color:var(--muted);text-decoration:none;margin-left:20px;font-size:15px}
+nav{display:flex;flex-wrap:nowrap}nav a{color:var(--muted);text-decoration:none;margin-left:20px;font-size:15px;white-space:nowrap}
+@media (max-width:960px){nav a.opt{display:none}}
 nav a:hover{color:var(--text)}
 .hero{padding:48px 0 24px;display:grid;grid-template-columns:1.05fr 1fr;gap:40px;align-items:center}
 .hero>*,.grid3>*,.steps>*,.pricing>*,.buy>*{min-width:0}
@@ -123,7 +124,7 @@ footer a{color:var(--muted)}
       <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="var(--accent)"/><path d="M16 6v16M9 22h14M11 26h10" stroke="var(--accent-ink)" stroke-width="3" stroke-linecap="round"/></svg>
       NativeKeel
     </a>
-    <nav><a href="#checks">What it checks</a><a href="case-study.html">Case study</a><a href="/check/">Check online</a><a href="sample-report.html">Sample report</a><a href="ai-agents.html">AI agents</a><a href="changelog.html">What's new</a><a href="security.html">Security</a><a href="/teams">For teams</a><a href="#help">Expert help</a><a href="https://github.com/AlicanAkyol/nativekeel">GitHub</a></nav>
+    <nav><a class="opt" href="#checks">What it checks</a><a href="/check/">Check online</a><a href="/teams">For teams</a><a class="opt" href="ai-agents.html">AI agents</a><a class="opt" href="changelog.html">What's new</a><a class="opt" href="#help">Expert help</a><a href="https://github.com/AlicanAkyol/nativekeel">GitHub</a></nav>
   </header>
 
   <div class="hero">
@@ -265,7 +266,7 @@ New Architecture  android: <span class="r">off</span>  ios: <span class="r">off<
 
   <footer>
     <span>© 2026 NativeKeel, run by <a href="https://alicanakyol.com">Alican Akyol</a> · <a href="mailto:hello@nativekeel.com">hello@nativekeel.com</a></span>
-    <span><a href="changelog.html">What's new</a> · <a href="/fix/">React Native fixes</a> · <a href="privacy.html">Privacy</a> · <a href="https://github.com/AlicanAkyol/nativekeel">GitHub</a> · <a href="https://www.npmjs.com/package/nativekeel">npm</a></span>
+    <span><a href="changelog.html">What's new</a> · <a href="case-study.html">Case study</a> · <a href="sample-report.html">Sample report</a> · <a href="/teams">For teams</a> · <a href="ai-agents.html">AI agents</a> · <a href="security.html">Security</a> · <a href="/fix/">React Native fixes</a> · <a href="privacy.html">Privacy</a> · <a href="https://github.com/AlicanAkyol/nativekeel">GitHub</a> · <a href="https://www.npmjs.com/package/nativekeel">npm</a></span>
   </footer>
 </div>
 <script>
