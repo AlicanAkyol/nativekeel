@@ -17,6 +17,9 @@ inputs:
   sarif:
     description: 'Upload results to GitHub code scanning (needs `security-events: write`)'
     default: 'false'
+  sonar:
+    description: 'Write findings for SonarQube to this file (relative to the workspace); pass it to the scanner with sonar.externalIssuesReportPaths'
+    default: ''
   offline:
     description: 'Make no network requests (local checks only)'
     default: 'false'
@@ -40,6 +43,7 @@ runs:
         NK_FAIL_ON: ${{ inputs.fail-on }}
         NK_BASELINE: ${{ inputs.baseline }}
         NK_SARIF: ${{ inputs.sarif }}
+        NK_SONAR: ${{ inputs.sonar }}
         NK_OFFLINE: ${{ inputs.offline }}
       run: |
         args=("$NK_PATH" --markdown "$RUNNER_TEMP/nativekeel.md")
@@ -47,6 +51,7 @@ runs:
         [ -n "$NK_BASELINE" ] && args+=(--baseline "$NK_BASELINE")
         [ "$NK_SARIF" = "true" ] && args+=(--sarif "$RUNNER_TEMP/nativekeel.sarif")
         [ "$NK_OFFLINE" = "true" ] && args+=(--offline)
+        [ -n "$NK_SONAR" ] && args+=(--sonar "$NK_SONAR")
         set +e
         node "$GITHUB_ACTION_PATH/bin/nativekeel.js" "${args[@]}"
         code=$?

@@ -139,6 +139,9 @@ jobs:
           pr-comment: true</code></pre>
   <p>Already have findings you cannot fix this sprint? <code>--save-baseline</code> accepts them, and only new ones fail the build.</p>
 
+  <h2>Already on SonarQube?</h2>
+  <p>NativeKeel can write its findings in SonarQube's import format, so mobile issues land in the same project and quality gate: <a href="/sonarqube">SonarQube for React Native apps</a>.</p>
+
   <h2>Team decisions, in the repository</h2>
   <p>A <code>.nativekeel.json</code> next to <code>package.json</code> sets the gate and lists findings the team has accepted, each with a reason. Ignored findings stay listed in every report, and malware warnings cannot be ignored.</p>
 <pre><code>{

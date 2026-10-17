@@ -40,6 +40,11 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.93</h2><p class="date">17 October 2026</p>
+<ul>
+<li><span class="tag">SonarQube</span><b>NativeKeel findings inside SonarQube.</b> <code>npx nativekeel --sonar nativekeel-sonar.json</code> writes SonarQube's generic issue format; the scanner reads it with <code>sonar.externalIssuesReportPaths</code>. Security findings arrive as vulnerabilities, store rules and crash risks as bugs, the rest as code smells, each on its file and line, in the same project and quality gate as the rest of your code. The GitHub Action has a <code>sonar</code> input. Tested end to end on SonarQube Community Build 26.10. <a href="/sonarqube">How to set it up</a>.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.92</h2><p class="date">17 October 2026</p>
 <ul>
 <li><span class="tag">React Native 0.88</span>React Native 0.88 and Expo SDK 58 are stable, and reports now say so. The Xcode 27 / UIScene finding names the official 0.88 path: the new SceneDelegate entry points in <code>RCTReactNativeFactory</code>, forwarding links to <code>RCTLinkingManager</code>, one scene only. <a href="/fix/uiscene-life-cycle-required-xcode-27">Updated fix page</a>.</li>
