@@ -961,6 +961,92 @@ export function aiKeysInBundle(root, deps = {}) {
   }));
 }
 
+// Backend credentials with admin rights read by app code from build-time variables, and server
+// SDKs imported by app code. Either way the app carries a key that skips the backend's own access
+// rules (Supabase row-level security, Hasura permissions, Firestore rules, Stripe's API): anyone
+// who unpacks the app can read or change every user's data. The variable name is enough, as for
+// AI keys: EXPO_PUBLIC_, react-native-config and react-native-dotenv compile the value in.
+const BACKEND_ADMIN_NAMES = [
+  [/SUPABASE\w*SERVICE_ROLE|SERVICE_ROLE\w*SUPABASE|^SUPABASE_SERVICE_KEY$/, 'Supabase service_role key', 'bypasses row-level security on every table', 'critical'],
+  [/HASURA\w*ADMIN_SECRET/, 'Hasura admin secret', 'gives full access to the GraphQL API, past every permission rule', 'critical'],
+  [/FIREBASE\w*(?:PRIVATE_KEY|SERVICE_ACCOUNT|ADMIN_(?:KEY|SDK|CREDENTIAL))/, 'Firebase service account key', 'is an Admin SDK credential that ignores Firestore, Realtime Database and Storage rules', 'critical'],
+  // Only names that can only hold a credential: *_DATABASE_URL is often the public Firebase
+  // Realtime Database or Supabase URL, so URL/URI names are not reported.
+  [/^(?:\w+_)?(?:DATABASE|DB|POSTGRES|POSTGRESQL|PG|MONGO|MONGODB|MYSQL|REDIS)_(?:PASSWORD|PASS|CONNECTION_STRING)$/, 'Database password', 'connects straight to the database, past any API', 'critical'],
+  [/STRIPE\w*SECRET(?:_KEY)?$|^STRIPE_SK$/, 'Stripe secret key', 'can create charges and refunds and read every customer', 'critical'],
+  [/APPWRITE\w*(?:API_KEY|SECRET)/, 'Appwrite API key', 'is a server key with the scopes you gave it, outside user permissions', 'high'],
+  [/POCKETBASE\w*(?:ADMIN|SUPERUSER)\w*PASSWORD/, 'PocketBase superuser password', 'logs in as a superuser, past every collection rule', 'critical'],
+  [/^(?:\w+_)?JWT_SECRET$/, 'JWT signing secret', 'lets anyone sign valid tokens for any user', 'critical'],
+];
+const SERVER_SDKS = [
+  ['firebase-admin', 'firebase-admin (Admin SDK: ignores security rules; needs a service account)'],
+  ['node-appwrite', 'node-appwrite (server SDK: needs an API key)'],
+  ['stripe', 'stripe (server SDK: needs the secret key)'],
+  ['pg', 'pg (direct PostgreSQL connection: needs database credentials)'],
+  ['mongodb', 'mongodb (direct MongoDB connection: needs database credentials)'],
+  ['mysql2', 'mysql2 (direct MySQL connection: needs database credentials)'],
+];
+
+const TEST_FILE = /(?:^|\/)(?:test|tests|e2e|__tests__|__mocks__)\/|\.(?:test|spec)\.[cm]?[jt]sx?$/;
+
+export function backendAdminInBundle(root, deps = {}) {
+  const expo = !!deps.expo;
+  const ways = [
+    expo && [/process\.env\.(EXPO_PUBLIC_[A-Z0-9_]+)/g, 'EXPO_PUBLIC_ variables are compiled into the JavaScript bundle'],
+    deps['react-native-config'] && [/\bConfig\.([A-Z0-9_]+)/g, 'react-native-config compiles its values into the app'],
+    (deps['react-native-dotenv'] || deps['module:react-native-dotenv']) && [/import\s*\{([^}]+)\}\s*from\s*['"](?:@env|react-native-dotenv)['"]/g, 'react-native-dotenv inlines its values into the JavaScript bundle'],
+  ].filter(Boolean);
+  const keys = new Map(); // label -> hit
+  const sdks = new Map(); // module -> where
+  for (const file of jsFiles(root)) {
+    const rel = path.relative(root, file).split(path.sep).join('/');
+    if (AI_SERVER_DIRS.test(rel) || TEST_FILE.test(rel)) continue;
+    const text = read(file);
+    if (!text) continue;
+    const code = text.replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' ')).replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+    const lineAt = (i) => code.slice(0, i).split('\n').length;
+    for (const [re, how] of ways) {
+      for (const m of code.matchAll(re)) {
+        for (const raw of m[1].split(',').map((n) => n.trim().split(/\s+as\s+/)[0])) {
+          const name = raw.replace(/^EXPO_PUBLIC_/, '');
+          const rule = BACKEND_ADMIN_NAMES.find(([r]) => r.test(name));
+          if (!rule || keys.has(rule[1])) continue;
+          const shown = m[0].startsWith('process.env.') ? m[1] : m[0].startsWith('Config.') ? `Config.${raw}` : raw;
+          keys.set(rule[1], { rule, name: shown, how, where: `${rel}:${lineAt(m.index)}` });
+        }
+      }
+    }
+    // Only files that are certainly app code: they also import React Native or Expo. Server
+    // services, scripts and build config often live in the same repository.
+    const appFile = /(?:from\s*|require\(\s*)['"](?:react-native|expo(?:-[\w-]+)?|@expo\/[\w-]+)['"]/.test(code);
+    for (const [mod] of appFile ? SERVER_SDKS : []) {
+      if (sdks.has(mod)) continue;
+      const m = code.match(new RegExp(`(?:from\\s*|require\\(\\s*)['"]${mod.replace(/[/-]/g, '\\$&')}['"]`));
+      if (m) sdks.set(mod, `${rel}:${lineAt(m.index)}`);
+    }
+  }
+  const findings = [...keys.values()].map(({ rule, name, how, where }) => ({
+    id: `backend-admin-in-bundle:${rule[1]}`,
+    severity: rule[3],
+    area: 'security',
+    title: `${rule[1]} ships inside the app (${where})`,
+    detail: `The app reads ${name}, and ${how}. This credential ${rule[2]}: anyone who unpacks the app can read or change every user's data. Keep it only on a server you control (an API route or cloud function that checks who is calling), give the app a user-scoped key instead, and rotate the one that shipped. (OWASP MASVS-AUTH-1, MASVS-CRYPTO-2)`,
+    fix: { kind: 'security', step: `Move the ${rule[1]} (${where}) to your server, give the app user-scoped access, then rotate the credential that shipped.` },
+  }));
+  if (sdks.size) {
+    const list = [...sdks].map(([mod, where]) => `${SERVER_SDKS.find((x) => x[0] === mod)[1]} at ${where}`);
+    findings.push({
+      id: 'backend-server-sdk-in-app',
+      severity: 'high',
+      area: 'security',
+      title: `Server-only SDK${sdks.size === 1 ? '' : 's'} imported by app code (${[...sdks.keys()].join(', ')})`,
+      detail: `${list.join('; ')}. These SDKs are made to run on a server with credentials that bypass your backend's access rules; in a mobile app those credentials ship with it. Call your own API (or the client SDK with user-scoped access) instead. If this file only runs on a server, move it into a server folder so it is not bundled. (OWASP MASVS-AUTH-1)`,
+      fix: { kind: 'security', step: `Replace ${[...sdks.keys()].join(', ')} in app code with calls to your own server or the client SDK.` },
+    });
+  }
+  return findings;
+}
+
 // Deep links (MASVS-PLATFORM). A web link (https://your.domain/...) opens the app only when the
 // domain is verified (autoVerify + assetlinks.json); without it Android 12+ opens the browser,
 // and older Android lets any app that registers the same link receive it. Custom URL schemes can

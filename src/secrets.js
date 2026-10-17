@@ -31,6 +31,15 @@ const RULES = [
   { id: 'google-oauth-secret', label: 'Google OAuth client secret', re: /\b(?<v>GOCSPX-[A-Za-z0-9_-]{28})\b/g },
   { id: 'mailchimp-key', label: 'Mailchimp API key', re: /\b(?<v>[0-9a-f]{32}-us\d{1,2})\b/g },
   { id: 'shopify-token', label: 'Shopify access token', re: /\b(?<v>shp(?:at|ca|pa|ss)_[a-fA-F0-9]{32})\b/g },
+  // A database URL with a password connects straight to the database. Local development hosts
+  // (localhost, Docker service names without a dot) and placeholder passwords are left alone.
+  {
+    id: 'database-url',
+    label: 'Database connection string with password',
+    re: /\b(?:mongodb(?:\+srv)?|postgres(?:ql)?|mysql|mariadb|rediss?|amqps?):\/\/[^:@/\s'"`]+:(?<v>[^@/\s'"`]{6,})@(?<host>[A-Za-z0-9.-]+)/g,
+    validate: (m) => /\./.test(m.groups.host) && !/^(?:localhost|127\.|0\.0\.0\.0|10\.|192\.168\.|host\.docker\.internal)/.test(m.groups.host) && !/^(?:password|passw0rd|secret|changeme|\$\{|[<\[{(])/i.test(m.groups.v) && !/password|your|pass(?:wd)?$/i.test(m.groups.v),
+  },
+  { id: 'hasura-admin-secret', label: 'Hasura admin secret', re: /x-hasura-admin-secret["']?\s*[:=]\s*["'](?<v>[^"'\s$`{]{8,})["']/gi },
   // Supabase anon keys are public by design; the service_role key bypasses row-level security.
   // Both are JWTs, so decode the payload and only report the service role.
   {
