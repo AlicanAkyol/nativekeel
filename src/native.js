@@ -187,6 +187,47 @@ export function nativeChecks(project, { rnLatest = null, now = new Date() } = {}
     }
   }
 
+  // Android 16 (API 36), required for Google Play updates since 31 August 2026 (1 November with an
+  // extension): the edge-to-edge opt-out is ignored, and orientation, resizability and aspect
+  // ratio restrictions no longer apply on screens at least 600dp wide (tablets, foldables).
+  // https://developer.android.com/about/versions/16/behavior-changes-16
+  {
+    const styles = hasAndroid ? read(path.join(root, 'android', 'app', 'src', 'main', 'res', 'values', 'styles.xml')) || '' : '';
+    const optOut = /name\s*=\s*"(?:android:)?windowOptOutEdgeToEdgeEnforcement"\s*>\s*true\s*</.test(styles);
+    const appTag = (appManifest.match(/<application\b[^>]*>/) || [''])[0];
+    const game = /android:appCategory\s*=\s*"game"/.test(appTag);
+    const allowRestricted = /PROPERTY_COMPAT_ALLOW_RESTRICTED_RESIZABILITY[\s\S]{0,120}?android:value\s*=\s*"true"/.test(appManifest);
+    const locks = [];
+    for (const m of appManifest.matchAll(/<activity\b[^>]*>/g)) {
+      const name = (m[0].match(/android:name\s*=\s*"([^"]+)"/) || [])[1] || 'activity';
+      const o = (m[0].match(/android:screenOrientation\s*=\s*"(portrait|landscape|sensorPortrait|sensorLandscape|userPortrait|userLandscape|reversePortrait|reverseLandscape|nosensor|locked)"/) || [])[1];
+      if (o) locks.push(`${name.split('.').pop()} screenOrientation="${o}"`);
+      if (/android:resizeableActivity\s*=\s*"false"/.test(m[0])) locks.push(`${name.split('.').pop()} resizeableActivity="false"`);
+      if (/android:(?:min|max)AspectRatio\s*=/.test(m[0])) locks.push(`${name.split('.').pop()} aspect ratio limits`);
+    }
+    if (!hasAndroid && project.managed) {
+      const config = ['app.json', 'app.config.js', 'app.config.ts'].map((f) => read(path.join(root, f)) || '').join('\n');
+      const o = (config.match(/["']?orientation["']?\s*:\s*["'](portrait|landscape)["']/) || [])[1];
+      if (o) locks.push(`app config orientation "${o}"`);
+    }
+    const lockMatters = locks.length && !game;
+    if (optOut || lockMatters) {
+      const now36 = target && target >= 36;
+      const parts = [];
+      if (optOut) parts.push('`windowOptOutEdgeToEdgeEnforcement` in android/app/src/main/res/values/styles.xml is ignored on Android 16: the app is drawn edge-to-edge, so screens that relied on the opt-out slide under the status and navigation bars. Handle insets (react-native-safe-area-context) and remove the attribute.');
+      if (lockMatters) parts.push(`On screens at least 600dp wide (tablets, foldables) Android 16 ignores ${locks.slice(0, 3).join(', ')}${locks.length > 3 ? ', …' : ''}: the app rotates and resizes, so layouts that assume portrait need checking there.${allowRestricted ? ' PROPERTY_COMPAT_ALLOW_RESTRICTED_RESIZABILITY keeps the old behavior for now, but it stops working when you target API 37.' : ''}`);
+      add({
+        id: 'android-api36-behavior',
+        // A portrait lock alone is common (Expo's template sets it): a note, not a finding that moves the rating.
+        severity: optOut ? 'medium' : 'info',
+        area: 'store',
+        title: now36 ? 'Android 16 (API 36) changes apply to this app' : 'What changes when the app targets Android 16 (API 36)',
+        detail: `${now36 ? 'The app targets API 36.' : `Google Play requires API 36 for new apps and updates since 31 August 2026 (1 November 2026 with an extension)${target ? `; the app targets ${target}` : ''}.`} ${parts.join(' ')}`,
+        fix: { kind: 'known-issue', severity: optOut ? 'medium' : 'low', title: 'Android 16 (API 36) behavior changes', detail: parts.join(' ') },
+      });
+    }
+  }
+
   // RCTAppDependencyProvider: required in AppDelegate since React Native 0.77. Without it,
   // third-party Fabric components fall back to the legacy interop layer and send
   // RCTEventEmitter events, which do not exist in bridgeless mode: an error in Debug and a

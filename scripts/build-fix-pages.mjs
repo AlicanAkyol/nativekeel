@@ -509,6 +509,7 @@ Enable the Sign in with Apple capability for the app ID, show Apple's button nex
   },
   {
     slug: 'google-play-target-api-level',
+    updated: '2026-10-18',
     error: 'Your app currently targets API level 34 and must target at least API level 36',
     title: 'Google Play "must target at least API level": React Native',
     description: 'What Google Play\'s target API level error means for React Native and Expo apps in 2026, the deadlines, and what usually breaks when you raise targetSdk.',
@@ -519,16 +520,17 @@ Play Console shows:
 Your app currently targets API level 34 and must target at least API level 36 to ensure that it is built on the latest APIs optimized for security and performance.
 \`\`\`
 
-**The rule in 2026.** Since 31 August 2026, new apps and app updates must target Android 16 (API level 36). Existing apps must target at least Android 15 (API level 35) to stay available to new users on newer Android versions. Apps that requested an extension have until 1 November 2026.
+**The rule in 2026.** Since 31 August 2026, new apps and app updates must target Android 16 (API level 36). Existing apps must target at least Android 15 (API level 35) to stay available to new users on newer Android versions. Apps that requested an extension have until 1 November 2026; after that, updates need API 36.
 
 **How to fix it in React Native.** Set \`targetSdkVersion = 36\` and \`compileSdkVersion = 36\` in \`android/build.gradle\` (Expo: use the SDK that targets it, or \`expo-build-properties\`). Then check what changes with each API level you skip:
 
 - Target 31: components with an intent filter need \`android:exported\`, or the build fails ([details](/fix/android-exported)).
 - Target 34: foreground services must declare their type, or the app crashes when one starts ([details](/fix/missing-foreground-service-type)).
 - Target 35: the app is drawn edge-to-edge on Android 15, so screens using React Native's own \`SafeAreaView\` slide under the status bar ([details](/fix/imagebackground-safeareaview-deprecated)).
+- Target 36: on Android 16 the edge-to-edge opt-out (\`windowOptOutEdgeToEdgeEnforcement\`) is ignored, so screens that relied on it slide under the system bars. On screens at least 600dp wide (tablets, foldables), \`screenOrientation\`, \`resizeableActivity="false"\` and aspect ratio limits are ignored too: the app rotates and resizes. Predictive back is on by default, and \`onBackPressed\` is no longer called; test the back button and gesture.
 
 **Check your app first.** \`npx nativekeel\` reports the target SDK problem and each of these follow-on issues, and its upgrade plan orders them.`,
-    sources: [['Google Play target API level requirements', 'https://support.google.com/googleplay/android-developer/answer/11926878']],
+    sources: [['Android 16 behavior changes for apps targeting API 36', 'https://developer.android.com/about/versions/16/behavior-changes-16'], ['Google Play target API level requirements', 'https://support.google.com/googleplay/android-developer/answer/11926878']],
   },
   {
     slug: 'google-play-16-kb-page-size',
