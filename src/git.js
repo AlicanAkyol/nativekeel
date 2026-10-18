@@ -144,3 +144,36 @@ export function gitArchive(root, ref) {
   if (res.status !== 0 || !res.stdout) return { error: res.error && res.error.code === 'ENOBUFS' ? 'the committed project is larger than 512 MB' : 'git archive failed' };
   return { tar: res.stdout, sha };
 }
+
+// Files git ignores (build output, generated code, a local scratch folder). They are not in the
+// repository or in CI, so code and asset checks skip them; secret checks still read them, since an
+// ignored .env can be compiled into the app. Returns a predicate on absolute paths; outside a git
+// repository nothing counts as ignored.
+const ignoredCache = new Map();
+const NONE = () => false;
+export function gitIgnored(root) {
+  const key = path.resolve(root);
+  const cached = ignoredCache.get(key);
+  if (cached && Date.now() - cached.at < 30000) return cached.fn;
+  let fn = NONE;
+  if (!trackedOverride.has(root)) {
+    const res = git(root, ['ls-files', '-z', '-o', '-i', '--exclude-standard', '--directory']);
+    if (res.status === 0 && typeof res.stdout === 'string') {
+      const dirs = new Set();
+      const files = new Set();
+      for (const p of res.stdout.split('\0').filter(Boolean)) (p.endsWith('/') ? dirs : files).add(p.replace(/\/$/, ''));
+      // The project folder itself ignored by a parent repository: treat nothing as ignored.
+      if (!dirs.has('') && !dirs.has('.') && (dirs.size || files.size)) {
+        fn = (abs) => {
+          const rel = path.relative(key, abs).split(path.sep).join('/');
+          if (!rel || rel.startsWith('..')) return false;
+          if (files.has(rel) || dirs.has(rel)) return true;
+          for (let i = rel.indexOf('/'); i > 0; i = rel.indexOf('/', i + 1)) if (dirs.has(rel.slice(0, i))) return true;
+          return false;
+        };
+      }
+    }
+  }
+  ignoredCache.set(key, { at: Date.now(), fn });
+  return fn;
+}

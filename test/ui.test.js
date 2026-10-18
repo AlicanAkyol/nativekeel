@@ -136,3 +136,14 @@ test('placeholder text is checked for contrast against the input or the view beh
   assert.deepEqual(c.evidence.map((e) => `${e.at} ${e.placeholder}`), ['src/P.tsx:4 true']);
   assert.match(c.title, /1 of them placeholder/);
 });
+
+test("Gesture Handler's Pressable and Touchable* are checked like React Native's", () => {
+  const f = run(app({ 'src/A.tsx': `import { View } from 'react-native';\nimport { Pressable, TouchableOpacity as GhTouchable } from 'react-native-gesture-handler';\nimport { Ionicons } from '@expo/vector-icons';\nexport const A = (p) => (<View>
+    <Pressable onPress={p.close}><Ionicons name="close" /></Pressable>
+    <GhTouchable onPress={p.back}><Ionicons name="back" /></GhTouchable>
+    <Pressable onPress={p.ok} accessibilityRole="button" accessibilityLabel="OK"><Ionicons name="check" /></Pressable>
+  </View>);` }));
+  const b = f.find((x) => x.id === 'a11y-icon-button-unlabeled');
+  assert.ok(b, f.map((x) => x.id).join(','));
+  assert.deepEqual(b.evidence.map((e) => e.at), ['src/A.tsx:5', 'src/A.tsx:6']);
+});

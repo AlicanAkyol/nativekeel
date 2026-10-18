@@ -46,6 +46,9 @@ function classify(text) {
     if (spec === 'react-native') {
       if (imported === '*' || imported === 'default') rn.set(`${local}.*`, local);
       else rn.set(local, imported);
+    } else if (spec === 'react-native-gesture-handler' && TOUCHABLES.has(imported)) {
+      // Gesture Handler's Pressable and Touchable* take the same accessibility props.
+      rn.set(local, imported);
     } else if (ICON_MODULES.test(spec) || /\.svg$/.test(spec)) icons.add(local);
     else if (IMAGE_MODULES.test(spec) && ['Image', 'default', 'FastImage'].includes(imported)) icons.add(local);
   }

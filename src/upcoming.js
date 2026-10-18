@@ -1,6 +1,7 @@
 import fs from './read-boundary.js';
 import path from 'node:path';
 import { unprefixedReactImports } from './react-headers.js';
+import { gitIgnored } from './git.js';
 
 // What changes in the React Native and Expo versions ahead of the project, matched against its
 // own code: only the changes that touch this app are reported, each with file:line. Includes the
@@ -57,6 +58,7 @@ const SKIP = new Set(['node_modules', '.git', 'android', 'ios', 'build', 'dist',
 
 function codeFiles(root) {
   const out = [];
+  const ignored = gitIgnored(root);
   const walk = (dir, depth) => {
     let entries = [];
     try {
@@ -66,8 +68,8 @@ function codeFiles(root) {
     }
     for (const e of entries) {
       if (e.isDirectory()) {
-        if (depth < 10 && !SKIP.has(e.name) && !e.name.startsWith('.')) walk(path.join(dir, e.name), depth + 1);
-      } else if (/\.[cm]?[jt]sx?$/.test(e.name) && !/\.(test|spec|d)\.[jt]sx?$/.test(e.name)) out.push(path.join(dir, e.name));
+        if (depth < 10 && !SKIP.has(e.name) && !e.name.startsWith('.') && !ignored(path.join(dir, e.name))) walk(path.join(dir, e.name), depth + 1);
+      } else if (/\.[cm]?[jt]sx?$/.test(e.name) && !/\.(test|spec|d)\.[jt]sx?$/.test(e.name) && !ignored(path.join(dir, e.name))) out.push(path.join(dir, e.name));
     }
   };
   walk(root, 0);

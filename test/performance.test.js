@@ -110,3 +110,12 @@ test('logging that only runs in development is not counted', () => {
   const mixed = `${block}\n${Array.from({ length: 30 }, (_, i) => `console.log('y${i}');`).join('\n')}`;
   assert.ok(ids({ 'src/A.js': mixed }).includes('perf-console-in-release'), 'unguarded calls after a guarded block still count');
 });
+
+test("Metro's drop_console removes logging from release builds", () => {
+  const logs = Array.from({ length: 30 }, (_, i) => `console.log('x${i}');`).join('\n');
+  const metro = "const config = getDefaultConfig(__dirname);\nconfig.transformer.minifierConfig = { compress: { drop_console: true } };\nmodule.exports = config;\n";
+  assert.ok(!ids({ 'src/A.js': logs, 'metro.config.js': metro }).includes('perf-console-in-release'));
+  const assigned = "config.transformer.minifierConfig.compress.drop_console = true;\n";
+  assert.ok(!ids({ 'src/A.js': logs, 'metro.config.js': assigned }).includes('perf-console-in-release'));
+  assert.ok(ids({ 'src/A.js': logs, 'metro.config.js': '// drop_console: true\nmodule.exports = {};\n' }).includes('perf-console-in-release'), 'a comment does not count');
+});

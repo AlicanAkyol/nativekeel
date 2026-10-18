@@ -1,6 +1,7 @@
 import fs from './read-boundary.js';
 import path from 'node:path';
 import { compareVersions } from './known-issues.js';
+import { gitIgnored } from './git.js';
 
 // Security checks beyond leaked keys: known vulnerabilities in shipped dependencies, passwords
 // that flow into logs or remote writes, unsafe WebView settings, and Android backups.
@@ -9,7 +10,7 @@ const SKIP_DIRS = new Set(['node_modules', '.git', 'Pods', 'build', '.gradle', '
 const JS_EXT = /\.(?:[cm]?[jt]sx?)$/;
 const MAX_FILE_BYTES = 512 * 1024;
 
-function* jsFiles(dir) {
+function* jsFiles(dir, ignored = gitIgnored(dir)) {
   let entries;
   try {
     entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -18,8 +19,8 @@ function* jsFiles(dir) {
   }
   for (const e of entries) {
     if (e.isDirectory()) {
-      if (!SKIP_DIRS.has(e.name) && !e.name.startsWith('.')) yield* jsFiles(path.join(dir, e.name));
-    } else if (JS_EXT.test(e.name) && !/\.(test|spec)[._]/.test(e.name)) {
+      if (!SKIP_DIRS.has(e.name) && !e.name.startsWith('.') && !ignored(path.join(dir, e.name))) yield* jsFiles(path.join(dir, e.name), ignored);
+    } else if (JS_EXT.test(e.name) && !/\.(test|spec)[._]/.test(e.name) && !ignored(path.join(dir, e.name))) {
       yield path.join(dir, e.name);
     }
   }

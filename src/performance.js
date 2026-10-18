@@ -1,6 +1,7 @@
 import fs from './read-boundary.js';
 import path from 'node:path';
 import { rootImportEvidence } from './import-evidence.js';
+import { gitIgnored } from './git.js';
 
 // Performance problems you can see in the code: things that make lists stutter, animations run
 // on the JavaScript thread, or the app download heavier than it needs to be. Runtime profiling
@@ -9,7 +10,7 @@ import { rootImportEvidence } from './import-evidence.js';
 const SKIP_DIRS = new Set(['node_modules', '.git', 'Pods', 'build', '.gradle', 'DerivedData', '.expo', 'dist', 'coverage', 'vendor', '__tests__', '__mocks__', 'e2e', 'android', 'ios']);
 const JS_EXT = /\.(?:[cm]?[jt]sx?)$/;
 
-function* walk(dir, test) {
+function* walk(dir, test, ignored = gitIgnored(dir)) {
   let entries;
   try {
     entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -18,8 +19,8 @@ function* walk(dir, test) {
   }
   for (const e of entries) {
     if (e.isDirectory()) {
-      if (!SKIP_DIRS.has(e.name) && !e.name.startsWith('.')) yield* walk(path.join(dir, e.name), test);
-    } else if (test.test(e.name) && !/\.(test|spec)[._]/.test(e.name) && !/\.d\.[cm]?ts$/.test(e.name)) {
+      if (!SKIP_DIRS.has(e.name) && !e.name.startsWith('.') && !ignored(path.join(dir, e.name))) yield* walk(path.join(dir, e.name), test, ignored);
+    } else if (test.test(e.name) && !ignored(path.join(dir, e.name)) && !/\.(test|spec)[._]/.test(e.name) && !/\.d\.[cm]?ts$/.test(e.name)) {
       yield path.join(dir, e.name);
     }
   }
@@ -140,13 +141,17 @@ export function performanceChecks(project) {
     });
   }
   const babel = ['babel.config.js', '.babelrc', 'babel.config.json'].map((f) => read(path.join(root, f))).join('\n');
-  if (logs >= 30 && !/transform-remove-console|remove-console/.test(babel)) {
+  // Metro's minifier can drop them too: transformer.minifierConfig.compress.drop_console (Terser)
+  // or pure_funcs listing console.log.
+  const metro = ['metro.config.js', 'metro.config.cjs', 'metro.config.mjs', 'metro.config.ts'].map((f) => read(path.join(root, f))).join('\n').replace(/\/\/[^\n]*/g, '');
+  const metroDrops = /drop_console['"]?\s*[:=]\s*(?:true|\[)/.test(metro) || /pure_funcs['"]?\s*[:=]\s*\[[^\]]*console\.log/.test(metro);
+  if (logs >= 30 && !/transform-remove-console|remove-console/.test(babel) && !metroDrops) {
     findings.push({
       id: 'perf-console-in-release',
       severity: 'low',
       area: 'performance',
       title: `Review ${logs} console logging calls in source`,
-      detail: 'Logging calls were found without a recognized Babel console-removal setting. Other build transforms or development guards may remove them. Inspect the release bundle and logging payloads before changing configuration; runtime cost and data exposure have not been established.',
+      detail: 'Logging calls were found without a recognized console-removal setting (babel-plugin-transform-remove-console, or drop_console in Metro\'s minifierConfig). Other build transforms or development guards may remove them. Inspect the release bundle and logging payloads before changing configuration; runtime cost and data exposure have not been established.',
       fix: { kind: 'performance', step: "If unnecessary logging remains in the release bundle, review production-only console removal while preserving required diagnostics and argument side effects." },
     });
   }

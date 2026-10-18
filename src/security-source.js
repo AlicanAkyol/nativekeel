@@ -1,5 +1,6 @@
 import fs from './read-boundary.js';
 import path from 'node:path';
+import { gitIgnored } from './git.js';
 
 // A bounded lexer for evidence, not a JavaScript parser. No project code is imported.
 // Strings/comments/regex literals cannot manufacture calls; template expressions stay visible.
@@ -123,11 +124,13 @@ export function resolveLocal(expr, tokens, decls, before, depth = 0) {
 const SKIP = new Set(['node_modules', '.git', 'Pods', 'build', '.gradle', 'DerivedData', '.expo', 'dist', 'coverage', 'vendor', '__tests__', '__mocks__', 'test', 'tests', 'androidTest', 'e2e', 'fixtures', 'examples', 'backend', 'server', 'web_app', 'desktop_app']);
 export function sourceFiles(root, extensions = /\.(?:[cm]?[jt]sx?|xml)$/) {
   const files = []; const skipped = { unreadable: 0, oversized: 0, depth: 0, symlink: 0 };
+  const ignored = gitIgnored(root);
   const walk = (dir, depth) => {
     if (depth > 20) { skipped.depth++; return; }
     let entries; try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { skipped.unreadable++; return; }
     for (const e of entries) {
       const f = path.join(dir, e.name);
+      if (ignored(f)) continue;
       if (e.isDirectory()) { if (!SKIP.has(e.name) && !e.name.startsWith('.') && !(e.name === 'functions' && path.basename(dir) === 'supabase')) walk(f, depth + 1); }
       else if (e.isSymbolicLink()) skipped.symlink++;
       else if (e.isFile() && extensions.test(e.name) && !/\.(?:test|spec|d|web)\.[cm]?[jt]sx?$/.test(e.name)) {

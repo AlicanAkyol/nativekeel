@@ -1,6 +1,7 @@
 import fs from './read-boundary.js';
 import path from 'node:path';
 import { SITE_URL } from './config.js';
+import { gitIgnored } from './git.js';
 
 // Render loops: state updates that run on every render, so React renders again, forever. The app
 // freezes or shows "Maximum update depth exceeded" / "Too many re-renders". Only the certain
@@ -16,6 +17,7 @@ const MAX_FILES = 4000;
 
 function sourceFiles(root) {
   const out = [];
+  const ignored = gitIgnored(root);
   const walk = (dir) => {
     if (out.length >= MAX_FILES) return;
     let entries = [];
@@ -26,8 +28,8 @@ function sourceFiles(root) {
     }
     for (const e of entries) {
       if (e.isDirectory()) {
-        if (!SKIP.has(e.name) && !e.name.startsWith('.')) walk(path.join(dir, e.name));
-      } else if (/\.[jt]sx?$/.test(e.name) && !/\.(test|spec|stories)\.[jt]sx?$/.test(e.name) && !e.name.endsWith('.d.ts')) out.push(path.join(dir, e.name));
+        if (!SKIP.has(e.name) && !e.name.startsWith('.') && !ignored(path.join(dir, e.name))) walk(path.join(dir, e.name));
+      } else if (/\.[jt]sx?$/.test(e.name) && !/\.(test|spec|stories)\.[jt]sx?$/.test(e.name) && !e.name.endsWith('.d.ts') && !ignored(path.join(dir, e.name))) out.push(path.join(dir, e.name));
     }
   };
   walk(root);

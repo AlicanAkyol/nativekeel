@@ -5,6 +5,7 @@ import path from 'node:path';
 import { cleanVersion, findPackageDir, installedVersion, versionFromSpec } from './project.js';
 import { filesImportingWith } from './usage.js';
 import { lockedCopies } from './lockfile.js';
+import { gitIgnored } from './git.js';
 
 // Static checks for setups that build fine and then crash at runtime. Each one is a known,
 // documented failure, not a style preference.
@@ -351,6 +352,7 @@ export function removedCoreImports(project) {
   const root = project.root;
   const used = new Map(); // name -> first file:line
   const referenced = new Set(); // used beyond the import line
+  const ignored = gitIgnored(root);
   const deprecated = new Map();
   const files = [];
   const walk = (dir) => {
@@ -362,8 +364,8 @@ export function removedCoreImports(project) {
     }
     for (const e of entries) {
       if (e.isDirectory()) {
-        if (!['node_modules', '.git', 'android', 'ios', 'build', 'dist', '.expo', 'coverage', '__tests__', '__mocks__'].includes(e.name) && !e.name.startsWith('.')) walk(path.join(dir, e.name));
-      } else if (/\.[cm]?[jt]sx?$/.test(e.name) && !/\.(test|spec)\./.test(e.name)) {
+        if (!['node_modules', '.git', 'android', 'ios', 'build', 'dist', '.expo', 'coverage', '__tests__', '__mocks__'].includes(e.name) && !e.name.startsWith('.') && !ignored(path.join(dir, e.name))) walk(path.join(dir, e.name));
+      } else if (/\.[cm]?[jt]sx?$/.test(e.name) && !/\.(test|spec)\./.test(e.name) && !ignored(path.join(dir, e.name))) {
         files.push(path.join(dir, e.name));
       }
     }
@@ -442,6 +444,7 @@ const API_USE = /(?:base_?url|api_?url|api_?base|server_?url|backend_?url|endpoi
 export function releaseDevServer(project) {
   const root = project.root;
   const SKIP = new Set(['node_modules', '.git', 'android', 'ios', 'build', 'dist', 'Pods', '__tests__', '__mocks__', 'e2e', 'detox', '.expo', 'coverage', 'vendor', 'scripts', 'server', 'backend', 'functions', 'test', 'tests', 'mocks', 'storybook', 'docs', 'example', 'examples', 'cli', 'admin', 'admin-dashboard', 'dashboard', 'web']);
+  const ignored = gitIgnored(root);
   const files = [];
   const walk = (dir, depth) => {
     let entries = [];
@@ -452,8 +455,8 @@ export function releaseDevServer(project) {
     }
     for (const e of entries) {
       if (e.isDirectory()) {
-        if (depth < 8 && !SKIP.has(e.name) && !e.name.startsWith('.')) walk(path.join(dir, e.name), depth + 1);
-      } else if (/\.[cm]?[jt]sx?$/.test(e.name) && !/\.(?:test|spec|stories|config|web)\.|(?:mock|fixture|dev|debug|local)/i.test(e.name)) files.push(path.join(dir, e.name));
+        if (depth < 8 && !SKIP.has(e.name) && !e.name.startsWith('.') && !ignored(path.join(dir, e.name))) walk(path.join(dir, e.name), depth + 1);
+      } else if (/\.[cm]?[jt]sx?$/.test(e.name) && !/\.(?:test|spec|stories|config|web)\.|(?:mock|fixture|dev|debug|local)/i.test(e.name) && !ignored(path.join(dir, e.name))) files.push(path.join(dir, e.name));
     }
   };
   walk(root, 0);

@@ -3,6 +3,7 @@ import path from 'node:path';
 import { PRIVACY_SDKS } from './privacy-sdks.js';
 import { IOS_SDK_27, SCENE_WINDOW_LIBS } from './rules.js';
 import { SITE_URL } from './config.js';
+import { gitIgnored } from './git.js';
 
 // App Store and Google Play review rules that code can show (checked on Apple's App Review
 // Guidelines and Google Play's policy pages, October 2026). These are common rejection reasons;
@@ -12,6 +13,7 @@ const SKIP = new Set(['node_modules', '.git', 'android', 'ios', 'build', 'dist',
 
 function appSource(root) {
   let text = '';
+  const ignored = gitIgnored(root);
   const walk = (dir, depth) => {
     let entries = [];
     try {
@@ -21,6 +23,7 @@ function appSource(root) {
     }
     for (const e of entries) {
       const p = path.join(dir, e.name);
+      if (ignored(p)) continue;
       if (e.isDirectory()) {
         if (depth < 8 && !SKIP.has(e.name) && !e.name.startsWith('.')) walk(p, depth + 1);
       } else if (/\.[cm]?[jt]sx?$|\.json$/.test(e.name) && !/\.(?:test|spec)\.|package(?:-lock)?\.json$|tsconfig/.test(e.name)) {
