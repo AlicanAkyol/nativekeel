@@ -101,3 +101,12 @@ test('large JSON required inside a function is bundled but described as evaluate
     assert.match(f.detail, /every user downloads it\. It is required inside a function, so evaluated only when that code runs\./);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
+
+test('logging that only runs in development is not counted', () => {
+  const block = `if (__DEV__) {\n${Array.from({ length: 30 }, (_, i) => `  console.log('x${i}', { a: ${i} });`).join('\n')}\n}`;
+  assert.ok(!ids({ 'src/A.js': block }).includes('perf-console-in-release'), 'if (__DEV__) { … }');
+  const lines = Array.from({ length: 30 }, (_, i) => (i % 3 === 0 ? `if (__DEV__) console.log('x${i}');` : i % 3 === 1 ? `__DEV__ && console.log('x${i}');` : `if (process.env.NODE_ENV !== 'production') console.info('x${i}');`)).join('\n');
+  assert.ok(!ids({ 'src/A.js': lines }).includes('perf-console-in-release'), 'one-line guards');
+  const mixed = `${block}\n${Array.from({ length: 30 }, (_, i) => `console.log('y${i}');`).join('\n')}`;
+  assert.ok(ids({ 'src/A.js': mixed }).includes('perf-console-in-release'), 'unguarded calls after a guarded block still count');
+});

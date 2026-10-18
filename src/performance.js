@@ -46,6 +46,30 @@ function tagProps(text, start) {
   return { props: text.slice(start, start + 4000), end: start + 4000 };
 }
 
+// Logging that only runs in development is left out of the count: `if (__DEV__) { … }`,
+// `if (__DEV__) console.log(…)` and `__DEV__ && console.log(…)` (the same with
+// process.env.NODE_ENV !== 'production'). Release builds set __DEV__ to false.
+const DEV_GUARD = /\bif\s*\(\s*(?:__DEV__|process\.env\.NODE_ENV\s*!==?\s*['"]production['"])\s*\)\s*/g;
+function devOnlyRemoved(code) {
+  let out = code.replace(/\b__DEV__\s*&&\s*console\./g, '__DEV__ && _dev_.');
+  for (let m; (m = DEV_GUARD.exec(out)); ) {
+    const start = m.index + m[0].length;
+    let end;
+    if (out[start] === '{') {
+      let depth = 0;
+      for (end = start; end < out.length; end++) {
+        if (out[end] === '{') depth++;
+        else if (out[end] === '}' && --depth === 0) break;
+      }
+    } else {
+      end = out.indexOf('\n', start);
+      if (end < 0) end = out.length;
+    }
+    out = out.slice(0, start) + out.slice(start, end + 1).replace(/console\./g, '_dev_.') + out.slice(end + 1);
+  }
+  return out;
+}
+
 export function performanceChecks(project) {
   const root = project.root;
   const findings = [];
@@ -83,7 +107,7 @@ export function performanceChecks(project) {
       jsDriver++;
       jsDriverAt = jsDriverAt || `${rel}:${code.slice(0, m.index).split('\n').length}`;
     }
-    logs += (code.match(/\bconsole\.(?:log|debug|info)\s*\(/g) || []).length;
+    logs += (devOnlyRemoved(code).match(/\bconsole\.(?:log|debug|info)\s*\(/g) || []).length;
     // Redux selectors that build a new object or array on every call ({ ... }, or `|| {}` / `|| []`
     // as a fallback) without an equality function: the component re-renders on every store update.
     for (const m of code.matchAll(/\buseSelector\s*\(\s*\(?\s*\w+\s*\)?\s*=>\s*(\(\s*\{|[^,;\n]*\|\|\s*(?:\{\s*\}|\[\s*\]))/g)) {

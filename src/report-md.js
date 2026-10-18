@@ -27,14 +27,14 @@ export function markdownReport(result, { verbose = false } = {}) {
   if (main.length) {
     lines.push('| | Finding | Details |', '|---|---|---|');
     for (const sev of SEVERITIES) {
-      for (const f of main.filter((x) => x.severity === sev)) lines.push(`| ${ICON[sev]} | ${cell(f.title)} | ${cell(f.detail + (f.attack ? ' Verify: ' + f.attack.validation + ' Fix: ' + f.fix.step : ''))} |`);
+      for (const f of main.filter((x) => x.severity === sev)) lines.push(`| ${ICON[sev]} | ${cell(f.title)}<br><sub>\`${cell(String(f.id))}\`</sub> | ${cell(f.detail + (f.attack ? ' Verify: ' + f.attack.validation + ' Fix: ' + f.fix.step : ''))} |`);
     }
     lines.push('');
   }
   const low = result.findings.filter((f) => f.severity === 'low');
   if (low.length) {
     lines.push(`<details><summary>${low.length} low-priority findings</summary>`, '');
-    for (const f of verbose ? low : low.slice(0, 50)) lines.push(`- ${f.title}`);
+    for (const f of verbose ? low : low.slice(0, 50)) lines.push(`- ${f.title} \`${f.id}\``);
     if (!verbose && low.length > 50) lines.push(`- … and ${low.length - 50} more`);
     lines.push('', '</details>', '');
   }

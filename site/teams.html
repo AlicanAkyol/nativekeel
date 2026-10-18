@@ -152,11 +152,14 @@ jobs:
   <p>NativeKeel can write its findings in SonarQube's import format, so mobile issues land in the same project and quality gate: <a href="/sonarqube">SonarQube for React Native apps</a>.</p>
 
   <h2>Team decisions, in the repository</h2>
-  <p>A <code>.nativekeel.json</code> next to <code>package.json</code> sets the gate and lists findings the team has accepted, each with a reason. Ignored findings stay listed in every report, and malware warnings cannot be ignored.</p>
+  <p>A <code>.nativekeel.json</code> next to <code>package.json</code> sets the gate, lists findings the team has accepted and folders that are not part of the app, each with a reason. Every finding in the report shows its id. Ignored findings stay listed in every report, and malware warnings cannot be ignored.</p>
 <pre><code>{
   "failOn": "high",
   "ignore": [
     { "id": "flipper", "reason": "Removed in the 0.80 upgrade, sprint 42" }
+  ],
+  "exclude": [
+    { "path": "tools/admin-web", "reason": "Internal web dashboard" }
   ]
 }</code></pre>
 

@@ -425,3 +425,16 @@ test('a scanned repository cannot run commands through its own git config (core.
   spawnSync('git', ['ls-files'], { cwd: root });
   assert.equal(fs.existsSync(marker), true, 'control: plain git ls-files does run it');
 });
+
+test('signing files encrypted with git-crypt are not reported as committed', () => {
+  const files = { 'package.json': { name: 'x', dependencies: { 'react-native': '0.80.0' } }, 'android/app/release.keystore': 'binary-keystore-bytes' };
+  const plain = makeProject(files);
+  spawnSync('git', ['init', '-q'], { cwd: plain });
+  spawnSync('git', ['add', '-A'], { cwd: plain });
+  assert.ok(nativeChecks(loadProject(plain), { now: NOW }).some((f) => f.id.startsWith('signing-keystore')), 'committed in the clear');
+  const crypted = makeProject({ ...files, '.gitattributes': '*.keystore filter=git-crypt diff=git-crypt\n' });
+  spawnSync('git', ['init', '-q'], { cwd: crypted });
+  spawnSync('git', ['add', '-A'], { cwd: crypted });
+  const ids = nativeChecks(loadProject(crypted), { now: NOW }).map((f) => f.id);
+  assert.ok(!ids.some((i) => i.startsWith('signing-keystore')), ids.join(','));
+});

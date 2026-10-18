@@ -42,7 +42,7 @@ export function textReport(result, { color = true, verbose = false } = {}) {
       // Outdated packages are many and alike: list them compactly. Everything else gets a full entry.
       const bumps = group.filter((f) => f.id.startsWith('dep-major:'));
       for (const f of group.filter((x) => !x.id.startsWith('dep-major:'))) {
-        out.push(`${label.low} ${c.bold(f.title)}`);
+        out.push(`${label.low} ${c.bold(f.title)} ${c.gray(`[${f.id}]`)}`);
         out.push(c.gray(indent + f.detail));
         if (f.attack) { out.push(indent + 'Verify: ' + f.attack.validation); out.push(indent + 'Fix: ' + f.fix.step); }
       }
@@ -58,7 +58,7 @@ export function textReport(result, { color = true, verbose = false } = {}) {
     // Packages the Expo SDK upgrade moves: one line, they are not separate work.
     const expoMoves = group.filter((f) => f.fix && f.fix.expoManaged);
     for (const f of group.filter((x) => !(x.fix && x.fix.expoManaged))) {
-      out.push(`${label[sev]} ${c.bold(f.title)}`);
+      out.push(`${label[sev]} ${c.bold(f.title)} ${c.gray(`[${f.id}]`)}`);
       out.push(c.gray(indent + f.detail));
       if (f.attack) { out.push(indent + 'Verify: ' + f.attack.validation); out.push(indent + 'Fix: ' + f.fix.step); }
     }
@@ -70,6 +70,7 @@ export function textReport(result, { color = true, verbose = false } = {}) {
     out.push('');
   }
 
+  if (result.findings.length && !(result.settings && result.settings.ignored.length)) out.push(c.gray(`To accept a finding, add its [id] to .nativekeel.json: { "ignore": [{ "id": "…", "reason": "…" }] }`));
   if (result.settings && result.settings.ignored.length) {
     const ig = result.settings.ignored;
     out.push(c.gray(`${result.settings.file}: ${ig.length} finding${ig.length === 1 ? '' : 's'} ignored by the team (${ig.slice(0, 3).map((i) => `${i.id}: ${i.reason}`).join('; ')}${ig.length > 3 ? '; …' : ''}).`));

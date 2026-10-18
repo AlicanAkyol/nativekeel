@@ -71,13 +71,14 @@ function permittedGit(root) {
 }
 
 // Runs git with the safe overrides. `args` never come from the scanned project.
-function git(root, args, { encoding = 'utf8', maxBuffer = 64 * 1024 * 1024 } = {}) {
+function git(root, args, { encoding = 'utf8', maxBuffer = 64 * 1024 * 1024, input } = {}) {
   if (!permittedGit(root)) return { status: 1, stdout: null };
   const env = Object.fromEntries(Object.entries(process.env).filter(([k]) => !k.startsWith('GIT_')));
   return spawnSync('git', SAFE_CONFIG.flatMap((c) => ['-c', c]).concat(args), {
     cwd: root,
     encoding,
     maxBuffer,
+    input,
     timeout: 60000,
     env: { ...env, ...GIT_ENV },
   });
@@ -94,7 +95,35 @@ export function gitLsFiles(root) {
   const res = git(root, ['ls-files', '-z']);
   if (res.status !== 0 || typeof res.stdout !== 'string') return null;
   // -z: names with newlines or quotes come through unmangled.
-  return res.stdout.split('\0').filter(Boolean);
+  const files = res.stdout.split('\0').filter(Boolean);
+  const encrypted = encryptedFiles(root, files);
+  return encrypted.size ? files.filter((f) => !encrypted.has(f)) : files;
+}
+
+// Files that git-crypt or transcrypt encrypt on commit (`filter=git-crypt` / `filter=crypt` in
+// .gitattributes). The working copy is decrypted, but the repository and its history only hold
+// ciphertext, so a key in them is not committed in the clear.
+export function encryptedFiles(root, files) {
+  // .gitattributes in the project, or above it when the project is a folder of a larger repo.
+  const attrs = files.filter((f) => path.basename(f) === '.gitattributes').map((f) => path.join(root, f));
+  for (let dir = path.resolve(root), i = 0; i < 6; i++, dir = path.dirname(dir)) {
+    attrs.push(path.join(dir, '.gitattributes'));
+    if (gitPathExists(path.join(dir, '.git')) || path.dirname(dir) === dir) break;
+  }
+  const uses = attrs.some((f) => {
+    try {
+      return /\bfilter=(?:git-crypt|crypt)\b/.test(fs.readFileSync(f, 'utf8'));
+    } catch {
+      return false;
+    }
+  });
+  if (!uses) return new Set();
+  const res = git(root, ['check-attr', '-z', '--stdin', 'filter'], { input: files.join('\0'), maxBuffer: 64 * 1024 * 1024 });
+  if (res.status !== 0 || typeof res.stdout !== 'string') return new Set();
+  const out = new Set();
+  const parts = res.stdout.split('\0');
+  for (let i = 0; i + 2 < parts.length; i += 3) if (/^(?:git-crypt|crypt)$/.test(parts[i + 2])) out.add(parts[i]);
+  return out;
 }
 
 // A revision name a person or agent typed (HEAD, HEAD~1, main, v1.2.0, a SHA). Anything that

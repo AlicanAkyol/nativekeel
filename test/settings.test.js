@@ -37,3 +37,20 @@ test('settings: the committed file sets the gate and hides accepted findings; --
   assert.equal(run([strict, '--offline']).status, 1, 'failOn medium from the file');
   assert.equal(run([strict, '--offline', '--fail-on', 'critical']).status, 0, 'the flag overrides the file');
 });
+
+test('settings: exclude leaves out findings whose files are all in the folder', () => {
+  const root = makeProject({ '.nativekeel.json': { exclude: [{ path: './tools/admin-web/', reason: 'Separate web project' }, { path: 'docs' }, { path: '../outside', reason: 'x' }, { path: 'a/*.js', reason: 'x' }] } });
+  const s = readSettings(root);
+  assert.deepEqual(s.exclude, [{ path: 'tools/admin-web', reason: 'Separate web project' }]);
+  assert.equal(s.warnings.length, 3);
+  const findings = [
+    { id: 'secret:x:tools/admin-web/a.js', severity: 'high', title: 't1', fix: { file: 'tools/admin-web/a.js' } },
+    { id: 'mixed', severity: 'low', title: 't2', evidence: [{ file: 'tools/admin-web/b.js' }, { file: 'src/App.js' }] },
+    { id: 'nofile', severity: 'low', title: 't3' },
+    { id: 'prefix', severity: 'low', title: 't4', fix: { file: 'tools/admin-website/a.js' } },
+    { id: 'malicious-code', severity: 'critical', title: 't5', fix: { file: 'tools/admin-web/x.js' } },
+  ];
+  const { findings: kept, ignored } = applySettings(findings, s);
+  assert.deepEqual(kept.map((f) => f.id), ['mixed', 'nofile', 'prefix', 'malicious-code']);
+  assert.match(ignored[0].reason, /tools\/admin-web\/ excluded: Separate web project/);
+});

@@ -2,7 +2,8 @@ import fs from './read-boundary.js';
 import path from 'node:path';
 
 // .nativekeel.json in the app folder: a team's decisions, committed with the code.
-//   { "failOn": "high", "ignore": [{ "id": "flipper", "reason": "Removed in the next sprint" }] }
+//   { "failOn": "high", "ignore": [{ "id": "flipper", "reason": "Removed in the next sprint" }],
+//     "exclude": [{ "path": "tools/admin-web", "reason": "Separate web project" }] }
 // An id ending in "*" matches every finding id that starts with it. Every ignore needs a reason,
 // and ignored findings stay listed in the result (and the report), so nothing is hidden silently.
 export const SETTINGS_FILE = '.nativekeel.json';
@@ -21,7 +22,7 @@ export function readSettings(root) {
   try {
     data = JSON.parse(text);
   } catch (e) {
-    return { file: SETTINGS_FILE, ignore: [], warnings: [`${SETTINGS_FILE} is not valid JSON (${e.message}); it was not applied.`] };
+    return { file: SETTINGS_FILE, ignore: [], exclude: [], warnings: [`${SETTINGS_FILE} is not valid JSON (${e.message}); it was not applied.`] };
   }
   const failOn = LEVELS.includes(data.failOn) ? data.failOn : undefined;
   if (data.failOn !== undefined && !failOn) warnings.push(`${SETTINGS_FILE}: failOn must be one of ${LEVELS.join(', ')}.`);
@@ -33,7 +34,18 @@ export function readSettings(root) {
     else if (!reason) warnings.push(`${SETTINGS_FILE}: ignore "${id}" has no reason, so it was not applied.`);
     else ignore.push({ id, reason });
   }
-  return { file: SETTINGS_FILE, failOn, ignore, warnings };
+  // Folders that are not part of the app (a web dashboard, a backend, an example project): a
+  // finding whose files all sit in them is left out. Findings without a file always stay.
+  const exclude = [];
+  for (const entry of Array.isArray(data.exclude) ? data.exclude : []) {
+    const raw = entry && typeof entry.path === 'string' ? entry.path.trim() : '';
+    const p = raw.replace(/^\.\//, '').replace(/\/\*\*?$/, '').replace(/\/$/, '');
+    const reason = entry && typeof entry.reason === 'string' ? entry.reason.trim() : '';
+    if (!p || p === '.' || p.startsWith('..') || path.isAbsolute(p) || /[*?]/.test(p)) warnings.push(`${SETTINGS_FILE}: exclude "${raw}" must be a folder inside the project (no wildcards).`);
+    else if (!reason) warnings.push(`${SETTINGS_FILE}: exclude "${raw}" has no reason, so it was not applied.`);
+    else exclude.push({ path: p, reason });
+  }
+  return { file: SETTINGS_FILE, failOn, ignore, exclude, warnings };
 }
 
 const matches = (rule, id) => (rule.endsWith('*') ? id.startsWith(rule.slice(0, -1)) : id === rule);
@@ -41,13 +53,22 @@ const matches = (rule, id) => (rule.endsWith('*') ? id.startsWith(rule.slice(0, 
 const NEVER_IGNORED = new Set(['malicious-code', 'vscode-autorun-task']);
 
 // Returns { findings, ignored }: ignored lists each finding left out, with the rule's reason.
+const findingFiles = (f) => [...new Set([f.fix && f.fix.file, ...(Array.isArray(f.evidence) ? f.evidence.map((e) => e && e.file) : [])].filter((x) => typeof x === 'string' && x).map((x) => x.split(path.sep).join('/').replace(/^\.\//, '')))];
+const inside = (file, dir) => file === dir || file.startsWith(`${dir}/`);
+
 export function applySettings(findings, settings) {
-  if (!settings || !settings.ignore.length) return { findings, ignored: [] };
+  const exclude = (settings && settings.exclude) || [];
+  if (!settings || (!settings.ignore.length && !exclude.length)) return { findings, ignored: [] };
   const kept = [];
   const ignored = [];
   for (const f of findings) {
-    const rule = !NEVER_IGNORED.has(f.id) && settings.ignore.find((r) => matches(r.id, String(f.id)));
+    const never = NEVER_IGNORED.has(f.id);
+    const rule = !never && settings.ignore.find((r) => matches(r.id, String(f.id)));
+    const files = never || rule ? [] : findingFiles(f);
+    const dirs = files.length ? files.map((file) => exclude.find((e) => inside(file, e.path))) : [];
+    const excluded = dirs.length && dirs.every(Boolean) ? dirs[0] : null;
     if (rule) ignored.push({ id: f.id, severity: f.severity, title: f.title, reason: rule.reason });
+    else if (excluded) ignored.push({ id: f.id, severity: f.severity, title: f.title, reason: `${excluded.path}/ excluded: ${excluded.reason}` });
     else kept.push(f);
   }
   return { findings: kept, ignored };

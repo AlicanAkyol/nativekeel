@@ -107,7 +107,7 @@ test('text report: non-dependency low findings are not hidden under the outdated
     ],
   };
   const text = textReport(r, { color: false });
-  assert.match(text, /LOW {6}MainApplication.java calls getDefaultReactHost\n {11}Pass null\./);
+  assert.match(text, /LOW {6}MainApplication.java calls getDefaultReactHost \[android-default-react-host\]\n {11}Pass null\./);
   assert.match(text, /1 package is a major version behind:\n {11}a 1.0.0 → 2.0.0/);
 });
 

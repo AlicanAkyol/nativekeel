@@ -22,7 +22,7 @@ export function htmlReport(result, { brand = null, plan = null } = {}) {
   const rows = SEVERITIES.flatMap((sev) =>
     result.findings
       .filter((f) => f.severity === sev && !isBump(f))
-      .map((f) => `<li class="f ${sev}"><span class="tag">${sevLabel[sev]}</span><div><strong>${rich(f.title)}</strong><p>${rich(f.detail)}</p>${f.attack ? `<p><b>Verify:</b> ${esc(f.attack.validation)}</p><p><b>Fix:</b> ${rich(f.fix.step)}</p>` : ""}</div></li>`),
+      .map((f) => `<li class="f ${sev}"><span class="tag">${sevLabel[sev]}</span><div><strong>${rich(f.title)}</strong> <code class="fid">${esc(String(f.id))}</code><p>${rich(f.detail)}</p>${f.attack ? `<p><b>Verify:</b> ${esc(f.attack.validation)}</p><p><b>Fix:</b> ${rich(f.fix.step)}</p>` : ""}</div></li>`),
   ).join('\n');
   const bumps = result.findings.filter(isBump);
   const bumpTable = bumps.length
@@ -68,6 +68,7 @@ main{overflow-wrap:anywhere}code{overflow-wrap:anywhere;word-break:break-word}.f
 details.bumps{margin-top:8px;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--low);border-radius:8px;padding:10px 14px}details.bumps summary{cursor:pointer;font-weight:600}details.bumps table{width:100%;border-collapse:collapse;margin-top:10px;font-size:14px}details.bumps th,details.bumps td{text-align:left;padding:4px 8px;border-top:1px solid var(--line)}.muted{color:var(--muted);font-weight:400}
 .f{display:flex;gap:12px;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--low);border-radius:8px;padding:10px 14px}
 .f p{margin:2px 0 0;color:var(--muted);font-size:14px}.f strong{overflow-wrap:anywhere}
+.fid{font-size:12px;color:var(--muted,#888);word-break:break-all}
 .tag{flex:none;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;min-width:64px;padding-top:2px}
 .critical{border-left-color:var(--critical)}.critical .tag{color:var(--critical)}
 .high{border-left-color:var(--high)}.high .tag{color:var(--high)}
