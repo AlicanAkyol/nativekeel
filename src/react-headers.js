@@ -69,18 +69,30 @@ function scanFiles(files, table, own, prebuilt) {
   for (const f of files) {
     if (!/\.(h|m|mm)$/.test(f)) continue;
     const lines = read(f).replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' ')).split('\n');
+    // Each open #if: is it a __has_include fallback, and is this branch legacy-architecture only?
+    // React Native 0.82+ builds only the New Architecture, so code under
+    // `#ifndef RCT_NEW_ARCH_ENABLED` (or the #else of `#ifdef RCT_NEW_ARCH_ENABLED`) is never compiled.
     const stack = [];
+    const archCond = (kind, cond) => {
+      if (!/RCT_NEW_ARCH_ENABLED/.test(cond)) return null;
+      const negated = kind === 'ifndef' || /!\s*(?:defined\s*\(?\s*)?RCT_NEW_ARCH_ENABLED/.test(cond);
+      return negated ? 'legacy' : 'new';
+    };
     for (let i = 0; i < lines.length; i++) {
       const l = lines[i];
       const d = l.match(/^\s*#\s*(if|ifdef|ifndef|elif|else|endif)\b(.*)/);
       if (d) {
+        const top = stack[stack.length - 1];
         if (d[1] === 'endif') stack.pop();
-        else if (d[1] === 'elif') stack[stack.length - 1] = stack[stack.length - 1] || /__has_include/.test(d[2]);
-        else if (d[1] !== 'else') stack.push(/__has_include/.test(d[2]));
+        else if (d[1] === 'elif') {
+          if (top) top.fallback = top.fallback || /__has_include/.test(d[2]);
+        } else if (d[1] === 'else') {
+          if (top && top.arch) top.arch = top.arch === 'new' ? 'legacy' : 'new';
+        } else stack.push({ fallback: /__has_include/.test(d[2]), arch: archCond(d[1], d[2]) });
         continue;
       }
       const m = l.match(/^\s*#\s*(?:import|include)\s*(["<])(RCT\w+\.h)[">]/);
-      if (!m || stack.some(Boolean) || own.has(m[2])) continue;
+      if (!m || stack.some((x) => x.fallback || x.arch === 'legacy') || own.has(m[2])) continue;
       const t = table.get(m[2]);
       if (!t || (m[1] === '"' ? !prebuilt || t.quoted : t.angle)) continue;
       hits.push({ file: f, line: i + 1, header: `${m[1]}${m[2]}${m[1] === '"' ? '"' : '>'}` });

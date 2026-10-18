@@ -40,6 +40,12 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.101</h2><p class="date">18 October 2026</p>
+<ul>
+<li><span class="tag">Upgrade</span><b>Fewer false alarms on React Native 0.87.</b> A React header imported without <code>React/</code> is no longer reported when it sits in code that only compiles for the old architecture (<code>#ifndef RCT_NEW_ARCH_ENABLED</code>): React Native 0.82 and later always build the New Architecture, so that code never reaches the compiler.</li>
+<li><span class="tag">Research</span><b><a href="/react-native-0-88-library-readiness">React Native 0.88 library readiness</a>.</b> We checked the 590 most downloaded React Native libraries with native code against the two 0.87 changes that break builds and apps: 18 break. For 6 of them we sent a fix, each tested in a React Native 0.87.1 app (fails before, builds after).</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.100</h2><p class="date">18 October 2026</p>
 <ul>
 <li><span class="tag">AI agents</span><b>Clearer MCP tools.</b> Every parameter of the eight MCP tools now says what it does and its default, <code>upgrade_plan</code> describes what the plan contains, and every tool carries the standard MCP annotations (read-only, non-destructive, idempotent, and whether it uses the network), which agents and registries use to decide when to call it.</li>

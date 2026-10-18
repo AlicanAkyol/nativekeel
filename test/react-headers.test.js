@@ -57,3 +57,13 @@ test('react headers: a build failure on 0.87+, a planned change before it', () =
   const ahead = upcomingChanges(loadProject(app('0.86.3'))).find((c) => c.id === 'rn87-bare-includes');
   assert.deepEqual(ahead.hits, ['picker 1.0.0 (ios/DatePicker.m:2)']);
 });
+
+test('react headers: imports only compiled for the legacy architecture are not reported', () => {
+  const root = app('0.87.1', {
+    ...lib('legacy', { 'ios/L.mm': '#ifndef RCT_NEW_ARCH_ENABLED\n#import "RCTBridge.h"\n#endif\n', 'ios/E.mm': '#ifdef RCT_NEW_ARCH_ENABLED\n#import <React/RCTBridge.h>\n#else\n#import "RCTConvert.h"\n#endif\n' }),
+    ...lib('newarch', { 'ios/N.mm': '#ifdef RCT_NEW_ARCH_ENABLED\n#import "RCTConvert.h"\n#endif\n' }),
+    'package.json': { name: 'app', dependencies: { 'react-native': '0.87.1', legacy: '1.0.0', newarch: '1.0.0' } },
+  });
+  assert.deepEqual(unprefixedReactImports(loadProject(root)).libraries.map((l) => l.name), ['newarch']);
+});
+

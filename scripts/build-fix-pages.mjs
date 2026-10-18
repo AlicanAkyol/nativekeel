@@ -405,11 +405,13 @@ A few headers still resolve in quotes (\`RCTFabricComponentsPlugins.h\`, \`RCTCo
 
 | Library (version) | Import | Status |
 |---|---|---|
-| react-native-date-picker 5.0.13 | "RCTComponent.h", "RCTConvert.h" | [issue #974](https://github.com/henninghall/react-native-date-picker/issues/974), not released |
+| react-native-date-picker 5.0.13 | "RCTComponent.h", "RCTConvert.h" | [issue #974](https://github.com/henninghall/react-native-date-picker/issues/974), fix proposed in [PR #977](https://github.com/henninghall/react-native-date-picker/pull/977) |
 | @react-native-menu/menu 2.0.0 | "RCTBridge.h" | [issue #1221](https://github.com/react-native-menu/menu/issues/1221), fix proposed in [PR #1227](https://github.com/react-native-menu/menu/pull/1227) |
 | react-native-bottom-tabs 1.4.0 | "RCTConversions.h" | [fixed on main](https://github.com/callstack/react-native-bottom-tabs/issues/584), next release |
 | react-native-ios-context-menu 3.2.1 | "RCTBridge.h" | fix proposed in [PR #145](https://github.com/dominicstop/react-native-ios-context-menu/pull/145) |
 | react-native-ios-utilities 5.2.0 | "RCTBridge.h" | also fails on 0.87 for other reasons (removed legacy-architecture APIs, Swift errors): fixing the imports alone is not enough |
+
+The full list, from a later check of 590 libraries, with the status of each fix: [React Native 0.88 library readiness](/react-native-0-88-library-readiness).
 
 **Fix.** Update the library if a release has the change. Otherwise add the namespace yourself and keep it with patch-package:
 
