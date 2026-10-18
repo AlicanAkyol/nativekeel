@@ -282,6 +282,12 @@ async function improveTool(args, ctx) {
   return buildImprovementPlan(result);
 }
 
+// Shared parameter docs and MCP tool annotations (clients and registries read both).
+const PATH = { type: 'string', description: 'Folder of the React Native or Expo app (the one with package.json), absolute or relative to the workspace. Must be inside the folders this server may read.' };
+const OFFLINE = { type: 'boolean', default: false, description: 'true: make no network requests (skip the npm and React Native Directory lookups behind version, maintenance and vulnerability checks). Default false.' };
+const MIN_SEVERITY = { type: 'string', enum: SEV, default: 'low', description: 'Lowest severity to return: critical, high, medium, low or info. Default low.' };
+const readOnly = (title, openWorld) => ({ title, readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: openWorld });
+
 export const TOOLS = [
   {
     name: 'scan_project',
@@ -290,42 +296,56 @@ export const TOOLS = [
     inputSchema: {
       type: 'object',
       properties: {
-        path: { type: 'string', description: 'Project folder (absolute, or relative to the workspace).' },
-        min_severity: { type: 'string', enum: SEV, description: 'Lowest severity to include (default: low).' },
-        offline: { type: 'boolean', description: 'Skip npm / React Native Directory lookups.' },
+        path: PATH,
+        min_severity: MIN_SEVERITY,
+        offline: OFFLINE,
       },
       required: ['path'],
       additionalProperties: false,
     },
+    annotations: readOnly('Scan a React Native or Expo project', true),
     run: scanTool,
   },
   {
     name: 'security_audit',
     description: 'Review mobile app data exposure, account access, unsafe code execution, backend rules and dependency risks. Returns source evidence, attacker prerequisites, fixes, validation steps and explicit coverage limits. Static and read-only; does not claim a live penetration test or a clean bill of health.',
-    inputSchema: { type: 'object', properties: { path: { type: 'string' }, offline: { type: 'boolean' }, min_severity: { type: 'string', enum: SEV } }, required: ['path'], additionalProperties: false },
+    inputSchema: { type: 'object', properties: { path: PATH, offline: OFFLINE, min_severity: MIN_SEVERITY }, required: ['path'], additionalProperties: false },
+    annotations: readOnly('Security audit of a mobile app', true),
     run: (args, ctx) => scanTool(args, ctx, true),
   },
   {
     name: 'improve_app',
     description: 'Prioritize existing security, crash, accessibility, performance, store and dependency findings into a review plan with prerequisites, expected effects and validation. No project code runs, no automatic changes or unmeasured performance claims. Reports unassessed areas explicitly.',
-    inputSchema: { type: 'object', properties: { path: { type: 'string' }, offline: { type: 'boolean' } }, required: ['path'], additionalProperties: false },
+    inputSchema: { type: 'object', properties: { path: PATH, offline: OFFLINE }, required: ['path'], additionalProperties: false },
+    annotations: readOnly('Prioritized improvement plan', true),
     run: improveTool,
   },
   {
     name: 'measure_bundle',
     description: 'What the release JavaScript bundle of a React Native or Expo app is made of, measured from the source map a release build already wrote (Hermes bytecode maps included): bytes and share for the app code and each package, packages bundled more than once, and the largest JSON. With base (an older map), what was added, removed or changed size since that build. Nothing is built or run; returns found:false with how to produce a map if there is none.',
-    inputSchema: { type: 'object', properties: { path: { type: 'string' }, map: { type: 'string', description: 'Optional .map file, relative to path' }, base: { type: 'string', description: 'Optional older .map file, relative to path, to compare against' } }, required: ['path'], additionalProperties: false },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        path: PATH,
+        map: { type: 'string', description: 'Source map of the release bundle, relative to path (for example android/app/build/generated/sourcemaps/react/release/index.android.bundle.map). Optional: without it the usual React Native and Expo output folders are searched.' },
+        base: { type: 'string', description: 'An older release source map, relative to path, to compare against: the result then lists packages added, removed or changed in size. Optional.' },
+      },
+      required: ['path'],
+      additionalProperties: false,
+    },
+    annotations: readOnly('Measure the release JavaScript bundle', false),
     run: (args, ctx) => measureBundleTool({ ...args, __roots: ctx.roots }),
   },
   {
     name: 'upgrade_plan',
-    description: 'Ordered, step-by-step upgrade plan for a React Native or Expo project (phases with the reason for each and concrete steps), built from the same scan.',
+    description: 'Ordered, step-by-step upgrade plan for a React Native or Expo project: phases in the order to do them (security fixes, crash risks, store deadlines, React Native and Expo upgrades, library replacements), the reason for each phase and concrete steps with file names. Built from the same scan as scan_project; stops with a warning if the project contains planted malware. Read-only.',
     inputSchema: {
       type: 'object',
-      properties: { path: { type: 'string' }, offline: { type: 'boolean' } },
+      properties: { path: PATH, offline: OFFLINE },
       required: ['path'],
       additionalProperties: false,
     },
+    annotations: readOnly('Step-by-step upgrade plan', true),
     run: planTool,
   },
   {
@@ -335,12 +355,13 @@ export const TOOLS = [
     inputSchema: {
       type: 'object',
       properties: {
-        name: { type: 'string', description: 'npm package name' },
-        react_native: { type: 'string', description: 'React Native version, e.g. 0.86 or 0.86.3' },
+        name: { type: 'string', description: 'npm package name of the library, for example react-native-reanimated or @react-native-async-storage/async-storage.' },
+        react_native: { type: 'string', description: 'React Native version to check against, for example 0.88 or 0.88.0. Optional: without it only the general facts are returned.' },
       },
       required: ['name'],
       additionalProperties: false,
     },
+    annotations: readOnly('Check a React Native library', true),
     run: libraryTool,
   },
   {
@@ -351,12 +372,13 @@ export const TOOLS = [
       type: 'object',
       properties: {
         error: { type: 'string', maxLength: 20000, description: 'The error message or the relevant part of the build log.' },
-        path: { type: 'string', description: 'Project folder, to point at the place in this project (optional).' },
-        offline: { type: 'boolean', description: 'Default true: the project check runs without network requests.' },
+        path: { ...PATH, description: 'Folder of the React Native or Expo app, to point at the place in this project the error comes from. Optional.' },
+        offline: { type: 'boolean', default: true, description: 'Default true: the project check runs without network requests.' },
       },
       required: ['error'],
       additionalProperties: false,
     },
+    annotations: readOnly('Explain a build, launch or store error', false),
     run: errorTool,
   },
   {
@@ -366,13 +388,14 @@ export const TOOLS = [
     inputSchema: {
       type: 'object',
       properties: {
-        path: { type: 'string', description: 'Project folder (inside a git repository).' },
-        base: { type: 'string', description: 'Git revision to compare with: HEAD (default), HEAD~1, a branch, tag or commit SHA.' },
-        offline: { type: 'boolean', description: 'Default true: both sides are scanned without network requests.' },
+        path: { ...PATH, description: 'Folder of the React Native or Expo app, inside a git repository.' },
+        base: { type: 'string', default: 'HEAD', description: 'Git revision to compare with: HEAD (default), HEAD~1, a branch, tag or commit SHA.' },
+        offline: { type: 'boolean', default: true, description: 'Default true: both sides are scanned without network requests.' },
       },
       required: ['path'],
       additionalProperties: false,
     },
+    annotations: readOnly('Verify an upgrade before committing', false),
     run: verifyTool,
   },
 ];
