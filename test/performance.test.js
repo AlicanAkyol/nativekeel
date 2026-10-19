@@ -36,6 +36,11 @@ test('Redux selectors that return a new object every time', async () => {
   assert.ok(ids("const g = useSelector((state) => state.guide[id] || {});").includes('perf-redux-selector-new-object'));
   assert.ok(!ids("const v = useSelector(state => ({ a: state.a }), shallowEqual);").includes('perf-redux-selector-new-object'));
   assert.ok(!ids("const a = useSelector((state) => state.a);").includes('perf-redux-selector-new-object'));
+  // TypeScript: typed parameter, typed result, generic call.
+  assert.ok(ids("const c = useSelector((s: RootState) => ({ items: s.cart.items }));").includes('perf-redux-selector-new-object'));
+  assert.ok(ids("const c = useSelector((s: any): Cart => ({ items: s.cart.items }));").includes('perf-redux-selector-new-object'));
+  assert.ok(ids("const c = useSelector<RootState, string[]>((s) => s.list || []);").includes('perf-redux-selector-new-object'));
+  assert.ok(!ids("const a = useSelector((s: RootState) => s.a);").includes('perf-redux-selector-new-object'));
 });
 
 test('performance findings point at the right line even after block comments', async () => {

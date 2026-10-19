@@ -40,6 +40,15 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.105</h2><p class="date">19 October 2026</p>
+<p>We built a test app with 41 known problems and counted how many NativeKeel finds: 59% before this release, 76% after. Each new check was run on 1,000+ open-source apps and every new finding was reviewed by hand before release.</p>
+<ul>
+<li><span class="tag">Performance</span><b>Timers and listeners that can never be stopped.</b> <code>setInterval</code>, <code>Keyboard.addListener</code>, <code>AppState.addEventListener</code>, <code>navigation.addListener</code> and similar calls in an effect whose return value is thrown away and that returns no cleanup: every mount adds another one, and they keep running after the screen closes. Found in 10 open-source apps.</li>
+<li><span class="tag">Stability</span><b>Request loops.</b> An effect with no dependency array that fetches and stores the result sends a new request after every response.</li>
+<li><span class="tag">Security</span><b>Credentials in release logs.</b> Session tokens, API keys and passwords passed to <code>console.log</code> in code that ships. Logs inside <code>if (__DEV__)</code>, builds that strip console calls, push tokens, flags such as <code>!!token</code>, and server or tooling folders are left out. Found in 25 open-source apps.</li>
+<li><span class="tag">Security</span><b>More of what was already checked:</b> redux-persist keeping the auth slice in AsyncStorage, plain-HTTP API addresses kept in a constant (<code>const API_BASE = 'http://…'</code>), Android activities exported with no intent filter and no permission, and Redux selectors written with TypeScript types. Private network names (<code>.local</code>, VPN ranges) and commented-out lines are no longer reported as plain-HTTP calls.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.104</h2><p class="date">19 October 2026</p>
 <ul>
 <li><span class="tag">Reports</span><b>The HTML report's low count adds up.</b> Outdated packages are counted as low findings but sat in a closed table at the very end, after the notes, so a report could say "12 low" and show two. The table now comes right after the other low findings, open when it is short, and the low card says how many of them are outdated packages. Finding ids sit on their own line instead of breaking mid-word.</li>

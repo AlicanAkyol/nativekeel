@@ -51,7 +51,7 @@ function tagProps(text, start) {
 // `if (__DEV__) console.log(…)` and `__DEV__ && console.log(…)` (the same with
 // process.env.NODE_ENV !== 'production'). Release builds set __DEV__ to false.
 const DEV_GUARD = /\bif\s*\(\s*(?:__DEV__|process\.env\.NODE_ENV\s*!==?\s*['"]production['"])\s*\)\s*/g;
-function devOnlyRemoved(code) {
+export function devOnlyRemoved(code) {
   let out = code.replace(/\b__DEV__\s*&&\s*console\./g, '__DEV__ && _dev_.');
   for (let m; (m = DEV_GUARD.exec(out)); ) {
     const start = m.index + m[0].length;
@@ -69,6 +69,14 @@ function devOnlyRemoved(code) {
     out = out.slice(0, start) + out.slice(start, end + 1).replace(/console\./g, '_dev_.') + out.slice(end + 1);
   }
   return out;
+}
+
+// True when the release build strips console calls: babel-plugin-transform-remove-console, or
+// Metro's minifier with drop_console (Terser) or pure_funcs listing console.log.
+export function consoleRemovedInRelease(root) {
+  const babel = ['babel.config.js', '.babelrc', 'babel.config.json'].map((f) => read(path.join(root, f))).join('\n');
+  const metro = ['metro.config.js', 'metro.config.cjs', 'metro.config.mjs', 'metro.config.ts'].map((f) => read(path.join(root, f))).join('\n').replace(/\/\/[^\n]*/g, '');
+  return /transform-remove-console|remove-console/.test(babel) || /drop_console['"]?\s*[:=]\s*(?:true|\[)/.test(metro) || /pure_funcs['"]?\s*[:=]\s*\[[^\]]*console\.log/.test(metro);
 }
 
 export function performanceChecks(project) {
@@ -111,7 +119,7 @@ export function performanceChecks(project) {
     logs += (devOnlyRemoved(code).match(/\bconsole\.(?:log|debug|info)\s*\(/g) || []).length;
     // Redux selectors that build a new object or array on every call ({ ... }, or `|| {}` / `|| []`
     // as a fallback) without an equality function: the component re-renders on every store update.
-    for (const m of code.matchAll(/\buseSelector\s*\(\s*\(?\s*\w+\s*\)?\s*=>\s*(\(\s*\{|[^,;\n]*\|\|\s*(?:\{\s*\}|\[\s*\]))/g)) {
+    for (const m of code.matchAll(/\buseSelector\s*(?:<[^>]*>)?\s*\(\s*\(?\s*\w+\s*(?::\s*[\w$.<>[\]|\s]+)?\)?\s*(?::\s*[\w$.<>[\]|\s]+)?=>\s*(\(\s*\{|[^,;\n]*\|\|\s*(?:\{\s*\}|\[\s*\]))/g)) {
       const call = code.slice(m.index, m.index + 600);
       const close = call.indexOf(')\n') >= 0 ? call.slice(0, call.indexOf(')\n') + 1) : call;
       if (/shallowEqual|isEqual|equalityFn|,\s*\w+Equal\s*\)/.test(close)) continue;
@@ -140,12 +148,7 @@ export function performanceChecks(project) {
       fix: { kind: 'performance', step: 'Switch transform/opacity animations to `useNativeDriver: true` (or Reanimated for layout properties).' },
     });
   }
-  const babel = ['babel.config.js', '.babelrc', 'babel.config.json'].map((f) => read(path.join(root, f))).join('\n');
-  // Metro's minifier can drop them too: transformer.minifierConfig.compress.drop_console (Terser)
-  // or pure_funcs listing console.log.
-  const metro = ['metro.config.js', 'metro.config.cjs', 'metro.config.mjs', 'metro.config.ts'].map((f) => read(path.join(root, f))).join('\n').replace(/\/\/[^\n]*/g, '');
-  const metroDrops = /drop_console['"]?\s*[:=]\s*(?:true|\[)/.test(metro) || /pure_funcs['"]?\s*[:=]\s*\[[^\]]*console\.log/.test(metro);
-  if (logs >= 30 && !/transform-remove-console|remove-console/.test(babel) && !metroDrops) {
+  if (logs >= 30 && !consoleRemovedInRelease(root)) {
     findings.push({
       id: 'perf-console-in-release',
       severity: 'low',

@@ -40,3 +40,35 @@ test('render loops: one finding per project, with file and line', () => {
   assert.match(f.detail, /Maximum update depth exceeded/);
   assert.equal(renderLoops({ root: makeProject({ 'a.js': 'x' }) }).length, 0);
 });
+
+test('render loops: a request in an effect with no dependency array whose result is stored', () => {
+  for (const code of [
+    "const [d, setD] = useState(null);\nuseEffect(() => {\n  fetch('/me').then((r) => r.json()).then(setD);\n});",
+    "const [d, setD] = useState(null);\nuseEffect(() => {\n  axios.get('/me').then((r) => setD(r.data));\n});",
+    "const [d, setD] = useState([]);\nuseEffect(() => {\n  const load = async () => { const r = await fetch('/x'); setD(await r.json()); };\n  load();\n});",
+  ]) assert.deepEqual(kinds(code), ['no-deps-fetch'], code);
+  for (const code of [
+    "const [d, setD] = useState(null); useEffect(() => { fetch('/me').then((r) => r.json()).then(setD); }, []);",
+    "const [d, setD] = useState(null); useEffect(() => { if (!d) fetch('/me').then((r) => r.json()).then(setD); });",
+    "const [d, setD] = useState(null); useEffect(() => { d || fetch('/me').then((r) => r.json()).then(setD); });",
+    "const [busy, setBusy] = useState(false); useEffect(() => { fetch('/ping').then(() => setBusy(false)); });",
+    "const [d, setD] = useState(null); useEffect(() => { fetch('/log', { method: 'POST' }); });",
+  ]) assert.deepEqual(kinds(code), [], code);
+});
+
+test('effect leaks: discarded timers and subscriptions with no cleanup', () => {
+  const leaks = (code) => __test.effectLeaks(code).map((h) => h.call);
+  assert.deepEqual(leaks('useEffect(() => {\n  setInterval(() => tick(), 1000);\n}, []);'), ['setInterval']);
+  assert.deepEqual(leaks("useEffect(() => {\n  Keyboard.addListener('keyboardDidShow', onShow);\n}, []);"), ['Keyboard.addListener']);
+  assert.deepEqual(leaks("useEffect(() => { AppState.addEventListener('change', onChange); }, []);"), ['AppState.addEventListener']);
+  assert.deepEqual(leaks("useEffect(() => { messaging().onMessage(h); navigation.addListener('focus', load); }, []);"), ['navigation.addListener']);
+  for (const code of [
+    'useEffect(() => { const id = setInterval(tick, 1000); return () => clearInterval(id); }, []);',
+    "useEffect(() => { const sub = Keyboard.addListener('x', f); return () => sub.remove(); }, []);",
+    "useEffect(() => { subRef.current = AppState.addEventListener('change', f); }, []);",
+    "useEffect(() => { window.addEventListener('resize', f); }, []);",
+    "useEffect(() => { setTimeout(go, 500); }, []);",
+    "useEffect(() => { // setInterval(x, 1)\n go(); }, []);",
+    "useEffect(() => navigation.addListener('focus', load), [navigation]);",
+  ]) assert.deepEqual(leaks(code), [], code);
+});

@@ -121,6 +121,16 @@ function fileLoops(text) {
     if (deps === undefined) continue; // something else after the callback
     const depNames = deps === null ? null : deps.split(',').map((d) => d.trim()).filter(Boolean);
     const body = src.slice(bodyOpen + 1, bodyClose);
+    // No dependency array and a request whose result is stored: every response renders the
+    // component, which runs the effect, which sends the request again (an endless request loop).
+    // Any condition in the effect is taken as a guard.
+    if (depNames === null && !/\b(?:if|switch|return)\b|\?\s*[^:]+:|&&|\|\|/.test(body) && /\b(?:fetch|axios(?:\.(?:get|post|request))?)\s*\(/.test(body)) {
+      const stored = [...setters.keys()].find((name) => new RegExp(`\\.then\\(\\s*${name.replace(/\$/g, '\\$')}\\s*\\)|\\b${name.replace(/\$/g, '\\$')}\\s*\\(\\s*(?![\\s)]|true\\b|false\\b|null\\b|undefined\\b|-?\\d|['"\`])`).test(body));
+      if (stored) {
+        hits.push({ line: lineOf(src, m.index), kind: 'no-deps-fetch', setter: stored });
+        continue;
+      }
+    }
     // Walk the top level of the body; stop at the first guard (if/return/loop/try/switch).
     let depth = 0;
     let guarded = false;
@@ -152,9 +162,37 @@ function fileLoops(text) {
   return hits;
 }
 
+// Timers and subscriptions started in an effect that can never be stopped: the call's return value
+// (interval id, subscription, unsubscribe function) is thrown away and the effect returns no cleanup.
+// Each mount adds another one; they keep running after the screen is gone. A stored return value
+// may be cleaned up elsewhere, so only discarded ones are reported. Web-only receivers are skipped.
+function effectLeaks(text) {
+  const src = blank(text);
+  const hits = [];
+  for (const m of src.matchAll(/\b(?:React\.)?use(?:Layout)?Effect\s*\(/g)) {
+    const open = m.index + m[0].length - 1;
+    const close = closing(src, open);
+    if (close < 0) continue;
+    const call = src.slice(open + 1, close);
+    const arrow = call.match(/^\s*(?:\(\s*\)|function\s*\(\s*\))\s*(?:=>)?\s*\{/);
+    if (!arrow) continue;
+    const bodyOpen = open + 1 + arrow[0].length - 1;
+    const bodyClose = closing(src, bodyOpen);
+    if (bodyClose < 0 || bodyClose > close) continue;
+    const body = src.slice(bodyOpen + 1, bodyClose);
+    if (/\breturn\b/.test(body)) continue;
+    const leak = body.match(/(?:^|[;{}]|\n)\s*((?:setInterval)|(?!window\.|document\.)[\w$]+(?:\(\))?(?:\.[\w$]+(?:\(\))?)*\.(?:addListener|addEventListener))\s*\(/);
+    if (!leak) continue;
+    const at = bodyOpen + 1 + leak.index + leak[0].indexOf(leak[1]);
+    hits.push({ line: lineOf(src, at), call: leak[1] });
+  }
+  return hits;
+}
+
 export function renderLoops(project) {
   const root = project.root;
   const found = [];
+  const leaks = [];
   for (const file of sourceFiles(root)) {
     let text = '';
     try {
@@ -162,27 +200,45 @@ export function renderLoops(project) {
     } catch {
       continue;
     }
-    if (!/useState/.test(text) || text.length > 400_000) continue;
-    for (const h of fileLoops(text)) found.push({ ...h, file: path.relative(root, file).split(path.sep).join('/') });
+    if (text.length > 400_000 || !/use(?:Layout)?Effect|useState/.test(text)) continue;
+    const rel = path.relative(root, file).split(path.sep).join('/');
+    if (/useState/.test(text)) for (const h of fileLoops(text)) found.push({ ...h, file: rel });
+    if (/\.web\.[jt]sx?$/.test(rel)) continue;
+    for (const h of effectLeaks(text)) leaks.push({ ...h, file: rel });
   }
-  if (!found.length) return [];
-  const say = (h) => {
-    const at = `${h.file}:${h.line}`;
-    if (h.kind === 'handler') return `${at}: \`${h.setter}(…)\` is called while rendering instead of being passed (write \`() => ${h.setter}(…)\`)`;
-    if (h.kind === 'no-deps') return `${at}: an effect with no dependency array calls \`${h.setter}\` with a new value on every run`;
-    return `${at}: an effect that depends on \`${h.state}\` always changes \`${h.state}\``;
-  };
-  return [
-    {
+  const out = [];
+  if (found.length) {
+    const say = (h) => {
+      const at = `${h.file}:${h.line}`;
+      if (h.kind === 'handler') return `${at}: \`${h.setter}(…)\` is called while rendering instead of being passed (write \`() => ${h.setter}(…)\`)`;
+      if (h.kind === 'no-deps') return `${at}: an effect with no dependency array calls \`${h.setter}\` with a new value on every run`;
+      if (h.kind === 'no-deps-fetch') return `${at}: an effect with no dependency array sends a request and stores the result with \`${h.setter}\`, so every response starts the next request (add \`[]\` or the values it depends on)`;
+      return `${at}: an effect that depends on \`${h.state}\` always changes \`${h.state}\``;
+    };
+    const sync = found.some((h) => h.kind !== 'no-deps-fetch');
+    const requests = found.some((h) => h.kind === 'no-deps-fetch');
+    out.push({
       id: 'crash-render-loop',
       severity: 'high',
       area: 'crash',
       title: `${found.length} render loop${found.length === 1 ? '' : 's'}: state set on every render (${found[0].file}:${found[0].line}${found.length > 1 ? ', …' : ''})`,
-      detail: `${found.slice(0, 5).map(say).join('; ')}${found.length > 5 ? `; and ${found.length - 5} more` : ''}. Each update renders the component again, which runs the update again: the screen freezes and React stops with "Too many re-renders" or "Maximum update depth exceeded". Fixes for each pattern: ${SITE_URL}/fix/maximum-update-depth-exceeded-react-native`,
+      detail: `${found.slice(0, 5).map(say).join('; ')}${found.length > 5 ? `; and ${found.length - 5} more` : ''}.${sync ? ' Each update renders the component again, which runs the update again: the screen freezes and React stops with "Too many re-renders" or "Maximum update depth exceeded".' : ''}${requests ? ' A request loop does not freeze the screen: it keeps sending requests while the screen is open, using data, battery and API quota, and can get the app rate-limited.' : ''} Fixes for each pattern: ${SITE_URL}/fix/maximum-update-depth-exceeded-react-native`,
       fix: { kind: 'crash', step: `Break each render loop: pass handlers as \`() => setX(…)\`, give effects a dependency array, and do not set state an effect depends on without a condition (${found.slice(0, 3).map((h) => `${h.file}:${h.line}`).join(', ')}).` },
       evidence: found.slice(0, 20).map((h) => ({ file: h.file, line: h.line, role: h.kind })),
-    },
-  ];
+    });
+  }
+  if (leaks.length) {
+    out.push({
+      id: 'perf-effect-leak',
+      severity: 'medium',
+      area: 'performance',
+      title: `${leaks.length} timer${leaks.length === 1 ? ' or listener' : 's or listeners'} started in an effect can never be stopped (${leaks[0].file}:${leaks[0].line}${leaks.length > 1 ? ', …' : ''})`,
+      detail: `${leaks.slice(0, 5).map((h) => `${h.file}:${h.line} \`${h.call}(…)\``).join('; ')}${leaks.length > 5 ? `; and ${leaks.length - 5} more` : ''}. The return value (the interval id or the subscription) is thrown away and the effect returns no cleanup, so nothing can stop it: it keeps running after the screen closes, and every new mount adds another one (handlers fire twice, three times, …; state updates hit unmounted screens). Keep the value and return a cleanup: \`const sub = Keyboard.addListener(…); return () => sub.remove();\` or \`const id = setInterval(…); return () => clearInterval(id);\`.`,
+      fix: { kind: 'performance', step: `Return a cleanup from each effect that starts a timer or listener (${leaks.slice(0, 3).map((h) => `${h.file}:${h.line}`).join(', ')}).` },
+      evidence: leaks.slice(0, 20).map((h) => ({ file: h.file, line: h.line, role: h.call })),
+    });
+  }
+  return out;
 }
 
-export const __test = { fileLoops, blank, alwaysNew };
+export const __test = { fileLoops, effectLeaks, blank, alwaysNew };

@@ -382,3 +382,54 @@ test('token storage: auth tokens are reported; push and invitation tokens behind
     assert.match(f.detail, /^KEY \(src\/auth\.ts:3\)\. /);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
+
+test('redux-persist keeping the auth slice in AsyncStorage', () => {
+  const store = (src) => tokenStorage(makeProject({ 'package.json': '{}', 'src/store.ts': src })).map((f) => f.detail);
+  const [d] = store("import AsyncStorage from '@react-native-async-storage/async-storage';\nimport { persistReducer } from 'redux-persist';\nexport const r = persistReducer({ key: 'root', storage: AsyncStorage, whitelist: ['auth', 'settings'] }, root);");
+  assert.match(d, /redux-persist "auth" slice \(src\/store\.ts:3\)/);
+  assert.deepEqual(store("import AsyncStorage from '@react-native-async-storage/async-storage';\nimport { persistReducer } from 'redux-persist';\nexport const r = persistReducer({ key: 'root', storage: AsyncStorage, whitelist: ['settings', 'theme'] }, root);"), []);
+});
+
+test('plain HTTP API constants and exported activities without an intent filter', async () => {
+  const { plainHttpCalls, exportedComponents } = await import('../src/security.js');
+  const http = (src) => plainHttpCalls(makeProject({ 'src/api.ts': src })).map((f) => f.detail);
+  assert.match(http("const API_BASE = 'http://api.shop.io/v2';\nexport const get = () => fetch(`${API_BASE}/x`);")[0] || '', /api\.shop\.io/);
+  assert.match(http("export const BASE: string = 'http://api.shop.io';")[0] || '', /api\.shop\.io/);
+  assert.deepEqual(http("const PRIVACY_URL = 'http://shop.io/privacy';\nconst DOCS = 'http://docs.shop.io';"), []);
+  const xml = (app) => exportedComponents(makeProject({ 'android/app/src/main/AndroidManifest.xml': `<manifest><application>${app}</application></manifest>` })).map((f) => f.detail);
+  assert.match(xml('<activity android:name=".AdminActivity" android:exported="true" />')[0] || '', /activity \.AdminActivity/);
+  assert.deepEqual(xml('<activity android:name=".MainActivity" android:exported="true"><intent-filter><action android:name="android.intent.action.MAIN" /></intent-filter></activity><activity android:name=".Secure" android:exported="true" android:permission="x.P" /><activity android:name=".Inner" android:exported="false" />'), []);
+});
+
+test('credentials logged in release builds; development-only and stripped logs are not', async () => {
+  const { sensitiveLogs } = await import('../src/security.js');
+  const run = (files) => sensitiveLogs(makeProject({ 'package.json': '{}', ...files })).map((f) => f.detail);
+  assert.match(run({ 'src/a.ts': "export const ok = (res) => { console.log('login ok', res.accessToken); };" })[0] || '', /src\/a\.ts:1 \(`accessToken`\)/);
+  assert.match(run({ 'src/a.ts': 'console.log(`token=${token}`);' })[0] || '', /`token`/);
+  assert.match(run({ 'src/api/auth.ts': "console.log('session', accessToken);" })[0] || '', /src\/api\/auth\.ts/, 'client API code inside the app');
+  assert.match(run({ 'src/a.ts': "console.log('refresh', accessToken.refresh_token);" })[0] || '', /`refresh_token`/, 'the token property of a token object');
+  assert.match(run({ 'apps/mobile/package.json': '{"dependencies":{"react-native":"0.80.0"}}', 'apps/mobile/src/a.ts': 'console.log(password);' })[0] || '', /apps\/mobile/, 'a nested React Native app is still checked');
+  for (const files of [
+    { 'src/a.ts': "if (__DEV__) console.log('t', token);" },
+    { 'src/a.ts': "__DEV__ && console.log('t', token);" },
+    { 'src/a.ts': "console.log('token refreshed');" },
+    { 'src/a.ts': "console.log('push', expoPushToken);" },
+    { 'src/a.ts': 'console.warn(`Unexpected token type ${token.type} in markdown parser.`);' },
+    { 'src/a.ts': "console.log('API Key:', apiKey ? 'Present' : 'Missing');" },
+    { 'src/a.ts': 'console.log(`client, token: ${Boolean(token)}`);' },
+    { 'src/a.ts': "console.log('Error downloading metadata of token', token);" },
+    { 'src/a.ts': "console.log('params', { hasUrl: !!url, hasAccessToken: !!access_token });" },
+    { 'src/a.ts': "console.error('missing', { hasApiKey: !!apiKey, token: !!token });" },
+    { 'src/a.ts': "console.log('ok', { hasToken: !!response.data.token, n: Boolean(res?.accessToken) });" },
+    { 'src/a.ts': "console.log('mapbox', { tokenLength: token?.length || 0 });" },
+    { 'admin/package.json': '{"dependencies":{"bcrypt":"5.0.0"}}', 'admin/src/hash.js': 'console.log(password);' },
+    { 'src/a.ts': "console.log('ExpoPushToken:', token);" },
+    { 'src/notifications/register.ts': 'console.log(token);' },
+    { 'backend/server.js': 'console.log(apiKey);' },
+    { 'scripts/seed.js': 'console.log(secret);' },
+    { 'packages/api/src/auth.ts': 'console.log(accessToken);' },
+    { 'src/a.ts': "console.log('has token', !!token, token.length);" },
+    { 'src/a.ts': "// console.log(token)\nconsole.log('x');" },
+    { 'src/a.ts': "console.log(token);", 'babel.config.js': "module.exports = { env: { production: { plugins: ['transform-remove-console'] } } };" },
+  ]) assert.deepEqual(run(files), [], JSON.stringify(files));
+});

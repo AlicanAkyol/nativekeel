@@ -2,6 +2,7 @@ import fs from './read-boundary.js';
 import path from 'node:path';
 import { compareVersions } from './known-issues.js';
 import { gitIgnored } from './git.js';
+import { consoleRemovedInRelease, devOnlyRemoved } from './performance.js';
 
 // Security checks beyond leaked keys: known vulnerabilities in shipped dependencies, passwords
 // that flow into logs or remote writes, unsafe WebView settings, and Android backups.
@@ -168,6 +169,77 @@ export function passwordLeaks(root) {
   return findings;
 }
 
+// Session tokens, API keys and passwords written to the console in release builds. Release logs
+// reach logcat and the iOS device console, crash tools that collect breadcrumbs, and anyone with
+// the phone on a cable. Development-only logging and builds that strip console calls are left out.
+// A file in a sub-folder with its own package.json that is not a React Native or Expo app (an
+// admin web panel, a Next.js dashboard, a Node script package): not part of the app bundle.
+const otherProjectCache = new Map();
+function insideOtherProject(root, file) {
+  for (let dir = path.dirname(file); dir.startsWith(root) && dir !== root; dir = path.dirname(dir)) {
+    if (!otherProjectCache.has(dir)) {
+      let other = false;
+      try {
+        const pkg = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8'));
+        const deps = { ...(pkg.dependencies || {}), ...(pkg.devDependencies || {}), ...(pkg.peerDependencies || {}) };
+        other = !deps['react-native'] && !deps.expo;
+      } catch {}
+      otherProjectCache.set(dir, other);
+    }
+    if (otherProjectCache.get(dir)) return true;
+  }
+  return false;
+}
+const LOGGED_SECRET = /\b(?:[\w$]*(?:access|refresh|auth|id|session|bearer|jwt|api)_?(?:token|key)|token|jwt|password|passwd|secret|apiKey|privateKey|mnemonic)\b/i;
+export function sensitiveLogs(root) {
+  if (consoleRemovedInRelease(root)) return [];
+  const hits = [];
+  for (const file of jsFiles(root)) {
+    const rel = path.relative(root, file).split(path.sep).join('/');
+    // Web-only files, server and tooling code (not in the app), and push-notification modules,
+    // where "token" is the device's push address.
+    if (/\.web\.[cm]?[jt]sx?$/.test(rel) || /^(?:server|backend|functions|api|scripts?|cli|tools|bin)\/|(?:^|\/)packages\/(?:api|server|backend|functions|cli)\/|(?:^|\/)(?:cli|scripts)\//.test(rel) || /notif|push|fcm|messaging/i.test(rel)) continue;
+    if (insideOtherProject(root, file)) continue;
+    const text = read(file);
+    if (!text || !/\bconsole\./.test(text) || !LOGGED_SECRET.test(text)) continue;
+    const code = devOnlyRemoved(text.replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' ')).replace(/(^|[^:])\/\/[^\n]*/g, '$1'));
+    for (const m of code.matchAll(/\bconsole\.(?:log|info|warn|error|debug)\s*\(/g)) {
+      const args = callArguments(code.slice(m.index, m.index + 600), /\bconsole\.(?:log|info|warn|error|debug)\s*\(/);
+      // Identifiers only: words inside strings ("token refreshed") are not values.
+      const values = args.replace(/(['"])(?:\\.|(?!\1)[^\\\n])*\1/g, ' ').replace(/`(?:\\.|\$\{([^}]*)\}|[^`\\])*`/g, (t) => [...t.matchAll(/\$\{([^}]*)\}/g)].map((x) => x[1]).join(' '));
+      // Push and device tokens are addresses, not credentials (the label often says so: "ExpoPushToken:").
+      if (/push|fcm|apns|expo|device|notif|messaging|csrf/i.test(args)) continue;
+      // The value itself, not a property of it (token.type, token.mint), a presence check
+      // (apiKey ? 'set' : 'missing', Boolean(token), !!token) or its length.
+      const word = [...values.matchAll(new RegExp(LOGGED_SECRET.source, 'gi'))].find((w) => {
+        const after = values.slice(w.index + w[0].length);
+        // Look before the whole member chain: !!response.data.token is a flag.
+        const head = values.slice(Math.max(0, w.index - 120), w.index);
+        const before = head.slice(0, head.length - head.match(/[\w$.?\]\[]*$/)[0].length).slice(-12);
+        // Object keys ({ hasToken: !!token }) and flag names are labels, not values.
+        if (/^(?:has|is|should|did|can|needs?)[A-Z_]/.test(w[0]) || /^\s*:(?!:)/.test(after)) return false;
+        return !/^\s*(?:\??\.(?!\.)|\?(?![.?])|!==?|===?|&&|\|\|)/.test(after) && !/(?:Boolean\(|typeof\s+|!!|\b(?:has|is|should)\w*\s*\(?)\s*$/.test(before);
+      });
+      if (!word) continue;
+      // A bare "token" in a parser or a crypto wallet is a lexer token or an asset.
+      if (/^tokens?$/i.test(word[0]) && /metadata|mint|balance|symbol|\buid\b|asset|coin|nft|erc-?20|markdown|parser|lexer|syntax/i.test(args)) continue;
+      hits.push({ at: `${rel}:${code.slice(0, m.index).split('\n').length}`, what: word[0] });
+      break;
+    }
+  }
+  if (!hits.length) return [];
+  return [
+    {
+      id: 'log-sensitive-data',
+      severity: 'low',
+      area: 'security',
+      title: `${hits.length} file${hits.length === 1 ? ' logs' : 's log'} a token, key or password in release builds (${hits[0].at}${hits.length > 1 ? ', …' : ''})`,
+      detail: `${hits.slice(0, 5).map((h) => `${h.at} (\`${h.what}\`)`).join(', ')}${hits.length > 5 ? ', …' : ''}. Release builds keep console output: it reaches logcat and the iOS device console, crash and support tools that collect logs, and anyone with the phone on a cable. A logged session token signs in as the user. Remove these logs, wrap them in \`if (__DEV__)\`, or strip console calls from release builds (babel-plugin-transform-remove-console, or drop_console in Metro's minifierConfig). (OWASP MASVS-STORAGE-2)`,
+      fix: { kind: 'security', step: `Stop logging credentials in release builds (${hits.slice(0, 3).map((h) => h.at).join(', ')}): remove the logs or guard them with \`__DEV__\`.` },
+    },
+  ];
+}
+
 // From the start of `text` up to the end of the first statement: stops at a newline or ';' once
 // all brackets opened so far are closed.
 function balanced(text) {
@@ -328,6 +400,17 @@ export function exportedComponents(root) {
     const name = (attrs.match(/android:name\s*=\s*"([^"]+)"/) || [])[1] || m[1];
     open.push(`${m[1]} ${name}`);
   }
+  // An activity exported with no intent filter has no launcher, link or share entry: it exists
+  // only to be started directly, and without a permission any app can do that with any extras.
+  for (const m of text.matchAll(/<activity\b([^>]*?)(?:\/>|>([\s\S]*?)<\/activity>)/g)) {
+    const attrs = m[1];
+    if (!/android:exported\s*=\s*"true"/.test(attrs) || /android:permission\s*=/.test(attrs) || /<intent-filter\b/.test(m[2] || '')) continue;
+    const name = (attrs.match(/android:name\s*=\s*"([^"]+)"/) || [])[1] || 'activity';
+    // The app's main screen (any app can open it from the launcher anyway) and SDK callback
+    // activities that must be exported, such as WeChat's wxapi.WXEntryActivity.
+    if (/(?:^|\.)(?:Main|Launcher|Splash)Activity$|\.wxapi\.WX\w*EntryActivity$/.test(name)) continue;
+    open.push(`activity ${name}`);
+  }
   if (!open.length) return [];
   return [
     {
@@ -336,7 +419,7 @@ export function exportedComponents(root) {
       area: 'security',
       title: `${open.length} Android component${open.length === 1 ? '' : 's'} open to every other app`,
       detail: `${open.slice(0, 4).join(', ')}${open.length > 4 ? ', …' : ''}: exported="true" without a permission, so any installed app can start it or read from it. Set exported="false" unless another app must call it, or protect it with android:permission.`,
-      fix: { kind: 'security', step: 'In `android/app/src/main/AndroidManifest.xml`, set `android:exported="false"` on services/receivers/providers no other app needs, or add `android:permission`.' },
+      fix: { kind: 'security', step: 'In `android/app/src/main/AndroidManifest.xml`, set `android:exported="false"` on activities, services, receivers and providers no other app needs, or add `android:permission`.' },
     },
   ];
 }
@@ -351,11 +434,13 @@ export function plainHttpCalls(root) {
     if (!text || !/(?:http|ws):\/\//.test(text)) continue;
     const lines = text.split('\n');
     lines.forEach((line, i) => {
-      if (/Linking\.|openURL|openBrowser|WebBrowser\.|href=|xmlns|schemas\.|w3\.org|example\.(?:com|org)/.test(line)) return;
-      if (!/\bfetch\s*\(|axios|baseURL|baseUrl|BASE_URL|API_URL|apiUrl|new WebSocket\s*\(|\.get\s*\(|\.post\s*\(/.test(line)) return;
+      if (/^\s*(?:\/\/|\/?\*)/.test(line) || /Linking\.|openURL|openBrowser|WebBrowser\.|href=|xmlns|schemas\.|w3\.org|example\.(?:com|org)/.test(line)) return;
+      // A call on this line, or a constant named like an API address (const API_BASE = 'http://…').
+      if (!/\bfetch\s*\(|axios|baseURL|baseUrl|BASE_URL|API_URL|apiUrl|new WebSocket\s*\(|\.get\s*\(|\.post\s*\(/.test(line) && !/\b(?:const|let|var)\s+\w*(?:api|base|server|backend|endpoint)\w*\s*(?::\s*\w+\s*)?=/i.test(line)) return;
       for (const m of line.matchAll(/['"`](?:http|ws):\/\/([^/'"`:\s$]+)/g)) {
         // Real hosts only: not local addresses, not placeholders like http://dummy used for URL parsing.
-        if (LOCAL_HOST.test(m[1]) || /^\$\{/.test(m[1]) || !m[1].includes('.')) continue;
+        // Private networks too: .local/.lan names, carrier-grade NAT and VPN ranges (Tailscale 100.64.0.0/10).
+        if (LOCAL_HOST.test(m[1]) || /^\$\{/.test(m[1]) || !m[1].includes('.') || /\.(?:local|lan|test|invalid|localhost|internal|home\.arpa)$/i.test(m[1]) || /^100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./.test(m[1]) || /(?:^|\.)(?:x+|your\w*)(?:\.|$)/i.test(m[1])) continue;
         if (!hosts.has(m[1])) hosts.set(m[1], `${path.relative(root, file)}:${i + 1}`);
       }
     });
@@ -645,6 +730,15 @@ export function tokenStorage(root) {
       if (/push|fcm|apns|expo_?push|notif|device|firebase|messaging|invit/i.test(`${key} ${constant ? constant[1] : ''} ${m[2]} ${path.basename(file)}`)) continue;
       hits.push(`${m[1].trim()} (${at(m.index)})`);
     }
+    // redux-persist writing the auth slice to AsyncStorage: persistReducer({ storage: AsyncStorage,
+    // whitelist: ['auth'] }). The slice holds the session token.
+    if (/\bpersist(?:Reducer|CombineReducers)\b/.test(text)) {
+      for (const m of text.matchAll(/\bstorage\s*:\s*AsyncStorage\b/g)) {
+        const config = text.slice(Math.max(0, text.lastIndexOf('{', m.index)), m.index + 400);
+        const slice = config.match(/\bwhitelist\s*:\s*\[[^\]]*?['"`]((?:auth|authentication|authReducer|session|token|tokens|login|credentials?))['"`]/i);
+        if (slice) hits.push(`redux-persist "${slice[1]}" slice (${at(m.index)})`);
+      }
+    }
   }
   if (!hits.length) return [];
   return [
@@ -674,7 +768,7 @@ export const MASVS_GROUPS = {
 export function masvsOf(id) {
   if (/^(secret:|env-bundled|crypto-|expo-secret|ai-key-)/.test(id)) return 'CRYPTO';
   if (/^(clipboard-|keychain-)/.test(id)) return 'STORAGE';
-  if (/^(password-leak|token-unencrypted|android-allow-backup)/.test(id)) return 'STORAGE';
+  if (/^(password-leak|token-unencrypted|android-allow-backup|log-sensitive)/.test(id)) return 'STORAGE';
   if (/^(insecure-tls|user-certificates|plain-http|ios-ats|android-cleartext)/.test(id)) return 'NETWORK';
   if (/^(webview-|android-exported|deeplink-)/.test(id)) return 'PLATFORM';
   if (/^(firebase-|supabase-)/.test(id)) return 'AUTH';
