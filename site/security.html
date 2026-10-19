@@ -20,6 +20,7 @@
 <h2>What could go wrong?</h2>
 <div class="grid">
 <div class="card"><h3>Credentials escape the app</h3><p>Tokens and wallet secrets passed to telemetry, passwords embedded in URLs, secrets bundled in the app, unsafe storage and sensitive clipboard use.</p></div>
+<div class="card"><h3>Keys added at build time</h3><p>An <code>EXPO_PUBLIC_</code> value set in EAS or a CI secret is compiled into the app without ever appearing in the repository. NativeKeel opens the built APK, AAB or IPA (or the bundle Gradle wrote) and scans the JavaScript bundle inside it, including Hermes bytecode: <code>npx nativekeel --artifact app-release.apk</code>.</p></div>
 <div class="card"><h3>Another user reaches private data</h3><p>Open Firebase rules, overly broad writes and supported Supabase RLS policy mistakes. Deployed permissions and cross-account isolation still need runtime verification.</p></div>
 <div class="card"><h3>Untrusted data becomes code</h3><p>WebView messages or fetched response bodies reaching eval/Function; traced text input or navigation values concatenated into SQLite query text.</p></div>
 <div class="card"><h3>Login or file sharing loses protection</h3><p>OAuth code flows with PKCE explicitly disabled, implicit redirect tokens, and referenced FileProvider paths that cover entire private directories.</p></div>
@@ -37,6 +38,7 @@
 <h2>How the new checks were verified</h2>
 <p>Each rule has positive and negative fixtures. A read-only pass over 922 repositories produced 13 source matches in 11 repositories after exclusions for public map identifiers, server/web code and cache-only sharing. These are review candidates, not confirmed breaches. No corpus application or malicious sample was executed.</p>
 <p>The six native checks have positive and negative fixtures and CLI/MCP/report integration coverage. A read-only pass over 922 repositories produced no matching native findings. Guards, complex branches and unknown transformations may stop analysis; no match is not a passed security control. These new native flows currently cover Android, not iOS native flows, release binaries or deployed services.</p>
+<p>The built-app scan was checked on Hermes bytecode compiled with the React Native 0.87.1 compiler: keys stored back to back with other strings and keys inside non-ASCII (UTF-16) strings are found. Only key formats with a distinctive prefix are matched inside bytecode (for OpenAI keys, also the marker every key carries), after a first version matched CSS names such as <code>mask-image</code>; built bundles of 20 open-source apps produced no findings.</p>
 <p><a href="https://github.com/AlicanAkyol/nativekeel/blob/main/docs/native-security-0.1.66.md">Native Android definitions and limits</a> · <a href="https://github.com/AlicanAkyol/nativekeel/blob/main/docs/mobile-security-0.1.65.md">Read the rule definitions and limitations</a> · <a href="changelog.html">Release history</a></p>
 <footer><a href="/">NativeKeel</a> · <a href="privacy.html">Privacy</a> · MIT licensed</footer>
 </main></body></html>

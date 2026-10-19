@@ -766,7 +766,7 @@ export const MASVS_GROUPS = {
 };
 
 export function masvsOf(id) {
-  if (/^(secret:|env-bundled|crypto-|expo-secret|ai-key-)/.test(id)) return 'CRYPTO';
+  if (/^(secret:|secret-in-build:|env-bundled|crypto-|expo-secret|ai-key-)/.test(id)) return 'CRYPTO';
   if (/^(clipboard-|keychain-)/.test(id)) return 'STORAGE';
   if (/^(password-leak|token-unencrypted|android-allow-backup|log-sensitive)/.test(id)) return 'STORAGE';
   if (/^(insecure-tls|user-certificates|plain-http|ios-ats|android-cleartext)/.test(id)) return 'NETWORK';

@@ -40,6 +40,11 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.106</h2><p class="date">19 October 2026</p>
+<ul>
+<li><span class="tag">Security</span><b>Keys added at build time.</b> An <code>EXPO_PUBLIC_</code> value set in EAS, or a CI secret written into a <code>.env</code> on the build machine, is compiled into the app but never appears in the repository, so no source scan can see it. NativeKeel now opens the built app and scans the JavaScript bundle inside it: APKs and AABs under <code>android/app/build/outputs</code>, <code>eas build --local</code> results, committed bundles, and any APK, AAB or IPA passed with <code>--artifact</code> (or the GitHub Action's new <code>artifact</code> input, after your build step). Hermes bytecode stores its strings back to back, so a key does not start at a word boundary there; only key formats with a distinctive prefix are matched inside bytecode, after a first version matched CSS names such as <code>mask-image</code> as OpenAI keys. A key already reported from the source is not reported again.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.105</h2><p class="date">19 October 2026</p>
 <p>We built a test app with 41 known problems and counted how many NativeKeel finds: 59% before this release, 76% after. Each new check was run on 1,000+ open-source apps and every new finding was reviewed by hand before release.</p>
 <ul>

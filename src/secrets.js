@@ -62,6 +62,48 @@ const RULES = [
 // Values that are obviously not real: docs examples, test fixtures, templates.
 const PLACEHOLDER = /example|test|dummy|fake|sample|placeholder|xxxx|changeme|redacted|your[_-]?(?:api[_-]?)?(?:key|token|secret)/i;
 
+// Hermes bytecode stores its strings back to back with no separator ("…JK6lsk_live_51…"), so in a
+// built bundle a key does not start or end at a word boundary. Those copies of the rules drop the
+// outer \b; the prefixes (sk_live_, AKIA, eyJ…) still anchor them.
+// Only rules with a prefix that does not occur in ordinary text are relaxed: "sk-" alone would match
+// inside "mask-image" or "task-…", and Twilio's SK + 32 hex inside base64 data. OpenAI keys also
+// carry "T3BlbkFJ" (base64 of "OpenAI"), which a run of CSS names never does.
+const RELAXED_IN_BINARY = {
+  'aws-access-key': null,
+  'stripe-secret': null,
+  'openai-key': (m) => m[0].includes('T3BlbkFJ'),
+  'anthropic-key': (m) => /^sk-ant-(?:api|admin)\d\d-/.test(m[0]),
+  'github-token': null,
+  'slack-token': null,
+  'sendgrid-key': null,
+  'google-oauth-secret': null,
+  'shopify-token': null,
+  'supabase-service-role': null,
+};
+const BINARY_RULES = RULES.map((rule) => {
+  if (!(rule.id in RELAXED_IN_BINARY)) return rule;
+  const extra = RELAXED_IN_BINARY[rule.id];
+  return {
+    ...rule,
+    re: new RegExp(rule.re.source.replace(/^\\b/, '').replace(/\\b$/, ''), rule.re.flags),
+    validate: extra ? (m) => extra(m) && (!rule.validate || rule.validate(m)) : rule.validate,
+  };
+});
+
+// Every secret in `text` (a source file, or with `binary` a built JavaScript or Hermes bundle read
+// as latin1): { rule, label, value, index }.
+export function findSecrets(text, { binary = false } = {}) {
+  const out = [];
+  for (const rule of binary ? BINARY_RULES : RULES) {
+    for (const m of text.matchAll(rule.re)) {
+      if (rule.validate && !rule.validate(m)) continue;
+      if (PLACEHOLDER.test(m[0])) continue;
+      out.push({ rule: rule.id, label: rule.label, value: (m.groups && m.groups.v) || m[0], index: m.index });
+    }
+  }
+  return out;
+}
+
 // Test code is never part of the app bundle.
 export const TEST_PATH = /(^|\/)(__tests__|__mocks__|__fixtures__|test|tests|e2e|fixtures)\/|\.(test|spec)\.[cm]?[jt]sx?$|(^|\/)tests?\.[cm]?[jt]sx?$|[a-z]Test\.[cm]?[jt]sx?$/;
 
@@ -160,6 +202,8 @@ export function scanSecrets(root) {
           file: rel,
           line,
           preview: value ? mask(value) : null,
+          // Start of the value, so a copy found in the built app is not reported a second time.
+          fingerprint: (value || m[0]).slice(0, 16),
           inAppBundle: !SERVER_DIRS.has(posix.split('/')[0]) && !TEST_PATH.test(posix) && !inComment && !unreferencedJson && envShipped,
           inComment,
           committed: tracked ? tracked.has(posix) : null,

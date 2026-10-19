@@ -9,7 +9,7 @@ import zlib from 'node:zlib';
 const PAGE_16K = 16384;
 const ABIS_64 = ['arm64-v8a', 'x86_64'];
 
-function readZipEntries(buf) {
+export function readZipEntries(buf) {
   // End of central directory record is in the last 64 KB (+22 bytes).
   const min = Math.max(0, buf.length - 65557);
   let eocd = -1;
@@ -66,7 +66,7 @@ function readZipEntries(buf) {
   return entries;
 }
 
-function entryData(buf, entry) {
+export function entryData(buf, entry) {
   const p = entry.localOffset;
   if (buf.readUInt32LE(p) !== 0x04034b50) throw new Error(`bad local header for ${entry.name}`);
   const start = p + 30 + buf.readUInt16LE(p + 26) + buf.readUInt16LE(p + 28);

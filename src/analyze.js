@@ -5,6 +5,7 @@ import { validPackageName } from './package-name.js';
 import path from 'node:path';
 import { cleanVersion, findPackageDir, installedVersion, versionFromSpec } from './project.js';
 import { createRegistry, fetchJson } from './registry.js';
+import { secretsInBuilds } from './build-secrets.js';
 import { scanSecrets, TEST_PATH } from './secrets.js';
 import { nativeChecks } from './native.js';
 import { stabilityChecks } from './stability.js';
@@ -101,7 +102,7 @@ export function satisfiesExpoRange(version, range) {
 }
 
 // `offline: true` means the user asked for no network access (get returns nothing).
-export async function analyze(project, { get, now = new Date(), offline: forcedOffline = false } = {}) {
+export async function analyze(project, { get, now = new Date(), offline: forcedOffline = false, artifacts = [] } = {}) {
   // Requests that failed even after retries (rate limits, network): reported, never hidden.
   const net = { failed: 0, deadline: Date.now() + (Number(process.env.NATIVEKEEL_NETWORK_BUDGET_MS) || 90000) };
   const registry = createRegistry(get || ((url, headers, body) => fetchJson(url, headers, net, { body })));
@@ -579,7 +580,8 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
     for (const f of vulns || []) add(f);
   }
 
-  for (const s of scanSecrets(project.root)) {
+  const sourceSecrets = scanSecrets(project.root);
+  for (const s of sourceSecrets) {
     const value = s.preview ? `Value ${s.preview}. ` : '';
     const where = `${s.file}:${s.line}`;
     if (s.inAppBundle) {
@@ -621,6 +623,22 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
         fix: { kind: 'secret', label: s.label, file: s.file, line: s.line, bundled: false, exposure: 'repository' },
       });
     }
+  }
+
+  // The built app: keys added at build time (EAS or CI environment variables) never appear in the
+  // source, only in the bundle that ships.
+  const builds = secretsInBuilds(project.root, { artifacts, known: new Set(sourceSecrets.map((s) => s.fingerprint)) });
+  for (const e of builds.errors.filter((x) => artifacts.length && !/no JavaScript bundle/.test(x))) warnings.push(`--artifact ${e}`);
+  for (const s of builds.secrets) {
+    const where = s.entry ? `${s.file} → ${s.entry}` : s.file;
+    add({
+      id: `secret-in-build:${s.rule}`,
+      severity: 'critical',
+      area: 'secret',
+      title: `${s.label} inside the built app (${where})`,
+      detail: `Value ${s.value.slice(0, 8)}…. It is in the JavaScript bundle of the built app but not in the source code, so it was added at build time: an EAS or CI environment variable (EXPO_PUBLIC_… or a react-native-config .env on the build machine). Anyone who downloads the app can extract it. Revoke it now, then move the call that needs it to a server.`,
+      fix: { kind: 'secret', label: s.label, file: s.file, line: 1, bundled: true },
+    });
   }
 
   const native = nativeSecurity(project.root);

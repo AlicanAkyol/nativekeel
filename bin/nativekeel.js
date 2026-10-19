@@ -16,17 +16,18 @@ import { securityOnly } from '../src/security-review.js';
 import { buildImprovementPlan, improvementToMarkdown, improvementToText } from '../src/improve.js';
 import { SITE_URL } from '../src/config.js';
 
-const VALUE_FLAGS = new Set(['--html', '--out', '--baseline', '--save-baseline', '--brand', '--sarif', '--markdown', '--fail-on', '--sonar', '--path', '--base', '--comment', '--report-url']);
+const VALUE_FLAGS = new Set(['--html', '--out', '--baseline', '--save-baseline', '--brand', '--sarif', '--markdown', '--fail-on', '--sonar', '--path', '--base', '--comment', '--report-url', '--artifact']);
 const COMMANDS = new Set(['scan', 'security', 'improve', 'bundle', 'plan', 'compare', 'compare-imports', 'prepare-imports', 'explain', 'verify', 'fleet', 'mcp', 'help']);
 
 function parseArgs(argv) {
-  const flags = {};
+  const flags = { artifacts: [] };
   const positional = [];
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (VALUE_FLAGS.has(a)) {
       if (!argv[i + 1] || argv[i + 1].startsWith('--')) fail(`${a} needs a value`);
-      flags[a.slice(2)] = argv[++i];
+      if (a === '--artifact') flags.artifacts.push(argv[++i]);
+      else flags[a.slice(2)] = argv[++i];
     } else if (a.startsWith('--') || a === '-h' || a === '-v') {
       flags[a.replace(/^-+/, '')] = true;
     } else {
@@ -78,6 +79,9 @@ Scan options
                             needs NATIVEKEEL_TOKEN (closed beta)
   --verbose                 List every outdated package
   --offline                 Make no network requests (local checks only)
+  --artifact <file>         Also scan a built app (APK, AAB or IPA, e.g. from CI) for
+                            keys added at build time; repeatable. Built apps and
+                            bundles under android/app/build are scanned automatically
   --save-baseline <file>    Accept current findings as known
   --baseline <file>         Only report findings not in the baseline (for CI)
   --brand <name>            Put your company name on the HTML report
@@ -106,7 +110,7 @@ async function runScan(root, flags) {
     fail(e.message);
   }
   if (!flags.json) process.stderr.write(`Scanning ${root}${flags.offline ? ' (offline)' : ''} …\n`);
-  return analyze(project, flags.offline ? { get: async () => null, offline: true } : {});
+  return analyze(project, { ...(flags.offline ? { get: async () => null, offline: true } : {}), artifacts: flags.artifacts });
 }
 
 function packageVersion() {
@@ -158,7 +162,7 @@ async function runFleet(positional, flags, failOn) {
     try {
       const project = loadProject(dir);
       if (!flags.json) process.stderr.write(`Scanning ${rel}${flags.offline ? ' (offline)' : ''} …\n`);
-      const result = await analyze(project, flags.offline ? { get: async () => null, offline: true } : {});
+      const result = await analyze(project, { ...(flags.offline ? { get: async () => null, offline: true } : {}), artifacts: flags.artifacts });
       rows.push({ ...fleetRow(result, rel), counts: countBySeverity(result.findings), failOn: (result.settings && result.settings.failOn) || null, scannedAt: result.scannedAt });
       summaries.set(rel, result.findings);
     } catch (e) {
