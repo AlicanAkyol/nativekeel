@@ -636,7 +636,7 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
       severity: 'critical',
       area: 'secret',
       title: `${s.label} inside the built app (${where})`,
-      detail: `Value ${s.value.slice(0, 8)}…. It is in the JavaScript bundle of the built app but not in the source code, so it was added at build time: an EAS or CI environment variable (EXPO_PUBLIC_… or a react-native-config .env on the build machine). Anyone who downloads the app can extract it. Revoke it now, then move the call that needs it to a server.`,
+      detail: `The value starts with \`${s.value.slice(0, 8)}\`. It is in the JavaScript bundle of the built app but not in the source code, so it was added at build time: an EAS or CI environment variable (EXPO_PUBLIC_… or a react-native-config .env on the build machine). Anyone who downloads the app can extract it. Revoke it now, then move the call that needs it to a server.`,
       fix: { kind: 'secret', label: s.label, file: s.file, line: 1, bundled: true },
     });
   }
