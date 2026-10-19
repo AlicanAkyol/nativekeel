@@ -4,6 +4,6 @@
   "description": "Pins the NativeKeel MCP server this Claude Code plugin runs. Claude Code installs it from this lockfile (exact version, integrity hash, no install scripts).",
   "license": "MIT",
   "dependencies": {
-    "nativekeel": "0.1.105"
+    "nativekeel": "0.1.106"
   }
 }
