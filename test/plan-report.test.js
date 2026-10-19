@@ -241,7 +241,9 @@ test('HTML report: outdated packages collapse into one table', () => {
     ],
   };
   const html = htmlReport(r);
-  assert.match(html, /<details class="bumps"><summary>3 packages are a major version behind/);
+  assert.match(html, /<li class="f low bumps">.*<details open><summary><strong>3 packages are a major version behind/s);
+  assert.match(html, /low · 3 outdated packages/, 'the low count says how many are packages');
+  assert.ok(html.indexOf('3 packages are a major version behind') < (html.indexOf('class="f info"') >>> 0), 'listed with the low findings, before info');
   assert.ok(!html.includes('Major version behind.'), 'no card per outdated package');
 });
 

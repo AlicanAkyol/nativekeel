@@ -19,17 +19,15 @@ export function htmlReport(result, { brand = null, plan = null } = {}) {
 
   // Outdated packages are many and alike: one collapsible table instead of a card each.
   const isBump = (f) => f.id.startsWith('dep-major:');
-  const rows = SEVERITIES.flatMap((sev) =>
-    result.findings
-      .filter((f) => f.severity === sev && !isBump(f))
-      .map((f) => `<li class="f ${sev}"><span class="tag">${sevLabel[sev]}</span><div><strong>${rich(f.title)}</strong> <code class="fid">${esc(String(f.id))}</code><p>${rich(f.detail)}</p>${f.attack ? `<p><b>Verify:</b> ${esc(f.attack.validation)}</p><p><b>Fix:</b> ${rich(f.fix.step)}</p>` : ""}</div></li>`),
-  ).join('\n');
   const bumps = result.findings.filter(isBump);
+  // Shown right after the other low findings, open when short, so the low count adds up on the page.
   const bumpTable = bumps.length
-    ? `<details class="bumps"><summary>${bumps.length} package${bumps.length === 1 ? ' is' : 's are'} a major version behind${bumps.some((f) => f.fix.expoManaged) ? ` <span class="muted">(${bumps.filter((f) => f.fix.expoManaged).length} move with the Expo SDK upgrade)</span>` : ' <span class="muted">(low)</span>'}</summary><table><thead><tr><th>Package</th><th>Installed</th><th>Latest</th><th></th></tr></thead><tbody>${bumps
+    ? `<li class="f low bumps"><span class="tag">Low</span><div><details${bumps.length <= 15 ? ' open' : ''}><summary><strong>${bumps.length} package${bumps.length === 1 ? ' is' : 's are'} a major version behind</strong>${bumps.some((f) => f.fix.expoManaged) ? ` <span class="muted">(${bumps.filter((f) => f.fix.expoManaged).length} move with the Expo SDK upgrade)</span>` : ''}</summary><table><thead><tr><th>Package</th><th>Installed</th><th>Latest</th><th></th></tr></thead><tbody>${bumps
         .map((f) => `<tr><td>${esc(f.fix.name)}</td><td>${esc(f.fix.from || '')}</td><td>${esc(f.fix.to || '')}</td><td class="muted">${[f.fix.native && 'native', f.fix.expoManaged && 'moves with Expo SDK'].filter(Boolean).join(', ')}</td></tr>`)
-        .join('')}</tbody></table></details>`
+        .join('')}</tbody></table></details></div></li>`
     : '';
+  const card = (f, sev) => `<li class="f ${sev}"><span class="tag">${sevLabel[sev]}</span><div><strong>${rich(f.title)}</strong><code class="fid">${esc(String(f.id))}</code><p>${rich(f.detail)}</p>${f.attack ? `<p><b>Verify:</b> ${esc(f.attack.validation)}</p><p><b>Fix:</b> ${rich(f.fix.step)}</p>` : ''}</div></li>`;
+  const rows = SEVERITIES.map((sev) => result.findings.filter((f) => f.severity === sev && !isBump(f)).map((f) => card(f, sev)).join('\n') + (sev === 'low' ? bumpTable : '')).join('\n').trim();
 
   const planHtml = plan
     ? `<section><h2>${plan.phases.some((ph) => /^Upgrade (React Native|Expo SDK)/.test(ph.title)) ? 'Upgrade plan' : 'Action plan'} <small>scope: ${esc(plan.complexity.size)}</small></h2>${plan.phases
@@ -65,10 +63,10 @@ ul.list{list-style:none;padding:0;margin:0;display:grid;gap:8px}
 main{overflow-wrap:anywhere}code{overflow-wrap:anywhere;word-break:break-word}.f>div,.sg,.stats>*{min-width:0}.facts{display:flex;flex-wrap:wrap;gap:6px 16px}
 .start{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;padding:6px 18px 10px;margin-top:20px}.start h2{margin:10px 0 6px}.start li{margin:6px 0}
 .secgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.sg{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column}.sg b{font-size:20px}.sg.ok b{color:var(--accent)}.sg.bad b{color:var(--critical)}.sg small{color:var(--muted)}@media (max-width:560px){.secgrid{grid-template-columns:1fr 1fr}}
-details.bumps{margin-top:8px;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--low);border-radius:8px;padding:10px 14px}details.bumps summary{cursor:pointer;font-weight:600}details.bumps table{width:100%;border-collapse:collapse;margin-top:10px;font-size:14px}details.bumps th,details.bumps td{text-align:left;padding:4px 8px;border-top:1px solid var(--line)}.muted{color:var(--muted);font-weight:400}
+li.bumps summary{cursor:pointer}li.bumps table{width:100%;border-collapse:collapse;margin-top:10px;font-size:14px}li.bumps th,li.bumps td{text-align:left;padding:4px 8px;border-top:1px solid var(--line)}.muted{color:var(--muted);font-weight:400}
 .f{display:flex;gap:12px;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--low);border-radius:8px;padding:10px 14px}
 .f p{margin:2px 0 0;color:var(--muted);font-size:14px}.f strong{overflow-wrap:anywhere}
-.fid{font-size:12px;color:var(--muted,#888);word-break:break-all}
+.fid{display:block;width:fit-content;max-width:100%;margin-top:2px;font-size:12px;color:var(--muted);overflow-wrap:anywhere}
 .tag{flex:none;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;min-width:64px;padding-top:2px}
 .critical{border-left-color:var(--critical)}.critical .tag{color:var(--critical)}
 .high{border-left-color:var(--high)}.high .tag{color:var(--high)}
@@ -87,7 +85,7 @@ footer{margin-top:40px;color:var(--muted);font-size:13px}a{color:var(--accent)}
 <div class="stat critical"><b>${n.critical}</b><span>critical</span></div>
 <div class="stat high"><b>${n.high}</b><span>high</span></div>
 <div class="stat"><b>${n.medium}</b><span>medium</span></div>
-<div class="stat"><b>${n.low}</b><span>low</span></div>
+<div class="stat"><b>${n.low}</b><span>low${bumps.length ? ` · ${bumps.length} outdated package${bumps.length === 1 ? '' : 's'}` : ''}</span></div>
 </div>
 ${result.ratings ? `<div class="ratings" aria-label="Ratings by area: A means nothing found, E means a critical finding">${result.ratings.map((r) => `<div class="rating r${r.rating}"><b>${r.rating}</b><span>${esc(r.label)}</span></div>`).join('')}</div>` : ''}
 ${result.settings && result.settings.ignored.length ? `<p class="meta">${result.settings.ignored.length} finding${result.settings.ignored.length === 1 ? '' : 's'} ignored by <code>${esc(result.settings.file)}</code>: ${result.settings.ignored.map((i) => `${esc(i.id)} (${esc(i.reason)})`).join('; ')}</p>` : ''}
@@ -104,7 +102,7 @@ ${result.security ? `<section class="sec"><h2>Security <small>OWASP MASVS</small
   .join('')}</div><p class="muted">Finding counts, not passed controls. Static checks of code, config and dependencies. They find the common, detectable mistakes; they do not replace a penetration test of the running app and its backend.</p></section>` : ''}
 ${result.focus === "security" && result.securityReview ? `<section><h2>What this scan can tell you</h2><p>${esc(result.securityReview.verdict)}</p><ul>${Object.entries(result.securityReview.risks).map(([k,v]) => `<li>${esc(k)}: ${v.count}</li>`).join("")}</ul><p>${esc(result.securityReview.limitations.join(" "))}</p>${result.securityReview.flowCoverage ? `<p>New flow/config checks read ${result.securityReview.flowCoverage.filesRead} source files. ${esc(result.securityReview.flowCoverage.limits.join(" "))}</p>` : ""}${result.securityReview.nativeCoverage ? `<p>Native Android checks read ${result.securityReview.nativeCoverage.filesRead} files and matched ${result.securityReview.nativeCoverage.matchedEntryPoints} entry points; ${result.securityReview.nativeCoverage.guardedOrUnresolved} guarded/unresolved sink candidates. ${esc(result.securityReview.nativeCoverage.limits.join(" "))}</p>` : ""}</section>` : ""}
 <h2>Findings</h2>
-${result.findings.length ? `${rows ? `<ul class="list">${rows}</ul>` : ''}${bumpTable}` : '<p>No issues found.</p>'}
+${result.findings.length ? `<ul class="list">${rows}</ul>` : '<p>No issues found.</p>'}
 ${planHtml}
 <footer>${footer}</footer>
 </main></body></html>
