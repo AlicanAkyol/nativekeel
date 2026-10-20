@@ -94,6 +94,13 @@ function resolver(files) {
   };
 }
 
+// Files the app never imports, from the last hygiene run on this project (only when the import
+// graph could be trusted). Other checks use it to say a finding sits in dead code.
+const deadCache = new WeakMap();
+export function deadFiles(project) {
+  return deadCache.get(project) || null;
+}
+
 export function hygieneChecks(project) {
   const root = project.root;
   const everything = walk(root);
@@ -186,6 +193,7 @@ export function hygieneChecks(project) {
     // "components/x" with a components folder) means part of the graph is missing: no report.
     const dirs = new Set(everything.filter((f) => f.includes('/')).flatMap((f) => [f.split('/')[0], f.startsWith('src/') ? f.split('/')[1] : null]).filter(Boolean));
     const aliasLike = [...unresolvedSpecs].some((sp) => /^[~#]|^@\//.test(sp) || dirs.has(sp.split('/')[0]));
+    if (entries.size && reached.size >= 5 && !aliasLike && unresolvedSpecs.size <= 2 && orphans.length < appCode.length / 2) deadCache.set(project, new Set(orphans));
     if (entries.size && reached.size >= 5 && !aliasLike && unresolvedSpecs.size <= 2 && orphans.length && orphans.length < appCode.length / 2) {
       findings.push({
         id: 'cleanup-unused-files',

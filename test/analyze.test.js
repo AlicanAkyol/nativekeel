@@ -562,3 +562,25 @@ test('store review rules run as part of analyze (lost in 0.1.42, restored in 0.1
   assert.ok(ids.includes('store-account-deletion'));
   assert.ok(ids.includes('store-sign-in-with-apple'));
 });
+
+test('a finding in a file the app never imports is lowered and labelled as dead code', async () => {
+  const pkg = { name: 'a', main: 'index.js', dependencies: { react: '19.1.0', 'react-native': '0.87.1' } };
+  const files = {
+    'package.json': pkg,
+    'index.js': "import { AppRegistry } from 'react-native';\nimport App from './src/App';\nAppRegistry.registerComponent('a', () => App);",
+    'src/App.tsx': "import Home from './screens/Home';\nimport { fmt } from './utils/format';\nimport { b } from './utils/b';\nexport default () => <Home />;",
+    'src/screens/Home.tsx': "import { InteractionManager } from 'react-native';\nexport default () => { InteractionManager.runAfterInteractions(() => {}); return null; };",
+    'src/utils/format.ts': 'export const fmt = (x) => x;',
+    'src/utils/b.ts': 'export const b = 1;',
+    'src/screens/OldDatePicker.tsx': "import { InteractionManager } from 'react-native';\nexport default () => { InteractionManager.runAfterInteractions(() => {}); return null; };",
+  };
+  const live = await analyze(loadProject(makeProject(files)), { get: async () => null, now: NOW });
+  const f = live.findings.find((x) => x.id === 'crash-removed-core-imports');
+  assert.ok(f && !f.deadCode, 'one use is in live code: unchanged');
+  const deadOnly = { ...files, 'src/screens/Home.tsx': 'export default () => null;' };
+  const r = await analyze(loadProject(makeProject(deadOnly)), { get: async () => null, now: NOW });
+  const d = r.findings.find((x) => x.id === 'crash-removed-core-imports');
+  assert.ok(d && d.deadCode, JSON.stringify(d && d.title));
+  assert.equal(d.severity, 'low');
+  assert.match(d.title, /in code the app never imports/);
+});

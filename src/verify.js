@@ -1,3 +1,4 @@
+import { gates } from './settings.js';
 import fs, { withReadRoots, readPolicy } from './read-boundary.js';
 import { executionSafety } from './safety.js';
 import os from 'node:os';
@@ -30,7 +31,8 @@ export async function verifyUpgrade(root, { base = 'HEAD', offline = true, analy
     const before = await (readPolicy() ? withReadRoots([tmp], scanBase) : scanBase());
     const after = await analyze(loadProject(root), options);
     const diff = compareScans(before, after);
-    const bad = diff.added.filter((f) => f.severity === 'critical' || f.severity === 'high');
+    // The team's gate list (.nativekeel.json) decides which new findings can fail the gate.
+    const bad = diff.added.filter((f) => (f.severity === 'critical' || f.severity === 'high') && gates(after.settings, f.id));
     const notes = [];
     // node_modules is never committed: the committed side reads versions from the lockfile.
     if (after.project && fs.existsSync(path.join(root, 'node_modules')) && !fs.existsSync(path.join(tmp, 'node_modules'))) {

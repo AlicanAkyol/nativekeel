@@ -40,6 +40,13 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.112</h2><p class="date">20 October 2026</p>
+<p>From the same production review: "useful, but not something that should stop a release on every high finding".</p>
+<ul>
+<li><span class="tag">Teams</span><b>Choose which checks can fail the build.</b> <code>"gate": ["secret:*", "ci-*", "android-16kb-libs"]</code> in <code>.nativekeel.json</code>: only matching findings set the exit code and fail the pull request quality gate; everything else is still reported. Start with the checks you have seen to be right in your code. Planted malware always fails.</li>
+<li><span class="tag">Accuracy</span><b>Dead code is labelled.</b> A crash, performance, accessibility or code-security finding whose files the app never imports (followed from its entry point, only when every import resolves) is lowered two levels and marked "in code the app never imports": it cannot happen in the app as it is. Secret, store and dependency findings keep their level.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.111</h2><p class="date">20 October 2026</p>
 <p>Fewer false alarms, from a team that ran NativeKeel on a production app and checked every finding against its code.</p>
 <ul>

@@ -6,7 +6,7 @@ import path from 'node:path';
 import { cleanVersion, findPackageDir, installedVersion, versionFromSpec } from './project.js';
 import { createRegistry, fetchJson } from './registry.js';
 import { secretsInBuilds } from './build-secrets.js';
-import { hygieneChecks } from './hygiene.js';
+import { hygieneChecks, deadFiles } from './hygiene.js';
 import { ciSecurity } from './ci-security.js';
 import { urlTextChecks, clientPrivilegeWrites, tokenToEveryHost } from './api-security.js';
 import { scanSecrets, TEST_PATH } from './secrets.js';
@@ -660,6 +660,25 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
     if (f.severity !== 'info') security[g]++;
   }
   findings.sort((a, b) => SEVERITIES.indexOf(a.severity) - SEVERITIES.indexOf(b.severity));
+  // A finding whose code the app never imports cannot happen in the app: say so and lower it.
+  // Secrets, store, dependency and cleanup findings keep their level (a dead file can still be
+  // committed, and store rules are about the whole build).
+  const dead = deadFiles(project);
+  if (dead && dead.size) {
+    const order = ['critical', 'high', 'medium', 'low', 'info'];
+    for (const f of findings) {
+      if (['secret', 'store', 'dependency', 'cleanup', 'expo', 'react-native', 'native'].includes(f.area) || f.severity === 'info' || f.severity === 'low') continue;
+      const files = new Set([f.fix && f.fix.file, ...(Array.isArray(f.evidence) ? f.evidence.map((e) => e && (e.file || (typeof e.at === 'string' ? e.at.replace(/:\d+$/, '') : null))) : [])].filter(Boolean));
+      for (const m of `${f.title} ${f.detail || ''}`.matchAll(/([\w@.\/[\]()-]+\.[cm]?[jt]sx?):\d+/g)) files.add(m[1].replace(/^[([]+/, ''));
+      const list = [...files].map((x) => String(x).split(path.sep).join('/'));
+      if (!list.length || !list.every((x) => dead.has(x))) continue;
+      f.severity = order[Math.min(order.length - 2, order.indexOf(f.severity) + 2)];
+      f.title = `${f.title} (in code the app never imports)`;
+      f.detail = `${list.length === 1 ? 'This file is' : 'These files are'} not reached from the app's entry point, so this cannot happen in the app as it is; it would once the code is imported again. Delete the dead code, or fix it before reusing it. ${f.detail || ''}`;
+      f.deadCode = true;
+    }
+  }
+
   const settings = readSettings(project.root);
   const applied = applySettings(findings, settings);
   findings = applied.findings;
@@ -687,7 +706,7 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
     warnings,
     deps,
     findings,
-    ...(settings ? { settings: { file: settings.file, failOn: settings.failOn, ignored: applied.ignored } } : {}),
+    ...(settings ? { settings: { file: settings.file, failOn: settings.failOn, ignored: applied.ignored, ...(settings.gate ? { gate: settings.gate } : {}) } } : {}),
   };
   result.securityReview = securityOverview(result);
   result.ratings = ratings(findings);

@@ -54,3 +54,16 @@ test('settings: exclude leaves out findings whose files are all in the folder', 
   assert.deepEqual(kept.map((f) => f.id), ['mixed', 'nofile', 'prefix', 'malicious-code']);
   assert.match(ignored[0].reason, /tools\/admin-web\/ excluded: Separate web project/);
 });
+
+test('settings: gate limits which findings can fail the build; malware always can', async () => {
+  const { gates } = await import('../src/settings.js');
+  const s = readSettings(makeProject({ '.nativekeel.json': { gate: ['secret:*', 'ci-pull-request-target-checkout'] } }));
+  assert.deepEqual(s.gate, ['secret:*', 'ci-pull-request-target-checkout']);
+  assert.ok(gates(s, 'secret:stripe-secret:src/a.ts'));
+  assert.ok(!gates(s, 'crash-render-loop'));
+  assert.ok(gates(s, 'malicious-code'));
+  assert.ok(gates(readSettings(makeProject({ '.nativekeel.json': { failOn: 'high' } })), 'crash-render-loop'), 'no gate list: every finding counts');
+  assert.equal(readSettings(makeProject({ '.nativekeel.json': { gate: 'secret:*' } })).warnings.length, 1);
+  const root = makeProject({ 'package.json': { name: 'a', dependencies: { 'react-native': '0.80.0' } }, 'src/a.js': `const k = '${FAKE_AWS_ID}';`, '.nativekeel.json': { gate: ['ci-*'] } });
+  assert.equal(run([root, '--offline']).status, 0, 'the critical secret is reported but not in the gate');
+});

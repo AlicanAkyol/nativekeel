@@ -13,6 +13,7 @@ import { ratings } from '../src/ratings.js';
 import { applyBaseline, saveBaseline } from '../src/baseline.js';
 import { compareScans, compareToMarkdown } from '../src/compare.js';
 import { securityOnly } from '../src/security-review.js';
+import { gates } from '../src/settings.js';
 import { buildImprovementPlan, improvementToMarkdown, improvementToText } from '../src/improve.js';
 import { SITE_URL } from '../src/config.js';
 
@@ -95,8 +96,9 @@ Plan options
 The scan exits with code 1 when a critical issue is found (see --fail-on), so it
 can gate CI.
 
-Team settings: a committed .nativekeel.json sets failOn and lists accepted
-findings, each with a reason: {"failOn":"high","ignore":[{"id":"flipper","reason":"..."}]}
+Team settings: a committed .nativekeel.json sets failOn, lists accepted
+findings, each with a reason, and can limit which checks may fail the build
+(gate): {"failOn":"high","gate":["secret:*","ci-*"],"ignore":[{"id":"flipper","reason":"..."}]}
 
 Privacy: your code never leaves your machine. Without --offline, the only
 requests are package-name lookups on registry.npmjs.org and
@@ -378,7 +380,7 @@ async function main() {
   else console.log(textReport(result, { color: process.stdout.isTTY, verbose: !!flags.verbose }));
   if (failOn === 'never') return 0;
   const threshold = SEVERITIES.indexOf(failOn);
-  return result.findings.some((f) => SEVERITIES.indexOf(f.severity) <= threshold) ? 1 : 0;
+  return result.findings.some((f) => SEVERITIES.indexOf(f.severity) <= threshold && gates(result.settings, f.id)) ? 1 : 0;
 }
 
 // Exit only after stdout has flushed: process.exit() right after a large write to a pipe

@@ -45,7 +45,14 @@ export function readSettings(root) {
     else if (!reason) warnings.push(`${SETTINGS_FILE}: exclude "${raw}" has no reason, so it was not applied.`);
     else exclude.push({ path: p, reason });
   }
-  return { file: SETTINGS_FILE, failOn, ignore, exclude, warnings };
+  // Checks allowed to fail the build. A team that trusts only some checks lists them; every other
+  // finding is still reported, it just does not set the exit code or fail the pull request gate.
+  let gate = null;
+  if (data.gate !== undefined) {
+    if (!Array.isArray(data.gate) || !data.gate.every((g) => typeof g === 'string' && g.trim())) warnings.push(`${SETTINGS_FILE}: gate must be a list of finding ids (a trailing * matches a prefix).`);
+    else gate = data.gate.map((g) => g.trim());
+  }
+  return { file: SETTINGS_FILE, failOn, ignore, exclude, gate, warnings };
 }
 
 const matches = (rule, id) => (rule.endsWith('*') ? id.startsWith(rule.slice(0, -1)) : id === rule);
@@ -72,4 +79,11 @@ export function applySettings(findings, settings) {
     else kept.push(f);
   }
   return { findings: kept, ignored };
+}
+
+// True when the finding may fail the build: no gate list, or its id matches one entry. Planted
+// malware always may.
+export function gates(settings, id) {
+  const list = settings && settings.gate;
+  return !list || NEVER_IGNORED.has(id) || list.some((g) => matches(g, String(id)));
 }
