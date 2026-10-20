@@ -40,6 +40,14 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.108</h2><p class="date">20 October 2026</p>
+<ul>
+<li><span class="tag">Security</span><b>URLs trusted after a text comparison.</b> <code>url.startsWith('https://site.com')</code> also accepts <code>https://site.com.attacker.dev</code>, <code>url.includes('site.com')</code> any address that contains it, <code>host.endsWith('site.com')</code> <code>attackersite.com</code>. Reported only where the check decides trust: a WebView navigation allowlist, a message origin check, or code nearby that sends credentials or acts on a deep link. Found in 3 open-source apps, among them a WebView that decides a payment succeeded from <code>url.includes('payhere.lk')</code>.</li>
+<li><span class="tag">Security</span><b>Privileges the app grants itself.</b> <code>isPremium: true</code>, <code>plan: 'pro'</code>, a role or credits written to Firestore, the Realtime Database or Supabase by the app: unless the rules stop users from changing that field, anyone can make the same write from a script. Fields the repository's Firestore rules or SQL mention are taken as protected; admin screens are left out.</li>
+<li><span class="tag">Security</span><b>Login token sent to other sites.</b> A global axios interceptor that adds the Authorization header to every request while the same axios also calls another site.</li>
+<li><span class="tag">Cleanup</span><b>Dead code and leftovers.</b> Source files nothing imports (every import is followed from the app's entry, tsconfig paths, babel module-resolver and root-import aliases included; files used only by tests, scripts or server functions count as used, and the check stays quiet if an import looks like an alias it cannot read), images no code or config references, backup copies (<code>Screen copy.tsx</code>, <code>App (2).tsx</code>, <code>.bak</code>, <code>.orig</code>) and <code>debugger</code> statements. Cleanup findings do not change the A–E ratings. On 245 reported images sampled from open-source apps, none was in use.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.107</h2><p class="date">20 October 2026</p>
 <p>Tested against vulnerabilities other people found: 10 published cases (GitHub security advisories of React Native apps, and commits that removed a leaked key, scanned just before the fix). Found: 5 before this release, 7 after.</p>
 <ul>

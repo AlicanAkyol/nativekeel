@@ -770,7 +770,9 @@ export function masvsOf(id) {
   if (/^(clipboard-|keychain-)/.test(id)) return 'STORAGE';
   if (/^(password-leak|token-unencrypted|android-allow-backup|log-sensitive)/.test(id)) return 'STORAGE';
   if (/^(insecure-tls|user-certificates|plain-http|ios-ats|android-cleartext)/.test(id)) return 'NETWORK';
-  if (/^(webview-|android-exported|deeplink-)/.test(id)) return 'PLATFORM';
+  if (/^(webview-|android-exported|deeplink-|url-checked-as-text)/.test(id)) return 'PLATFORM';
+  if (/^client-writes-privilege/.test(id)) return 'AUTH';
+  if (/^token-sent-to-every-host/.test(id)) return 'NETWORK';
   if (/^(firebase-|supabase-)/.test(id)) return 'AUTH';
   if (/^(vuln:|signing-|android-debuggable|malicious-code|vscode-autorun)/.test(id)) return 'CODE';
   if (/^(sourcemap-in-app|easy-reverse-engineering)/.test(id)) return 'RESILIENCE';
