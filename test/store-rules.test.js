@@ -60,6 +60,8 @@ test('UIScene life cycle: needed to launch when built with the iOS 27 SDK', asyn
   assert.equal(crash[0].id, 'ios-scene-delegate-window', 'the 0.88 template AppDelegate has no window');
   assert.match(crash[0].detail, /unrecognized selector/);
   assert.deepEqual(run(bare(true, 'class AppDelegate: UIResponder, UIApplicationDelegate {\n  var window: UIWindow?\n}'), blob), [], 'window kept on the app delegate');
+  assert.deepEqual(run(bare(true, 'class AppDelegate: RCTAppDelegate {}'), blob), [], 'window inherited from RCTAppDelegate');
+  assert.deepEqual(run(bare(true, '#import "AppDelegate.h"\n@implementation AppDelegate\n@end', { 'ios/App/AppDelegate.h': '@interface AppDelegate : RCTAppDelegate\n@end' }), blob), [], 'Objective-C subclass of RCTAppDelegate');
   assert.match(run(bare(false, 'x'), { ...blob, rnVersion: '0.85.0' })[0].detail, /react-native-blob-util reads the window/, 'a warning before the move');
   assert.match(run({}, { managed: true, expoVersion: '56.0.0' })[0].detail, /upgrade to SDK 57/);
   assert.match(run({}, { managed: true, expoVersion: '57.0.25' })[0].detail, /enableSceneSupport/);

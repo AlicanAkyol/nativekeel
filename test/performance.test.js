@@ -124,3 +124,13 @@ test("Metro's drop_console removes logging from release builds", () => {
   assert.ok(!ids({ 'src/A.js': logs, 'metro.config.js': assigned }).includes('perf-console-in-release'));
   assert.ok(ids({ 'src/A.js': logs, 'metro.config.js': '// drop_console: true\nmodule.exports = {};\n' }).includes('perf-console-in-release'), 'a comment does not count');
 });
+
+test("console calls silenced by the project's own Babel plugin or replaced at run time", () => {
+  const logs = Array.from({ length: 30 }, (_, i) => `console.log('x${i}');`).join('\n');
+  assert.ok(!ids({ 'src/A.js': logs, 'babel.config.js': "module.exports = { plugins: ['./babel/strip-logs'] };", 'babel/strip-logs.js': "module.exports = () => ({ visitor: { CallExpression(p) { if (p.get('callee').matchesPattern('console.log')) p.remove(); } } });" }).includes('perf-console-in-release'));
+  assert.ok(!ids({ 'src/A.js': logs, 'index.js': "if (!__DEV__) { console.log = () => {}; console.info = () => {}; }" }).includes('perf-console-in-release'));
+  assert.ok(ids({ 'src/A.js': logs, 'babel.config.js': "module.exports = { plugins: ['./babel/inline-env'] };", 'babel/inline-env.js': 'module.exports = () => ({ visitor: {} });' }).includes('perf-console-in-release'), 'a local plugin that does not touch console');
+  assert.ok(ids({ 'src/A.js': logs, 'src/logger.ts': 'const orig = console.log;\nconsole.log = (...args) => { orig(...args); saveToFile(args); };' }).includes('perf-console-in-release'), 'a wrapper still logs');
+  assert.ok(ids({ 'src/A.js': logs, 'tests/setup.js': 'console.log = () => {};' }).includes('perf-console-in-release'), 'silenced only in tests');
+  assert.ok(!ids({ 'src/A.js': logs, 'src/console-override.ts': 'const noop = () => {};\nif (!__DEV__) console.log = noop;' }).includes('perf-console-in-release'));
+});

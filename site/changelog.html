@@ -40,6 +40,17 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.111</h2><p class="date">20 October 2026</p>
+<p>Fewer false alarms, from a team that ran NativeKeel on a production app and checked every finding against its code.</p>
+<ul>
+<li><span class="tag">Accuracy</span><b>AppDelegate window.</b> An AppDelegate that subclasses <code>RCTAppDelegate</code> (or Expo's app delegate) inherits its <code>window</code> property, so libraries that read it do not crash; the UIScene window warning no longer appears for it.</li>
+<li><span class="tag">Accuracy</span><b>Folly flags.</b> <code>-DFOLLY_CFG_NO_COROUTINES</code> set from the Podfile or in an <code>.xcconfig</code> (including the ones CocoaPods generates) counts, not only the Xcode project.</li>
+<li><span class="tag">Accuracy</span><b>Release logging.</b> A project's own Babel plugin that rewrites console calls, and console methods replaced with a no-op at run time (<code>console.log = () =&gt; {}</code> in app code), count as removing logs from release builds. A wrapper that still writes the message does not count, and neither does a test setup file.</li>
+<li><span class="tag">Accuracy</span><b>Server-only advisories.</b> moment's <code>moment.locale()</code> path traversal advisories (GHSA-4p3w-j4w9-5jqw, GHSA-8hfj-j24r-96c4) say they affect server-side use only; they are now counted as Node.js only, so moment 2.29.3 reports its ReDoS as the vulnerability that applies.</li>
+<li><span class="tag">Reports</span><b>Which build the 16 KB check measured.</b> The finding says whether it was a debug or release build, its date, and whether it is older than the last commit, with a note to build a current release before relying on it.</li>
+<li><span class="tag">Accessibility</span><b>Developer screens left out.</b> Debug menus, dev tools and Storybook files are not checked: users never see them.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.110</h2><p class="date">20 October 2026</p>
 <ul>
 <li><span class="tag">Security</span><b>Reads the database rules allow too widely.</b> Firestore rules that let any signed-in user read a collection of people or private records (<code>users</code>, <code>profiles</code>, <code>messages</code>, <code>orders</code>, <code>payments</code>…) with only <code>request.auth != null</code>, and Storage rules that do the same for every file in the bucket. Supabase: a table of people (users, profiles, patients, customers…) with columns such as email, phone or address and a SELECT policy <code>using (true)</code> for anon or authenticated users. A hospital's or shop's phone is public on purpose, so only tables of people count.</li>

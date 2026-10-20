@@ -458,3 +458,13 @@ test('reads open to any signed-in user on people and private records; public buc
   assert.match(sb("insert into storage.buckets (id, name, public) values ('receipts', 'receipts', true);")[0] || '', /Storage bucket "receipts" is public/);
   assert.deepEqual(sb("insert into storage.buckets (id, name, public) values ('avatars', 'avatars', true);"), []);
 });
+
+test('moment: the ReDoS applies, the server-only locale path traversal is counted as Node.js only', async () => {
+  const registry = { advisories: async () => ({ moment: [
+    { title: 'Moment.js vulnerable to Inefficient Regular Expression Complexity', severity: 'high', vulnerable_versions: '>=2.18.0 <2.29.4', url: 'https://github.com/advisories/GHSA-wc69-rhjr-hc9g' },
+    { title: 'moment vulnerable to Path Traversal via crafted non-string locale name', severity: 'moderate', vulnerable_versions: '>=2.29.2 <2.31.0', url: 'https://github.com/advisories/GHSA-4p3w-j4w9-5jqw' },
+  ] }) };
+  const [f] = await vulnerableDependencies(registry, { moment: '2.29.3' });
+  assert.equal(f.severity, 'high');
+  assert.match(f.title, /moment 2\.29\.3: 1 known vulnerability \(\+1 for Node\.js only\)/);
+});

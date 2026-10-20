@@ -223,7 +223,7 @@ export function iosSceneLifecycle(project, now = new Date()) {
   }
 
   const plists = iosFiles(iosDir, (n) => n === 'Info.plist');
-  const delegates = iosFiles(iosDir, (n) => /^AppDelegate\.(swift|m|mm)$/.test(n));
+  const delegates = iosFiles(iosDir, (n) => /^AppDelegate\.(swift|m|mm|h)$/.test(n));
   if (!plists.length || !delegates.length) return [];
   const delegateText = delegates.map(read).join('\n');
   // TN3187: a manifest without scene configurations does not count (Notesnook ships one with
@@ -242,7 +242,10 @@ export function iosSceneLifecycle(project, now = new Date()) {
   }
   // Adopted: libraries that read the app delegate's window crash without one.
   const out = [];
-  const hasWindow = /var\s+window\s*:\s*UIWindow|@property[^;]*UIWindow\s*\*\s*window\b|@synthesize\s+window/.test(delegateText);
+  // Declared here, or inherited: RCTAppDelegate and Expo's app delegate classes declare `window`,
+  // so a subclass answers the selector (SceneDelegate usually assigns it).
+  const hasWindow = /var\s+window\s*:\s*UIWindow|@property[^;]*UIWindow\s*\*\s*window\b|@synthesize\s+window/.test(delegateText)
+    || /(?:class\s+\w+\s*:\s*|@interface\s+\w+\s*:\s*)(?:RCTAppDelegate|EXAppDelegateWrapper|ExpoAppDelegate)\b/.test(delegateText);
   if (libs.length && !hasWindow) {
     out.push({
       id: 'ios-scene-delegate-window',

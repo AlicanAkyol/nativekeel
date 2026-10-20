@@ -290,6 +290,8 @@ export function uiChecks(project) {
   for (const { file, text } of files) {
     const rel = file.split(path.sep).join('/');
     if (!/react-native/.test(text)) continue;
+    // Developer-only screens (a debug menu, dev tools, storybook) are not seen by users.
+    if (/(?:^|\/)(?:debug|dev-?tools?|dev-?menu|developer|__dev__|storybook|\.storybook)\/|(?:^|\/)(?:Debug|DevMenu|DevTools)\w*\.[jt]sx?$/i.test(rel)) continue;
     const kinds = classify(text);
     for (const m of text.matchAll(DEFAULT_PROPS)) {
       const before = text.slice(0, m.index);

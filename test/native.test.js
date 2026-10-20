@@ -311,6 +311,8 @@ test('stale folly flags in the Xcode project break an Objective-C++ AppDelegate 
   assert.ok(!check(files('0.77.1')).some((f) => f.id === 'ios-folly-flags'), 'no upgrade target known: no claim');
   const fixed = files('0.80.3', { 'ios/App.xcodeproj/project.pbxproj': pbx.replace('"-DFOLLY_USE_LIBCPP=1",', '"-DFOLLY_USE_LIBCPP=1",\n"-DFOLLY_CFG_NO_COROUTINES=1",') });
   assert.ok(!check(fixed).some((f) => f.id === 'ios-folly-flags'));
+  assert.ok(!check(files('0.80.3', { 'ios/Podfile': "post_install do |installer|\n  config.build_settings['OTHER_CPLUSPLUSFLAGS'] << '-DFOLLY_CFG_NO_COROUTINES=1'\nend" })).some((f) => f.id === 'ios-folly-flags'), 'set in the Podfile');
+  assert.ok(!check(files('0.80.3', { 'ios/Pods/Target Support Files/Pods-App/Pods-App.release.xcconfig': 'OTHER_CPLUSPLUSFLAGS = -DFOLLY_CFG_NO_COROUTINES=1' })).some((f) => f.id === 'ios-folly-flags'), 'in the generated xcconfig');
   const swift = files('0.80.3', { 'ios/App/AppDelegate.mm': undefined });
   delete swift['ios/App/AppDelegate.mm'];
   swift['ios/App/AppDelegate.swift'] = 'import React';

@@ -147,3 +147,9 @@ test("Gesture Handler's Pressable and Touchable* are checked like React Native's
   assert.ok(b, f.map((x) => x.id).join(','));
   assert.deepEqual(b.evidence.map((e) => e.at), ['src/A.tsx:5', 'src/A.tsx:6']);
 });
+
+test('developer-only screens are not checked for accessibility', () => {
+  const code = "import { Pressable } from 'react-native';\nimport { Ionicons } from '@expo/vector-icons';\nexport const A = (p) => <Pressable onPress={p.x}><Ionicons name=\"bug\" /></Pressable>;";
+  assert.ok(!run(app({ 'src/debug/DebugMenu.tsx': code })).some((f) => f.id === 'a11y-icon-button-unlabeled'));
+  assert.ok(run(app({ 'src/screens/Home.tsx': code })).some((f) => f.id === 'a11y-icon-button-unlabeled'));
+});

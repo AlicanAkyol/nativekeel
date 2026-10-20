@@ -1,7 +1,7 @@
 import fs from './read-boundary.js';
 import path from 'node:path';
 import { validPackageName } from './package-name.js';
-import { gitLsFiles } from './git.js';
+import { gitLsFiles, gitLastCommitTime } from './git.js';
 import { checkArchive, findBuiltArtifact } from './elf-align.js';
 import { PAGE_SIZE_16K, PLATFORM_MINIMUMS } from './rules.js';
 import { installedVersion as installedVersionOf } from './project.js';
@@ -160,7 +160,14 @@ export function nativeChecks(project, { rnLatest = null, now = new Date() } = {}
       if (result) {
         const isRelease = /release/i.test(artifact);
         const relevant = result.misaligned.filter((l) => isRelease || !DEBUG_ONLY_LIBS.test(l.path));
-        const rel = path.relative(root, artifact);
+        // Say which build was measured: a debug build, or one older than the last commit, may not
+        // contain the libraries the next release ships.
+        let built = null;
+        try { built = fs.statSync(artifact).mtimeMs; } catch {}
+        const lastCommit = gitLastCommitTime(root);
+        const stale = built && lastCommit && built < lastCommit;
+        const rel = `${path.relative(root, artifact)}, ${isRelease ? 'release' : 'debug'} build${built ? ` from ${new Date(built).toISOString().slice(0, 10)}` : ''}${stale ? ', older than the last commit' : ''}`;
+        const caveat = !isRelease || stale ? ` This is ${!isRelease ? 'a debug build' : 'a build older than the last commit'}: build a release from the current code and run NativeKeel again before relying on the result.` : '';
         const libs = [...new Set(relevant.map((l) => path.basename(l.path)))];
         if (relevant.length) {
           add({
@@ -168,7 +175,7 @@ export function nativeChecks(project, { rnLatest = null, now = new Date() } = {}
             severity: isRelease && blocked16k ? 'critical' : 'high',
             area: 'store',
             title: `${libs.length} native librar${libs.length === 1 ? 'y is' : 'ies are'} not 16 KB aligned (${rel})`,
-            detail: `${libs.slice(0, 6).join(', ')}${libs.length > 6 ? ', …' : ''}. ${policy16k} Update the package that ships each library, or rebuild it with NDK r28+.`,
+            detail: `${libs.slice(0, 6).join(', ')}${libs.length > 6 ? ', …' : ''}. ${policy16k} Update the package that ships each library, or rebuild it with NDK r28+.${caveat}`,
             fix: { kind: 'align-16kb', libs, blocked: blocked16k, blockedFrom: PAGE_SIZE_16K.blockedFrom },
           });
         } else {
@@ -180,7 +187,7 @@ export function nativeChecks(project, { rnLatest = null, now = new Date() } = {}
             title: ignored
               ? `${result.libs.length - ignored} of ${result.libs.length} 64-bit native libraries are 16 KB aligned; the other ${ignored} are debug-only`
               : `All ${result.libs.length} 64-bit native libraries are 16 KB aligned`,
-            detail: `Checked ${rel}.${ignored ? ' Debug-only libraries (e.g. Flipper) never ship, but build a release bundle and re-run to be certain.' : ''}`,
+            detail: `Checked ${rel}.${ignored ? ' Debug-only libraries (e.g. Flipper) never ship.' : ''}${caveat}`,
           });
         }
       }
@@ -386,7 +393,11 @@ export function nativeChecks(project, { rnLatest = null, now = new Date() } = {}
   if (hasIos) {
     const pbx = findFiles(path.join(root, 'ios'), (name, full) => name === 'project.pbxproj' && !full.includes('Pods.xcodeproj'));
     const objcppDelegate = findFiles(path.join(root, 'ios'), (name) => name === 'AppDelegate.mm').length > 0;
-    const stale = pbx.find((f) => {
+    // The flag can also come from the Podfile (a post_install hook) or an .xcconfig, including the
+    // ones CocoaPods generates.
+    const elsewhere = /FOLLY_CFG_NO_COROUTINES/.test(read(path.join(root, 'ios', 'Podfile')) || '')
+      || [...findFiles(path.join(root, 'ios'), (name) => name.endsWith('.xcconfig')), ...findFiles(path.join(root, 'ios', 'Pods', 'Target Support Files'), (name) => /^Pods-.*\.xcconfig$/.test(name))].some((f) => /FOLLY_CFG_NO_COROUTINES/.test(read(f) || ''));
+    const stale = !elsewhere && pbx.find((f) => {
       const text = read(f) || '';
       return /-DFOLLY_NO_CONFIG/.test(text) && !/FOLLY_CFG_NO_COROUTINES/.test(text);
     });

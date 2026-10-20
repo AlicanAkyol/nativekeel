@@ -36,6 +36,11 @@ const read = (file) => {
 };
 
 const SERVER_ONLY = /node\.?js|server[- ]side|\bhttp adapter\b|\bhttp\/2\b|\bssr\b|\bssrf\b|no_proxy|proxy-authorization|config\.proxy|\bproxy is re-evaluated|cloud metadata|formDataToStream/i;
+// Advisories whose own text says they affect server-side use only, while the title does not (npm's
+// bulk endpoint returns titles, not descriptions). moment.locale() path traversal loads locale files
+// with require() on Node; Metro bundles locales at build time.
+const SERVER_ONLY_IDS = new Set(['GHSA-8hfj-j24r-96c4', 'GHSA-4p3w-j4w9-5jqw']);
+const serverOnly = (a) => SERVER_ONLY.test(a.title || '') || SERVER_ONLY_IDS.has(String(a.url || '').split('/').pop());
 const SEVERITY = { critical: 'critical', high: 'high', moderate: 'medium', low: 'low', info: 'low' };
 const RANK = ['low', 'medium', 'high', 'critical'];
 
@@ -54,9 +59,9 @@ export async function vulnerableDependencies(registry, versions, latestOf = {}) 
     if (!relevant.length) continue;
     // Advisories about Node.js-only code paths (axios' HTTP adapter, server rendering) do not
     // reach a React Native app: keep them visible, but at low severity.
-    const sevOf = (a) => (SERVER_ONLY.test(a.title || '') ? 'low' : SEVERITY[a.severity] || 'low');
+    const sevOf = (a) => (serverOnly(a) ? 'low' : SEVERITY[a.severity] || 'low');
     const severity = relevant.map(sevOf).sort((a, b) => RANK.indexOf(b) - RANK.indexOf(a))[0];
-    const serverOnly = relevant.filter((a) => SERVER_ONLY.test(a.title || '')).length;
+    const serverOnlyCount = relevant.filter(serverOnly).length;
     let fixedIn = minimumFixed(relevant);
     // Compare with what is published: "<=2.0.2" when 2.0.2 is the latest release means no fix exists.
     const newest = latestOf[name];
@@ -78,8 +83,8 @@ export async function vulnerableDependencies(registry, versions, latestOf = {}) 
       id: `vuln:${name}`,
       severity,
       area: 'security',
-      title: `${name} ${version}: ${relevant.length - serverOnly || relevant.length} known vulnerabilit${(relevant.length - serverOnly || relevant.length) === 1 ? 'y' : 'ies'}${serverOnly && serverOnly < relevant.length ? ` (+${serverOnly} for Node.js only)` : ''}${fixedIn ? ` (fixed in ${fixedIn})` : noFix ? ' (no fixed release)' : ''}`,
-      detail: `${top.join('; ')}${relevant.length > 3 ? `; and ${relevant.length - 3} more` : ''}. ${fixedIn ? `Fixed in ${fixedIn}${fixedIn.startsWith('a release') ? '' : ' or later'}.` : noFix ? `No fixed release exists yet (the latest is ${newest}): replace it, or make sure it never handles untrusted input.` : 'Check the advisories for a fixed version.'}${serverOnly ? ` ${serverOnly} of them concern Node.js/server use only and are counted as low.` : ''} Source: GitHub Advisory Database (via npm).`,
+      title: `${name} ${version}: ${relevant.length - serverOnlyCount || relevant.length} known vulnerabilit${(relevant.length - serverOnlyCount || relevant.length) === 1 ? 'y' : 'ies'}${serverOnlyCount && serverOnlyCount < relevant.length ? ` (+${serverOnlyCount} for Node.js only)` : ''}${fixedIn ? ` (fixed in ${fixedIn})` : noFix ? ' (no fixed release)' : ''}`,
+      detail: `${top.join('; ')}${relevant.length > 3 ? `; and ${relevant.length - 3} more` : ''}. ${fixedIn ? `Fixed in ${fixedIn}${fixedIn.startsWith('a release') ? '' : ' or later'}.` : noFix ? `No fixed release exists yet (the latest is ${newest}): replace it, or make sure it never handles untrusted input.` : 'Check the advisories for a fixed version.'}${serverOnlyCount ? ` ${serverOnlyCount} of them concern Node.js/server use only and are counted as low.` : ''} Source: GitHub Advisory Database (via npm).`,
       fix: { kind: 'vuln-dep', name, from: version, to: fixedIn, noFix, latest: newest || null, severity },
     });
   }

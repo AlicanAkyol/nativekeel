@@ -73,10 +73,35 @@ export function devOnlyRemoved(code) {
 
 // True when the release build strips console calls: babel-plugin-transform-remove-console, or
 // Metro's minifier with drop_console (Terser) or pure_funcs listing console.log.
+// Also a project's own Babel plugin that rewrites console calls (a local file listed in plugins),
+// and console methods replaced at run time (console.log = () => {} in app code), which
+// several teams use to silence release builds.
+const consoleCache = new Map();
 export function consoleRemovedInRelease(root) {
-  const babel = ['babel.config.js', '.babelrc', 'babel.config.json'].map((f) => read(path.join(root, f))).join('\n');
+  const hit = consoleCache.get(root);
+  if (hit && Date.now() - hit.at < 30000) return hit.removed;
+  const babel = ['babel.config.js', '.babelrc', 'babel.config.json', 'babel.config.cjs'].map((f) => read(path.join(root, f))).join('\n');
   const metro = ['metro.config.js', 'metro.config.cjs', 'metro.config.mjs', 'metro.config.ts'].map((f) => read(path.join(root, f))).join('\n').replace(/\/\/[^\n]*/g, '');
-  return /transform-remove-console|remove-console/.test(babel) || /drop_console['"]?\s*[:=]\s*(?:true|\[)/.test(metro) || /pure_funcs['"]?\s*[:=]\s*\[[^\]]*console\.log/.test(metro);
+  let removed = /transform-remove-console|remove-console/.test(babel) || /drop_console['"]?\s*[:=]\s*(?:true|\[)/.test(metro) || /pure_funcs['"]?\s*[:=]\s*\[[^\]]*console\.log/.test(metro);
+  if (!removed) {
+    for (const m of babel.matchAll(/['"](\.{1,2}\/[^'"]+)['"]/g)) {
+      const base = path.join(root, m[1]);
+      const plugin = [base, `${base}.js`, `${base}.cjs`, path.join(base, 'index.js')].map(read).find(Boolean) || '';
+      if (/\bconsole\b/.test(plugin) && /\.remove\(\)|replaceWith|CallExpression|MemberExpression/.test(plugin)) { removed = true; break; }
+    }
+  }
+  if (!removed) {
+    // Only a no-op assigned outside tests: a wrapper that still writes the message (to a file, to
+    // a log service) keeps the logs.
+    const NOOP = /\bconsole\s*\.\s*(?:log|info|debug)\s*=\s*(?:\(\s*\.{0,3}\w*\s*\)\s*=>\s*(?:\{\s*\}|null\b|undefined\b|void\s+0)|function\s*\w*\s*\(\s*\)\s*\{\s*\}|\w*[Nn]oop\b|(?:lodash|_)\.noop\b|__DEV__\s*\?\s*console\.\w+\s*:\s*\(\s*\)\s*=>\s*\{\s*\})/;
+    for (const file of walk(root, JS_EXT)) {
+      if (/(?:^|[\\/])(?:tests?|__tests__|e2e|jest)[\\/]|(?:setup|jest)[\w.-]*\.[jt]s$|\.(?:test|spec)\./i.test(path.relative(root, file))) continue;
+      const text = read(file);
+      if (text && NOOP.test(text.replace(/\/\/[^\n]*/g, ''))) { removed = true; break; }
+    }
+  }
+  consoleCache.set(root, { at: Date.now(), removed });
+  return removed;
 }
 
 export function performanceChecks(project) {

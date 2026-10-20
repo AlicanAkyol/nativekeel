@@ -177,3 +177,10 @@ export function gitIgnored(root) {
   ignoredCache.set(key, { at: Date.now(), fn });
   return fn;
 }
+
+// Time of the last commit (ms), or null outside a git repository.
+export function gitLastCommitTime(root) {
+  const res = git(root, ['log', '-1', '--format=%ct']);
+  const t = res.status === 0 && typeof res.stdout === 'string' ? Number(res.stdout.trim()) : NaN;
+  return Number.isFinite(t) && t > 0 ? t * 1000 : null;
+}
