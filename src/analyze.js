@@ -7,6 +7,7 @@ import { cleanVersion, findPackageDir, installedVersion, versionFromSpec } from 
 import { createRegistry, fetchJson } from './registry.js';
 import { secretsInBuilds } from './build-secrets.js';
 import { hygieneChecks } from './hygiene.js';
+import { ciSecurity } from './ci-security.js';
 import { urlTextChecks, clientPrivilegeWrites, tokenToEveryHost } from './api-security.js';
 import { scanSecrets, TEST_PATH } from './secrets.js';
 import { nativeChecks } from './native.js';
@@ -564,7 +565,7 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
   if (!project.isLibrary) for (const f of storeReviewRules(project, now)) add(f);
 
   // Security beyond leaked keys.
-  for (const f of [...passwordLeaks(project.root), ...webViewRisks(project.root), ...androidBackup(project.root), ...exportedComponents(project.root), ...plainHttpCalls(project.root), ...cloudRules(project.root, project.deps, now), ...insecureTls(project.root), ...weakCrypto(project.root), ...tokenStorage(project.root), ...sensitiveLogs(project.root), ...urlTextChecks(project.root), ...clientPrivilegeWrites(project.root), ...tokenToEveryHost(project.root), ...reverseEngineering(project.root, project), ...expoConfigSecrets(project.root), ...aiKeysInBundle(project.root, { ...project.devDeps, ...project.deps }), ...backendAdminInBundle(project.root, { ...project.devDeps, ...project.deps }), ...clipboardSecrets(project.root), ...keychainAccessibility(project.root), ...deepLinks(project.root, project.deps), ...supabaseRls(project.root), ...supabaseBroadPolicies(project.root), ...firebaseBroadWrites(project.root), ...(project.isLibrary ? [] : playRestrictedPermissions(project.root, project.deps)), ...maliciousCode(project.root)]) add(f);
+  for (const f of [...passwordLeaks(project.root), ...webViewRisks(project.root), ...androidBackup(project.root), ...exportedComponents(project.root), ...plainHttpCalls(project.root), ...cloudRules(project.root, project.deps, now), ...insecureTls(project.root), ...weakCrypto(project.root), ...tokenStorage(project.root), ...sensitiveLogs(project.root), ...urlTextChecks(project.root), ...clientPrivilegeWrites(project.root), ...tokenToEveryHost(project.root), ...ciSecurity(project.root), ...reverseEngineering(project.root, project), ...expoConfigSecrets(project.root), ...aiKeysInBundle(project.root, { ...project.devDeps, ...project.deps }), ...backendAdminInBundle(project.root, { ...project.devDeps, ...project.deps }), ...clipboardSecrets(project.root), ...keychainAccessibility(project.root), ...deepLinks(project.root, project.deps), ...supabaseRls(project.root), ...supabaseBroadPolicies(project.root), ...firebaseBroadWrites(project.root), ...(project.isLibrary ? [] : playRestrictedPermissions(project.root, project.deps)), ...maliciousCode(project.root)]) add(f);
   if (!forcedOffline) {
     // Exact versions only (installed, else the lockfile): a range would be a guess.
     const locked = lockedVersions(project.root, project.deps);

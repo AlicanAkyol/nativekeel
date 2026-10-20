@@ -40,6 +40,12 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.109</h2><p class="date">20 October 2026</p>
+<ul>
+<li><span class="tag">Security</span><b>CI workflows that run a fork's code with your secrets.</b> A GitHub Actions workflow started by <code>pull_request_target</code> has the repository's secrets and a token that can write to it, for pull requests from any fork. If it checks out the pull request and then runs anything (<code>npm ci</code> runs the package's own scripts), the fork's author gets your EXPO_TOKEN, App Store Connect or Play credentials. Jellyfin's iOS app was exposed exactly this way (GHSA-7qhm-2m45-7fmh); NativeKeel reports its workflow before the fix and nothing after. Jobs limited to the repository's own branches or behind an approval environment, directly or through <code>needs:</code>, are left alone. Workflows are read from the repository root, also when the app is a folder of a monorepo.</li>
+<li><span class="tag">Research</span><b>What did not make it.</b> Following tokens across files added one finding in 1,014 open-source apps, a false alarm: real apps log and send tokens under names the existing checks already recognize. WebViews that open an address from navigation parameters were never reachable from outside in the cases found. Neither was shipped.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.108</h2><p class="date">20 October 2026</p>
 <ul>
 <li><span class="tag">Security</span><b>URLs trusted after a text comparison.</b> <code>url.startsWith('https://site.com')</code> also accepts <code>https://site.com.attacker.dev</code>, <code>url.includes('site.com')</code> any address that contains it, <code>host.endsWith('site.com')</code> <code>attackersite.com</code>. Reported only where the check decides trust: a WebView navigation allowlist, a message origin check, or code nearby that sends credentials or acts on a deep link. Found in 3 open-source apps, among them a WebView that decides a payment succeeded from <code>url.includes('payhere.lk')</code>.</li>
