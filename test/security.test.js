@@ -468,3 +468,15 @@ test('moment: the ReDoS applies, the server-only locale path traversal is counte
   assert.equal(f.severity, 'high');
   assert.match(f.title, /moment 2\.29\.3: 1 known vulnerability \(\+1 for Node\.js only\)/);
 });
+
+test('Supabase: harmless statements no longer hide the policies; risky ones still do', async () => {
+  const { supabaseBroadPolicies } = await import('../src/authorization.js');
+  const titles = (sql) => supabaseBroadPolicies(makeProject({ 'supabase/migrations/0001.sql': sql })).map((f) => f.title);
+  const base = 'create table public.profiles (id uuid primary key, email text);\nalter table public.profiles enable row level security;\n';
+  const open = 'create policy "all" on public.profiles for select to anon using (true);\n';
+  assert.equal(titles(`SET search_path = public;\nselect cron.schedule('x', '* * * * *', 'select 1');\n${base}alter table public.profiles add column phone text;\n${open}`).length, 1, 'session settings, a cron call and a new column');
+  assert.equal(titles(`${base}DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'all') THEN\n${open}END IF; END $$;`).length, 1, 'policy created inside DO … IF NOT EXISTS');
+  assert.deepEqual(titles(`${base}${open}DO $$ BEGIN EXECUTE format('drop policy %I on public.profiles', 'all'); END $$;`), [], 'dynamic SQL in a DO block');
+  assert.deepEqual(titles(`${base}${open}alter table public.profiles rename to people;`), [], 'a rename');
+  assert.deepEqual(titles(`create function public.fix() returns void language plpgsql as $$ begin drop policy "all" on public.profiles; end $$;\n${base}${open}select public.fix();`), [], 'a SELECT that calls a function which drops the policy');
+});

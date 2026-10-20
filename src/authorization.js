@@ -40,7 +40,7 @@ function sqlStatements(text) {
     if (clean[n] === '"') { if (quote && clean[n + 1] === '"') { n++; continue; } quote = !quote; }
     if (n === clean.length || (clean[n] === ';' && !quote)) {
       const raw = clean.slice(start, n); const at = start + raw.search(/\S|$/);
-      out.push({ sql: raw.trim(), line: text.slice(0, at).split('\n').length }); start = n + 1;
+      out.push({ sql: raw.trim(), raw: text.slice(start, n), line: text.slice(0, at).split('\n').length }); start = n + 1;
     }
   }
   return out;
@@ -66,6 +66,8 @@ function expression(tail, keyword) {
   while (i < tail.length && depth) { if (tail[i] === '(') depth++; if (tail[i] === ')') depth--; i++; }
   return depth ? '?' : tail.slice(start, i - 1).trim();
 }
+// Statements inside a DO block or function body that can change what the policies mean.
+const DDL = /\b(?:create|alter|drop)\s+(?:policy|table)\b|\brow\s+level\s+security\b|\bexecute\s+(?:format|'|\$)|\bgrant\b|\brevoke\b|\brename\b/i;
 const isTrue = s => s !== null && /^\(*\s*true\s*\)*$/i.test(s);
 const forRole = (policy, role) => policy.roles.includes('public') || policy.roles.includes(role);
 const applies = (policy, op) => policy.op === 'all' || policy.op === op;
@@ -115,38 +117,71 @@ export function supabaseBroadPolicies(root) {
   const findings = [];
   for (const files of groups.values()) {
     const tables = new Map(); let uncertain = false;
+    const ddlFunctions = new Set();
     const get = name => { if (!tables.has(name)) tables.set(name, { policies: new Map(), rls: false, uncertain: false, columns: new Set() }); return tables.get(name); };
     const publicBuckets = [];
     for (const file of files) {
       const source = read(file);
       if (source === null) { uncertain = true; continue; }
-      for (const { sql, line } of sqlStatements(source)) {
-      // These can change schema/policies indirectly; do not claim a final policy state.
-      if (/^(?:do\b|call\b|execute\b|set\s+(?:local\s+)?search_path\b|select\b|rollback\b)/i.test(sql)) { uncertain = true; continue; }
+      for (const { sql, raw, line } of sqlStatements(source)) handle(sql, raw, line);
+      function handle(sql, raw, line) {
+      // Statements that could change tables or policies out of our sight make the final state
+      // unknown. Session settings (pg_dump's preamble), and SELECT or DO that touch no policy,
+      // table or RLS (cron.schedule, CREATE TYPE in a DO block), do not.
+      if (/^set\s+(?:local\s+)?(?:search_path|statement_timeout|lock_timeout|idle_in_transaction_session_timeout|client_encoding|standard_conforming_strings|check_function_bodies|xmloption|client_min_messages|row_security|default_tablespace|default_table_access_method|default_with_oids)\b/i.test(sql)) {
+        if (/search_path/i.test(sql) && !/search_path\s*(?:=|to)\s*(?:''|"public"|'?public'?\b|pg_catalog\s*,\s*public|public\s*,)/i.test(raw)) uncertain = true;
+        return;
+      }
+      if (/^do\b/i.test(sql)) {
+        if (!DDL.test(raw)) return;
+        // "IF NOT EXISTS (...) THEN CREATE POLICY ... END IF": idempotent creation, the same final
+        // state as the bare statement. Anything that drops, alters or runs dynamic SQL stays unknown.
+        if (/\b(?:drop|alter)\s+policy\b|\bdrop\s+table\b|\bexecute\b|\brename\b|\bdisable\s+row\s+level\b|\bgrant\b|\brevoke\b|\bset\s+schema\b/i.test(raw)) { uncertain = true; return; }
+        const inner = (raw.match(/\$([A-Za-z_]\w*)?\$([\s\S]*)\$\1\$/) || [])[2];
+        if (!inner) { uncertain = true; return; }
+        for (const st of sqlStatements(inner)) {
+          const at = st.sql.search(/\b(?:create\s+policy|create\s+table|alter\s+table)\b/i);
+          if (at < 0) continue;
+          const rawAt = st.raw.search(/\b(?:create\s+policy|create\s+table|alter\s+table)\b/i);
+          handle(st.sql.slice(at), st.raw.slice(rawAt), line + st.line - 1);
+        }
+        return;
+      }
+      if (/^select\b/i.test(sql)) {
+        const called = [...raw.matchAll(/([A-Za-z_][\w.]*)\s*\(/g)].map((x) => x[1].split('.').pop().toLowerCase());
+        if (DDL.test(raw.replace(/'(?:[^']|'')*'/g, "''")) || called.some((n) => ddlFunctions.has(n))) uncertain = true;
+        return;
+      }
+      // Functions whose body changes tables or policies: calling one from a SELECT is DDL.
+      const fn = sql.match(/^create\s+(?:or\s+replace\s+)?function\s+([\w."]+)/i);
+      if (fn && DDL.test(raw)) ddlFunctions.add(fn[1].replace(/"/g, '').split('.').pop().toLowerCase());
+      if (/^(?:call\b|execute\b|rollback\b)/i.test(sql)) { uncertain = true; return; }
       // Columns, to tell a table of personal data from a public catalogue.
       let c = sql.match(new RegExp(`^create\\s+table\\s+(?:if\\s+not\\s+exists\\s+)?${TABLE}\\s*\\(([\\s\\S]*)\\)`, 'i'));
-      if (c) { const name = tableName(c[1]); if (name) for (const col of columnNames(c[2])) get(name).columns.add(col); continue; }
+      if (c) { const name = tableName(c[1]); if (name) for (const col of columnNames(c[2])) get(name).columns.add(col); return; }
       c = sql.match(new RegExp(`^alter\\s+table\\s+(?:if\\s+exists\\s+)?(?:only\\s+)?${TABLE}\\s+(add\\s+column[\\s\\S]*)$`, 'i'));
-      if (c) { const name = tableName(c[1]); if (name) for (const a of c[2].matchAll(new RegExp(`add\\s+column\\s+(?:if\\s+not\\s+exists\\s+)?(${IDENT})`, 'gi'))) get(name).columns.add(unquote(a[1])); continue; }
+      if (c) { const name = tableName(c[1]); if (name) for (const a of c[2].matchAll(new RegExp(`add\\s+column\\s+(?:if\\s+not\\s+exists\\s+)?(${IDENT})`, 'gi'))) get(name).columns.add(unquote(a[1])); return; }
       // Storage buckets created public: insert into storage.buckets (id, name, public) values (...).
-      if (/^insert\s+into\s+storage\.buckets\b/i.test(sql)) { const raw = source.split('\n').slice(line - 1).join('\n').split(';')[0]; for (const b of publicBucketNames(raw)) publicBuckets.push({ name: b, file: path.relative(root, file), line }); continue; }
+      if (/^insert\s+into\s+storage\.buckets\b/i.test(sql)) { const raw = source.split('\n').slice(line - 1).join('\n').split(';')[0]; for (const b of publicBucketNames(raw)) publicBuckets.push({ name: b, file: path.relative(root, file), line }); return; }
       let m = sql.match(new RegExp(`^alter\\s+table\\s+(?:if\\s+exists\\s+)?(?:only\\s+)?${TABLE}\\s+(enable|disable)\\s+row\\s+level\\s+security$`, 'i'));
-      if (m) { const name = tableName(m[1]); if (name) get(name).rls = m[2].toLowerCase() === 'enable'; continue; }
+      if (m) { const name = tableName(m[1]); if (name) get(name).rls = m[2].toLowerCase() === 'enable'; return; }
       m = sql.match(new RegExp(`^drop\\s+table\\s+(?:if\\s+exists\\s+)?${TABLE}(?:\\s+(?:cascade|restrict))?$`, 'i'));
-      if (m) { tables.delete(tableName(m[1])); continue; }
+      if (m) { tables.delete(tableName(m[1])); return; }
       m = sql.match(new RegExp(`^(create|drop|alter)\\s+policy\\s+(?:if\\s+exists\\s+)?(${IDENT})\\s+on\\s+${TABLE}([\\s\\S]*)$`, 'i'));
       if (!m) {
         // Unknown DDL can rename/remove a policy's table. Suppress this group's results.
-        if (/^(?:alter|drop)\s+(?:table|schema|policy)\b/i.test(sql)) uncertain = true;
-        continue;
+        // Column, constraint, index and owner changes do not change policies; a rename or a move to
+        // another schema can.
+        if (/^drop\s+(?:schema|policy)\b/i.test(sql) || (/^alter\s+(?:table|schema)\b/i.test(sql) && /\brename\b|\bset\s+schema\b/i.test(sql))) uncertain = true;
+        return;
       }
-      const name = tableName(m[3]); if (!name) continue;
+      const name = tableName(m[3]); if (!name) return;
       const t = get(name), policyName = unquote(m[2]), verb = m[1].toLowerCase(), tail = m[4].trim();
-      if (verb === 'drop') { t.policies.delete(policyName); continue; }
-      if (verb === 'alter') { t.uncertain = true; continue; }
+      if (verb === 'drop') { t.policies.delete(policyName); return; }
+      if (verb === 'alter') { t.uncertain = true; return; }
       const header = tail.split(/\busing\s*\(|\bwith\s+check\s*\(/i)[0].trim();
       const h = header.match(new RegExp(`^(?:as\\s+(permissive|restrictive)\\s*)?(?:for\\s+(all|select|insert|update|delete)\\s*)?(?:to\\s+(${IDENT}(?:\\s*,\\s*${IDENT})*))?$`, 'i'));
-      if (!h) { t.uncertain = true; continue; }
+      if (!h) { t.uncertain = true; return; }
       t.policies.set(policyName, { name: policyName, file: path.relative(root, file), line, restrictive: h[1]?.toLowerCase() === 'restrictive', op: h[2]?.toLowerCase() || 'all', roles: h[3] ? h[3].match(new RegExp(IDENT, 'g')).map(unquote) : ['public'], using: expression(tail, 'using'), check: expression(tail, 'with\\s+check') });
     }
     }
