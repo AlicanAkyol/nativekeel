@@ -24,3 +24,19 @@ test('guarded or harmless pull_request_target jobs are not reported', () => {
     `name: ci\non:\n  pull_request:\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n${checkoutHead}      - run: npm test\n`,
   ]) assert.deepEqual(run(yml), [], yml);
 });
+
+test('script injection: untrusted text pasted into a run script in a privileged workflow', async () => {
+  const { ciScriptInjection } = await import('../src/ci-security.js');
+  const run2 = (yml) => ciScriptInjection(makeProject({ '.github/workflows/w.yml': yml }));
+  const triage = (step, on = 'issues:\n    types: [opened]') => `on:\n  ${on}\njobs:\n  triage:\n    runs-on: ubuntu-latest\n    steps:\n${step}`;
+  const [f] = run2(triage('      - run: echo "New issue: ${{ github.event.issue.title }}"\n'));
+  assert.equal(f.severity, 'critical');
+  assert.match(f.detail, /uses \$\{\{ github\.event\.issue\.title \}\} in a script/);
+  assert.equal(run2(triage('      - uses: actions/github-script@v7\n        with:\n          script: |\n            core.info("${{ github.event.comment.body }}")\n', 'issue_comment:')).length, 1);
+  for (const yml of [
+    triage('      - env:\n          TITLE: ${{ github.event.issue.title }}\n        run: echo "$TITLE"\n'),
+    triage('      - run: echo "${{ github.event.issue.number }}"\n'),
+    triage('      - run: echo "${{ github.head_ref }}"\n', 'pull_request:'),
+    `on:\n  pull_request_target:\njobs:\n  rc:\n    if: github.event.pull_request.user.login == 'release-bot'\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo "\${{ github.head_ref }}"\n`,
+  ]) assert.deepEqual(run2(yml), [], yml);
+});
