@@ -433,3 +433,13 @@ test('credentials logged in release builds; development-only and stripped logs a
     { 'src/a.ts': "console.log(token);", 'babel.config.js': "module.exports = { env: { production: { plugins: ['transform-remove-console'] } } };" },
   ]) assert.deepEqual(run(files), [], JSON.stringify(files));
 });
+
+test('server secrets read by app code: provider names and generic *_SECRET; SDK secrets made for the app are not', async () => {
+  const { backendAdminInBundle } = await import('../src/security.js');
+  const run = (code, deps = { expo: '58.0.0' }) => backendAdminInBundle(makeProject({ 'package.json': '{}', 'src/a.ts': code }), deps).map((f) => f.title);
+  assert.match(run('const s = process.env.EXPO_PUBLIC_CLOUDINARY_API_SECRET;')[0] || '', /^Cloudinary API secret ships/);
+  assert.match(run("import { AWS_SECRET_ACCESS_KEY } from '@env';", { 'react-native-dotenv': '3.0.0' })[0] || '', /^AWS secret access key ships/);
+  assert.match(run('const s = process.env.EXPO_PUBLIC_FATSECRET_CLIENT_SECRET;')[0] || '', /^Server secret ships/);
+  assert.match(run('const s = process.env.EXPO_PUBLIC_API_SHARED_SECRET;')[0] || '', /^Server secret ships/);
+  for (const code of ['const s = process.env.EXPO_PUBLIC_SINGULAR_SDK_SECRET;', 'const a = process.env.EXPO_PUBLIC_ADJUST_APP_SECRET;', 'const k = process.env.EXPO_PUBLIC_RAINBOW_MASTER_KEY;', 'const k = process.env.EXPO_PUBLIC_SECRET_SANTA_URL;']) assert.deepEqual(run(code), [], code);
+});

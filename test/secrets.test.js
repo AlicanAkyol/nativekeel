@@ -78,3 +78,22 @@ test('a JSON file ships only when the code imports it', () => {
   assert.equal(byFile['src/cryptoTest.ts'], false);
   assert.equal(byFile['src/latest.js'], true, '"latest.js" is not a test file');
 });
+
+test('Sentry auth tokens; secrets in an Expo app.json ship in the app unless under ios/android.config', () => {
+  const sentry = ['sntrys_', 'eyJpYXQiOjE3MDAwMDAwMDAuMCwidXJsIjoiaHR0cHM6Ly9zZW50cnkuaW8iLCJvcmciOiJhY21lIn0=', '_', 'Abc123Def456Ghi789Jkl012Mno345Pqr678Stu9'].join('');
+  const stripe = ['sk_', 'live_', '51HxQ2wE4rT6yU8iO0pA1sD3fG5hJ7kL9zX'].join('');
+  const app = (expo, deps = { expo: '58.0.0' }) => scanSecrets(makeProject({ 'package.json': { name: 'a', dependencies: deps }, 'app.json': { expo } }));
+  const [plugin] = app({ plugins: [['@sentry/react-native/expo', { organization: 'acme', authToken: sentry }]] });
+  assert.equal(plugin.rule, 'sentry-auth-token');
+  assert.equal(plugin.inAppBundle, true, 'plugin options are embedded (Constants.expoConfig)');
+  assert.equal(app({ extra: { stripe } })[0].inAppBundle, true, 'extra is embedded');
+  assert.equal(app({ ios: { config: { googleMapsApiKey: 'x', stripe } } })[0].inAppBundle, false, 'ios.config is removed from the public config');
+  assert.equal(app({ extra: { stripe } }, { 'react-native': '0.80.0' })[0].inAppBundle, false, 'not an Expo app: app.json is not embedded');
+});
+
+test('a token in sentry.properties is committed, not shipped: the build reads it', () => {
+  const sentry = ['sntryu_', 'a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90'].join('');
+  const [f] = scanSecrets(makeProject({ 'package.json': '{}', 'android/sentry.properties': `defaults.org=acme\nauth.token=${sentry}\n` }));
+  assert.equal(f.rule, 'sentry-auth-token');
+  assert.equal(f.inAppBundle, false);
+});

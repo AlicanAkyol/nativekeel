@@ -31,6 +31,10 @@ const RULES = [
   { id: 'google-oauth-secret', label: 'Google OAuth client secret', re: /\b(?<v>GOCSPX-[A-Za-z0-9_-]{28})\b/g },
   { id: 'mailchimp-key', label: 'Mailchimp API key', re: /\b(?<v>[0-9a-f]{32}-us\d{1,2})\b/g },
   { id: 'shopify-token', label: 'Shopify access token', re: /\b(?<v>shp(?:at|ca|pa|ss)_[a-fA-F0-9]{32})\b/g },
+  // Sentry organization tokens (sntrys_ + base64 payload + _ + secret) and user tokens (sntryu_ + 64
+  // hex) can read and change the Sentry organization. Sentry's own Expo plugin built them into the
+  // app bundle in 5.16–5.19 (GHSA-68c2-4mpx-qh95).
+  { id: 'sentry-auth-token', label: 'Sentry auth token', re: /\b(?<v>sntrys_[A-Za-z0-9+/=]{40,}_[A-Za-z0-9]{20,}|sntryu_[a-f0-9]{64})\b/g },
   // A database URL with a password connects straight to the database. Local development hosts
   // (localhost, Docker service names without a dot) and placeholder passwords are left alone.
   {
@@ -78,6 +82,7 @@ const RELAXED_IN_BINARY = {
   'sendgrid-key': null,
   'google-oauth-secret': null,
   'shopify-token': null,
+  'sentry-auth-token': null,
   'supabase-service-role': null,
 };
 const BINARY_RULES = RULES.map((rule) => {
@@ -170,6 +175,22 @@ export function scanSecrets(root) {
   } catch {}
   const allDeps = { ...(pkg.dependencies || {}), ...(pkg.devDependencies || {}) };
   const inlinesAllEnv = ['react-native-config', 'react-native-dotenv', 'babel-plugin-transform-inline-environment-variables'].some((n) => allDeps[n]);
+  // Expo embeds the app config in every build (Constants.expoConfig). Its public form drops only
+  // _internal, hooks, ios.config, android.config and the update signing fields
+  // (@expo/config getConfig isPublicConfig); plugin options and `extra` stay in the app.
+  let expoPublic = '';
+  if (allDeps.expo) {
+    try {
+      const data = JSON.parse(fs.readFileSync(path.join(root, 'app.json'), 'utf8'));
+      const exp = data.expo || data;
+      delete exp._internal;
+      delete exp.hooks;
+      if (exp.ios) delete exp.ios.config;
+      if (exp.android) delete exp.android.config;
+      if (exp.updates) { delete exp.updates.codeSigningCertificate; delete exp.updates.codeSigningMetadata; }
+      expoPublic = JSON.stringify(exp);
+    } catch {}
+  }
   for (const file of files) {
     let text;
     try {
@@ -190,7 +211,8 @@ export function scanSecrets(root) {
         // Comments are stripped from the bundle; a key there is committed, not shipped.
         const inComment = isCommentLine(lines[line - 1] || '');
         let unreferencedJson = false;
-        if (file.endsWith('.json') && !/^(android|ios)\//.test(posix)) {
+        const inExpoConfig = posix === 'app.json' && expoPublic.includes(value || m[0]);
+        if (file.endsWith('.json') && !/^(android|ios)\//.test(posix) && !inExpoConfig) {
           jsonImports = jsonImports || importedJsonNames(files);
           unreferencedJson = !jsonImports.has(path.basename(file));
         }
@@ -204,7 +226,9 @@ export function scanSecrets(root) {
           preview: value ? mask(value) : null,
           // Start of the value, so a copy found in the built app is not reported a second time.
           fingerprint: (value || m[0]).slice(0, 16),
-          inAppBundle: !SERVER_DIRS.has(posix.split('/')[0]) && !TEST_PATH.test(posix) && !inComment && !unreferencedJson && envShipped,
+          // Gradle and properties files (sentry.properties, gradle.properties) are read by the build,
+          // not packaged into the app.
+          inAppBundle: !SERVER_DIRS.has(posix.split('/')[0]) && !TEST_PATH.test(posix) && !inComment && !unreferencedJson && envShipped && !/\.(?:properties|gradle|kts)$/.test(posix),
           inComment,
           committed: tracked ? tracked.has(posix) : null,
         });

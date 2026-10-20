@@ -1072,6 +1072,13 @@ const BACKEND_ADMIN_NAMES = [
   [/APPWRITE\w*(?:API_KEY|SECRET)/, 'Appwrite API key', 'is a server key with the scopes you gave it, outside user permissions', 'high'],
   [/POCKETBASE\w*(?:ADMIN|SUPERUSER)\w*PASSWORD/, 'PocketBase superuser password', 'logs in as a superuser, past every collection rule', 'critical'],
   [/^(?:\w+_)?JWT_SECRET$/, 'JWT signing secret', 'lets anyone sign valid tokens for any user', 'critical'],
+  [/AWS\w*SECRET(?:_ACCESS)?_KEY/, 'AWS secret access key', 'acts as the IAM user with every permission it has', 'critical'],
+  [/CLOUDINARY\w*(?:API_)?SECRET/, 'Cloudinary API secret', 'can upload, overwrite and delete every file in the account', 'high'],
+  [/TWILIO\w*AUTH_TOKEN/, 'Twilio auth token', 'sends messages and places calls billed to your account', 'high'],
+  [/SENDGRID\w*API_KEY|RESEND\w*API_KEY|MAILGUN\w*API_KEY|POSTMARK\w*(?:SERVER_)?TOKEN/, 'Email API key', 'sends email as your domain, to anyone', 'high'],
+  // Any other name that says it is a server secret. Last, so the specific labels win.
+  // Singular's SDK secret and Adjust's app secret are designed to live in the app.
+  [/^(?!\w*(?:SINGULAR|ADJUST))(?:\w+_)?(?:SECRET|SECRET_KEY|CLIENT_SECRET|API_SECRET|PRIVATE_KEY|ADMIN_KEY)$/, 'Server secret', 'is named as a secret meant to stay on a server', 'high'],
 ];
 const SERVER_SDKS = [
   ['firebase-admin', 'firebase-admin (Admin SDK: ignores security rules; needs a service account)'],
