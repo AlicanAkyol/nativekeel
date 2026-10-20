@@ -2,6 +2,7 @@ import fs from './read-boundary.js';
 import path from 'node:path';
 import { SITE_URL } from './config.js';
 import { locate } from './report-sarif.js';
+import { findingLocations } from './locations.js';
 
 // SonarQube / SonarCloud generic issue import format (SonarQube 10.3+), read through
 // sonar.externalIssuesReportPaths. Teams already on SonarQube see NativeKeel findings next to
@@ -51,8 +52,26 @@ export function sonarReport(result, { base: baseDir = process.cwd() } = {}) {
         ruleId: ruleOf(f),
         effortMinutes: 0,
         primaryLocation: { message: clip(`[${f.severity}] ${f.title}. ${f.detail}`, 1000), filePath: rel(loc.uri), textRange: { startLine: loc.line || 1 } },
-        ...(f.evidence?.length > 1 ? { secondaryLocations: f.evidence.slice(1, 6).map((e) => ({ message: clip(e.role || 'Related source evidence', 200), filePath: rel(e.file), textRange: { startLine: e.line || 1 } })) } : {}),
+        ...(() => {
+          const more = findingLocations(f).slice(1, 6);
+          return more.length ? { secondaryLocations: more.map((e) => ({ message: clip(e.role || 'Related source evidence', 200), filePath: rel(e.file), textRange: { startLine: e.line } })) } : {};
+        })(),
       };
     }),
   };
+}
+
+// Issues whose file lies outside sonar.sources (sonar-project.properties next to the report, or in
+// the working directory) are dropped by the scanner without a word. Returns a warning, or null.
+export function sonarScopeWarning(report, { cwd = process.cwd() } = {}) {
+  let props = '';
+  try { props = fs.readFileSync(path.join(cwd, 'sonar-project.properties'), 'utf8'); } catch { return null; }
+  const value = (key) => (props.match(new RegExp(`^\\s*${key.replace(/\./g, '\\.')}\\s*=\\s*(.*)$`, 'm')) || [])[1];
+  const sources = (value('sonar.sources') || '').split(',').map((s) => s.trim().replace(/^\.\//, '').replace(/\/$/, '')).filter(Boolean);
+  if (!sources.length || sources.includes('.')) return null;
+  const files = report.issues.map((i) => i.primaryLocation.filePath);
+  const outside = files.filter((f) => !sources.some((s) => f === s || f.startsWith(`${s}/`)));
+  if (!outside.length) return null;
+  const sample = [...new Set(outside)].slice(0, 3).join(', ');
+  return `${outside.length} of ${files.length} issues point at files outside sonar.sources (${sources.join(', ')}), e.g. ${sample}; SonarQube drops them. Add those folders (or package.json, android, ios) to sonar.sources, or keep them out on purpose.`;
 }

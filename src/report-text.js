@@ -9,7 +9,10 @@ export const DEADLINE_IDS = /^(rn-unsupported|expo-unsupported|new-arch-disabled
 export function textReport(result, { color = true, verbose = false } = {}) {
   const paint = (code) => (s) => (color ? `\x1b[${code}m${s}\x1b[0m` : s);
   const c = { red: paint('31'), yellow: paint('33'), blue: paint('34'), gray: paint('90'), bold: paint('1'), green: paint('32') };
-  const label = {
+  // Short evidence label shown next to the id.
+const PROOF = { config: 'config file', source: 'found in source', 'dead-code': 'dead code', 'built-app': 'built app', versions: 'versions' };
+const tag = (f) => `[${f.id}${PROOF[f.proof] ? ` · ${PROOF[f.proof]}` : ''}]`;
+const label = {
     critical: c.red('✖ CRITICAL'),
     high: c.yellow('▲ HIGH    '),
     medium: c.yellow('● MEDIUM  '),
@@ -42,7 +45,7 @@ export function textReport(result, { color = true, verbose = false } = {}) {
       // Outdated packages are many and alike: list them compactly. Everything else gets a full entry.
       const bumps = group.filter((f) => f.id.startsWith('dep-major:'));
       for (const f of group.filter((x) => !x.id.startsWith('dep-major:'))) {
-        out.push(`${label.low} ${c.bold(f.title)} ${c.gray(`[${f.id}]`)}`);
+        out.push(`${label.low} ${c.bold(f.title)} ${c.gray(tag(f))}`);
         out.push(c.gray(indent + f.detail));
         if (f.attack) { out.push(indent + 'Verify: ' + f.attack.validation); out.push(indent + 'Fix: ' + f.fix.step); }
       }
@@ -58,7 +61,7 @@ export function textReport(result, { color = true, verbose = false } = {}) {
     // Packages the Expo SDK upgrade moves: one line, they are not separate work.
     const expoMoves = group.filter((f) => f.fix && f.fix.expoManaged);
     for (const f of group.filter((x) => !(x.fix && x.fix.expoManaged))) {
-      out.push(`${label[sev]} ${c.bold(f.title)} ${c.gray(`[${f.id}]`)}`);
+      out.push(`${label[sev]} ${c.bold(f.title)} ${c.gray(tag(f))}`);
       out.push(c.gray(indent + f.detail));
       if (f.attack) { out.push(indent + 'Verify: ' + f.attack.validation); out.push(indent + 'Fix: ' + f.fix.step); }
     }

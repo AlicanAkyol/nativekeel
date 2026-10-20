@@ -7,6 +7,7 @@ import { cleanVersion, findPackageDir, installedVersion, versionFromSpec } from 
 import { createRegistry, fetchJson } from './registry.js';
 import { secretsInBuilds } from './build-secrets.js';
 import { hygieneChecks, deadFiles } from './hygiene.js';
+import { findingLocations } from './locations.js';
 import { ciSecurity, ciScriptInjection } from './ci-security.js';
 import { urlTextChecks, clientPrivilegeWrites, tokenToEveryHost } from './api-security.js';
 import { scanSecrets, TEST_PATH } from './secrets.js';
@@ -105,6 +106,11 @@ export function satisfiesExpoRange(version, range) {
 }
 
 // `offline: true` means the user asked for no network access (get returns nothing).
+// The NativeKeel version that produced a result: two scans made with different versions can
+// differ because the checks changed, not the app.
+let TOOL_VERSION = null;
+try { TOOL_VERSION = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version; } catch {}
+
 export async function analyze(project, { get, now = new Date(), offline: forcedOffline = false, artifacts = [] } = {}) {
   // Requests that failed even after retries (rate limits, network): reported, never hidden.
   const net = { failed: 0, deadline: Date.now() + (Number(process.env.NATIVEKEEL_NETWORK_BUDGET_MS) || 90000) };
@@ -310,14 +316,18 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
         dep.unmaintained && 'unmaintained',
         stale && `no release since ${release.date.slice(0, 7)}`,
       ].filter(Boolean);
+      // A flag in React Native Directory says the package is abandoned; an old release date alone
+      // does not (a finished library may simply need no changes).
       const why = noNewArch
         ? 'Likely upgrade blocker (it may still run through the interop layer). Plan a replacement or a maintained fork.'
-        : 'No fixes will come for future React Native, iOS or Android releases.';
+        : dep.unmaintained
+          ? 'React Native Directory marks it unmaintained: fixes for future React Native, iOS or Android releases are unlikely.'
+          : `No release for ${Math.floor(age / 365)} years. That alone does not mean it is abandoned: check its repository (recent commits, answered issues) and that it builds on your React Native version before relying on it.`;
       add({
         id: `dep-risk:${name}`,
         // A general-purpose JS utility (clsx, lodash-style helpers) does not affect React Native
         // upgrades even when unmaintained: low. React Native/Expo-specific JS packages stay medium.
-        severity: noNewArch || native ? 'high' : (stale && !dep.unmaintained && release.rnLink === 'name') || (release && !release.rnLink && !/react-native|expo|^@react-navigation\//.test(name)) ? 'low' : 'medium',
+        severity: noNewArch || (native && dep.unmaintained) ? 'high' : native ? 'medium' : (stale && !dep.unmaintained && release.rnLink === 'name') || (release && !release.rnLink && !/react-native|expo|^@react-navigation\//.test(name)) ? 'low' : 'medium',
         area: 'dependency',
         title: `${name}: ${problems.join(', ')}`,
         detail: `${why}${alternatives.length ? ` Alternatives: ${alternatives.join(', ')}.` : ''}${PACKAGE_NOTES[name] ? ` ${PACKAGE_NOTES[name]}` : ''}`,
@@ -668,9 +678,7 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
     const order = ['critical', 'high', 'medium', 'low', 'info'];
     for (const f of findings) {
       if (['secret', 'store', 'dependency', 'cleanup', 'expo', 'react-native', 'native'].includes(f.area) || f.severity === 'info' || f.severity === 'low') continue;
-      const files = new Set([f.fix && f.fix.file, ...(Array.isArray(f.evidence) ? f.evidence.map((e) => e && (e.file || (typeof e.at === 'string' ? e.at.replace(/:\d+$/, '') : null))) : [])].filter(Boolean));
-      for (const m of `${f.title} ${f.detail || ''}`.matchAll(/([\w@.\/[\]()-]+\.[cm]?[jt]sx?):\d+/g)) files.add(m[1].replace(/^[([]+/, ''));
-      const list = [...files].map((x) => String(x).split(path.sep).join('/'));
+      const list = [...new Set(findingLocations(f).map((l) => l.file))];
       if (!list.length || !list.every((x) => dead.has(x))) continue;
       f.severity = order[Math.min(order.length - 2, order.indexOf(f.severity) + 2)];
       f.title = `${f.title} (in code the app never imports)`;
@@ -679,12 +687,30 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
     }
   }
 
+  // How strong the evidence is, apart from how bad the outcome would be: seen in a configuration
+  // file, in source code whose execution was not verified, in code the app never imports, in the
+  // built app, or derived from package versions.
+  const CONFIG_FILE = /(?:AndroidManifest\.xml|\.plist|\.gradle(?:\.kts)?|\.properties|\.pbxproj|Podfile|\.xcconfig|\.rules|\.sql|\.ya?ml|\.entitlements|(?:^|\/)(?:app|eas|package|firebase|google-services)\.json|\.xml)$/;
+  for (const f of findings) {
+    if (f.proof) continue;
+    const files = findingLocations(f).map((l) => l.file);
+    if (f.deadCode) f.proof = 'dead-code';
+    else if (/^(?:secret-in-build|android-16kb)/.test(f.id)) f.proof = 'built-app';
+    else if (f.area === 'dependency' || /^(?:vuln|dep-|rn-|expo-|unused:)/.test(f.id)) f.proof = 'versions';
+    else if (files.length && files.every((x) => CONFIG_FILE.test(x))) f.proof = 'config';
+    // Checks that read the native project or build settings without recording a line.
+    else if (!files.length && (['store', 'native'].includes(f.area) || /^(?:android-|ios-|easy-reverse|signing-|firebase-|supabase-|ci-|ota-|release-|expo-secret|env-bundled)/.test(f.id)) && !/^(?:ios-unprefixed-react-imports|ios-scene-delegate-window)/.test(f.id)) f.proof = 'config';
+    else if (files.some((x) => /\.(?:[cm]?[jt]sx?|kt|java|swift|mm?)$/.test(x))) f.proof = 'source';
+    else f.proof = 'project';
+  }
+
   const settings = readSettings(project.root);
   const applied = applySettings(findings, settings);
   findings = applied.findings;
   if (settings) warnings.push(...settings.warnings);
   const result = {
     tool: 'nativekeel',
+    toolVersion: TOOL_VERSION,
     mobileSecurityCoverage: mobile.coverage,
     nativeSecurityCoverage: native.coverage,
     accessibilityCoverage: ui.coverage,

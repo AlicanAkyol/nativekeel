@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>How accurate is NativeKeel? Measured results · NativeKeel</title>
+<meta name="description" content="What NativeKeel finds and misses, measured: planted issues, published vulnerabilities, false alarms reviewed by hand in 1,000+ apps, and known blind spots.">
+<link rel="canonical" href="https://nativekeel.com/accuracy">
+<meta property="og:title" content="How accurate is NativeKeel? Measured results · NativeKeel">
+<meta property="og:description" content="What NativeKeel finds and misses, measured: planted issues, published vulnerabilities, false alarms reviewed by hand in 1,000+ apps, and known blind spots.">
+<meta property="og:url" content="https://nativekeel.com/accuracy"><meta property="og:type" content="article"><meta property="og:image" content="https://nativekeel.com/og.png">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:description" content="What NativeKeel finds and misses, measured: planted issues, published vulnerabilities, false alarms reviewed by hand in 1,000+ apps, and known blind spots.">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "TechArticle", "headline": "How accurate is NativeKeel? Measured results", "description": "What NativeKeel finds and misses, measured: planted issues, published vulnerabilities, false alarms reviewed by hand in 1,000+ apps, and known blind spots.", "dateModified": "2026-10-20", "author": {"@type": "Organization", "name": "NativeKeel", "url": "https://nativekeel.com/"}, "mainEntityOfPage": "https://nativekeel.com/accuracy"}</script>
+<style>
+:root{color-scheme:light dark;--bg:#fbfaf7;--fg:#15171b;--muted:#5d6470;--line:#e4e2dc;--accent:#0b5d55;--card:#fff}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.65 system-ui,sans-serif}main{max-width:920px;margin:auto;padding:32px 24px 70px}a{color:var(--accent)}nav{display:flex;justify-content:space-between;gap:20px;font-size:15px}h1{font-size:clamp(34px,5vw,54px);line-height:1.1;letter-spacing:-1.5px;max-width:780px;margin-top:64px}h2{margin-top:48px;line-height:1.25}p{max-width:780px}.lead{font-size:21px;color:var(--muted)}pre{overflow:auto;background:#12151a;color:#d9dee6;padding:22px;border-radius:12px;font-size:15px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.card{padding:22px;border:1px solid var(--line);border-radius:12px;background:var(--card)}h3{margin:0 0 10px}.card p{margin:0;color:var(--muted)}.example{border-left:4px solid var(--accent);padding:4px 0 4px 22px}.note{color:var(--muted)}footer{margin-top:60px;border-top:1px solid var(--line);padding-top:20px;font-size:14px}@media(max-width:620px){.grid{grid-template-columns:1fr}main{padding:24px 18px}h1{margin-top:42px}}@media(prefers-color-scheme:dark){:root{--bg:#0e1013;--fg:#e9ebef;--muted:#9aa2ad;--line:#262b32;--accent:#3cc4b4;--card:#161a1f}}
+table{width:100%;border-collapse:collapse;margin:12px 0 18px;font-size:15px}th,td{text-align:left;vertical-align:top;padding:8px 10px;border-top:1px solid var(--line)}th{font-size:13px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted)}
+</style></head><body><main>
+</head><body><main>
+<nav><a href="/">NativeKeel</a><a href="/security">Security checks</a><a href="/changelog">What's new</a></nav>
+<h1>How accurate is NativeKeel?</h1>
+<p class="lead">A scanner earns trust by what it gets right, not by how many checks it lists. These are the measurements behind NativeKeel's checks, including what it misses. Updated 20 October 2026.</p>
+
+<h2>Finds: problems we planted</h2>
+<p>A React Native 0.87 test app with 41 known problems, each in its own file (security, performance, stability). NativeKeel found 24 of them fully and 1 partly in 0.1.104, and <b>31 fully and 1 partly (76%) from 0.1.105</b>. Of the 9 it misses, 4 are left out on purpose: copying a password to the clipboard is a feature users ask for; SQL built from a value whose source cannot be traced proves nothing; a client-side role check is not a hole while the server enforces it; a new object passed to a Context provider rarely matters. The other 5 need runtime or data-flow information a static scan does not have: a long list rendered with <code>map</code> inside a ScrollView, a FlatList without <code>keyExtractor</code>, <code>JSON.parse</code> without <code>try</code>, no error boundary, and a deep link URL fetched without checking its host.</p>
+
+<h2>Finds: vulnerabilities other people found</h2>
+<p>Ten published cases in scope for static analysis: GitHub security advisories of React Native apps, and commits in React Native repositories that removed a leaked key, each scanned at the commit before the fix. <b>Found: 5 before 0.1.107, 7 after.</b> It reports Rocket.Chat's exported reply receiver (GHSA-gwg8-fvp7-mp2x) on the vulnerable release and not on the fixed one, Sentry's Expo plugin token (GHSA-68c2-4mpx-qh95), and Jellyfin's pull_request_target workflow (GHSA-7qhm-2m45-7fmh) before its fix and not after. It misses Zulip's link check done with a string prefix (CVE-2022-35962) and two app-specific API keys whose name and format look like public keys.</p>
+
+<h2>False alarms: every new finding reviewed by hand</h2>
+<p>Before a check ships, it runs on 1,000+ open-source React Native and Expo apps, every finding it adds is opened in the source, and the check is tightened until what remains is right. Examples from October 2026:</p>
+<table>
+<tr><th>Check</th><th>First version</th><th>Shipped</th></tr>
+<tr><td>URL trusted after a text comparison</td><td>52 apps, mostly harmless "is this a YouTube link" tests</td><td>3 apps, 3 confirmed (a payment WebView, a reCAPTCHA WebView, a video player)</td></tr>
+<tr><td>Credentials in release logs</td><td>55 apps (server code, push tokens, <code>!!token</code> flags)</td><td>25 apps, reviewed one by one</td></tr>
+<tr><td>Timers and listeners that can never be stopped</td><td>13 findings</td><td>13 confirmed</td></tr>
+<tr><td>Images nothing references</td><td>394 apps</td><td>245 reported images sampled, none in use</td></tr>
+<tr><td>Source files nothing imports</td><td>161 apps, wrong when an alias could not be read</td><td>stays quiet unless every import resolves</td></tr>
+<tr><td>Hermes bundle secrets</td><td>32 CSS names taken for OpenAI keys</td><td>0 in 20 open-source bundles; planted keys found</td></tr>
+<tr><td>Script injection in GitHub Actions</td><td>3 workflows, all guarded</td><td>0; 12 public workflows that use issue titles correctly pass</td></tr>
+<tr><td>Supabase tables of people readable by anyone</td><td>would have reported a hospital's public phone column</td><td>2 apps, both confirmed in their migrations</td></tr>
+</table>
+<p>A production app review in October 2026 found four false alarms (an inherited AppDelegate window, Folly flags set in the Podfile, logging removed by the project's own Babel plugin, a server-only moment advisory). All four were fixed in 0.1.111.</p>
+
+<h2>What every finding tells you</h2>
+<p>Severity says how bad the outcome would be. Separately, each finding says what it rests on: <b>a configuration file</b> (manifest, plist, build file, rules), <b>source code</b> (whether that code runs was not verified), <b>code the app never imports</b> (lowered and labelled), <b>the built app</b>, or <b>package versions</b>. In a team's <code>.nativekeel.json</code>, <code>gate</code> picks which checks may fail the build, and an accepted finding can carry an <code>until</code> date so it comes back for review.</p>
+
+<h2>Known blind spots</h2>
+<ul>
+<li>Behaviour at run time: crashes, frame drops and start-up time need a device.</li>
+<li>Your server: API authorization, and Firebase or Supabase rules that live only in the console.</li>
+<li>Data flow across files: a token passed through several functions before it is logged.</li>
+<li>iOS native code paths (Android native Intent flows are checked).</li>
+<li>Supabase migrations with dynamic SQL or blocks that drop policies: 17 of 45 open-source databases are skipped rather than guessed.</li>
+<li>Keys without a recognisable format, named like public keys.</li>
+</ul>
+<p>Zero findings is never a certificate. The test app and the corpus scripts are run again with every change to the checks; when a number above changes, this page changes with it.</p>
+<footer><a href="/">NativeKeel</a> · <a href="/security">Security checks</a> · <a href="/changelog">What's new</a> · MIT licensed</footer>
+</main></body></html>

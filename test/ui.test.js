@@ -153,3 +153,10 @@ test('developer-only screens are not checked for accessibility', () => {
   assert.ok(!run(app({ 'src/debug/DebugMenu.tsx': code })).some((f) => f.id === 'a11y-icon-button-unlabeled'));
   assert.ok(run(app({ 'src/screens/Home.tsx': code })).some((f) => f.id === 'a11y-icon-button-unlabeled'));
 });
+
+test('contrast: a symbol-only Text is a decoration; network inspectors are developer tools', () => {
+  const screen = (child) => `import { View, Text } from 'react-native';\nexport const A = () => (<View style={{ backgroundColor: '#ffffff' }}><Text style={{ color: '#dddddd' }}>${child}</Text></View>);`;
+  assert.ok(run(app({ 'src/A.tsx': screen('Saved') })).some((f) => f.id === 'a11y-low-contrast'));
+  assert.ok(!run(app({ 'src/A.tsx': screen('✓') })).some((f) => f.id === 'a11y-low-contrast'));
+  assert.ok(!run(app({ 'local-packages/network-inspector/src/Panel.tsx': screen('Request') })).some((f) => f.id === 'a11y-low-contrast'));
+});

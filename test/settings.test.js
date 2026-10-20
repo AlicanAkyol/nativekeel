@@ -67,3 +67,16 @@ test('settings: gate limits which findings can fail the build; malware always ca
   const root = makeProject({ 'package.json': { name: 'a', dependencies: { 'react-native': '0.80.0' } }, 'src/a.js': `const k = '${FAKE_AWS_ID}';`, '.nativekeel.json': { gate: ['ci-*'] } });
   assert.equal(run([root, '--offline']).status, 0, 'the critical secret is reported but not in the gate');
 });
+
+test('settings: an ignore with "until" applies until that date, then the finding comes back with a warning', () => {
+  const s = readSettings(makeProject({ '.nativekeel.json': { ignore: [
+    { id: 'flipper', reason: 'Removed next sprint', until: '2999-01-01' },
+    { id: 'old-thing', reason: 'Was fine last year', until: '2001-01-01' },
+    { id: 'bad-date', reason: 'x', until: 'next month' },
+  ] } }));
+  assert.deepEqual(s.ignore.map((i) => i.id), ['flipper']);
+  assert.ok(s.warnings.some((w) => /exception for "old-thing" ended on 2001-01-01/.test(w)));
+  assert.ok(s.warnings.some((w) => /bad-date.*YYYY-MM-DD/.test(w)));
+  const { ignored } = applySettings([{ id: 'flipper', severity: 'low', title: 't' }], s);
+  assert.equal(ignored[0].until, '2999-01-01');
+});

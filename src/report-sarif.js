@@ -1,5 +1,6 @@
 import fs from './read-boundary.js';
 import path from 'node:path';
+import { findingLocations } from './locations.js';
 import { SITE_URL } from './config.js';
 
 // SARIF 2.1.0 for GitHub code scanning: findings show up on the exact line in pull requests.
@@ -11,8 +12,8 @@ const LEVEL = { critical: 'error', high: 'error', medium: 'warning', low: 'note'
 // declares the dependency, otherwise the top of package.json.
 export function locate(result, finding, pkgLines) {
   const fix = finding.fix || {};
-  if (finding.evidence?.[0]?.file) return { uri: finding.evidence[0].file, line: finding.evidence[0].line || 1 };
-  if (fix.file) return { uri: fix.file, line: fix.line || 1 };
+  const [first] = findingLocations(finding);
+  if (first) return { uri: first.file, line: first.line };
   const name = fix.name || (finding.id.includes(':') ? finding.id.split(':').slice(1).join(':') : null);
   if (name) {
     const i = pkgLines.findIndex((l) => l.includes(`"${name}"`));

@@ -26,8 +26,26 @@ export function htmlReport(result, { brand = null, plan = null } = {}) {
         .map((f) => `<tr><td>${esc(f.fix.name)}</td><td>${esc(f.fix.from || '')}</td><td>${esc(f.fix.to || '')}</td><td class="muted">${[f.fix.native && 'native', f.fix.expoManaged && 'moves with Expo SDK'].filter(Boolean).join(', ')}</td></tr>`)
         .join('')}</tbody></table></details></div></li>`
     : '';
-  const card = (f, sev) => `<li class="f ${sev}"><span class="tag">${sevLabel[sev]}</span><div><strong>${rich(f.title)}</strong><code class="fid">${esc(String(f.id))}</code><p>${rich(f.detail)}</p>${f.attack ? `<p><b>Verify:</b> ${esc(f.attack.validation)}</p><p><b>Fix:</b> ${rich(f.fix.step)}</p>` : ''}</div></li>`;
-  const rows = SEVERITIES.map((sev) => result.findings.filter((f) => f.severity === sev && !isBump(f)).map((f) => card(f, sev)).join('\n') + (sev === 'low' ? bumpTable : '')).join('\n').trim();
+  // Evidence strength, apart from severity.
+  const PROOF = { config: 'Seen in a configuration file', source: 'Found in source code; whether it runs was not verified', 'dead-code': 'In code the app never imports', 'built-app': 'Found in the built app', versions: 'From package versions' };
+  const card = (f, sev) => `<li class="f ${sev}"><span class="tag">${sevLabel[sev]}</span><div><strong>${rich(f.title)}</strong><code class="fid">${esc(String(f.id))}</code>${PROOF[f.proof] ? `<span class="proof">${PROOF[f.proof]}</span>` : ''}<p>${rich(f.detail)}</p>${f.attack ? `<p><b>Verify:</b> ${esc(f.attack.validation)}</p><p><b>Fix:</b> ${rich(f.fix.step)}</p>` : ''}</div></li>`;
+  // Grouped by what to do with them, then by severity: confirmed configuration problems first,
+  // code findings to check, upgrade work, performance signals to measure, cleanup, notes.
+  const GROUPS = [
+    ['config', 'Confirmed in configuration', 'Seen directly in a manifest, plist, build file, database rules or the built app.'],
+    ['code', 'Found in source code', 'Patterns in your code. Check that the code is actually used before prioritising; dead code is marked.'],
+    ['upgrade', 'Upgrade and maintenance', 'Versions, support windows, store deadlines and packages to update or replace.'],
+    ['perf', 'Performance signals', 'Static signs, not measurements: measure on a device before changing.'],
+    ['cleanup', 'Cleanup', 'Leftovers that do not change what ships.'],
+    ['notes', 'Notes', 'For information; no action required.'],
+  ];
+  const groupOf = (f) => (f.severity === 'info' ? 'notes' : f.area === 'cleanup' ? 'cleanup' : f.area === 'performance' ? 'perf' : f.proof === 'config' || f.proof === 'built-app' ? 'config' : f.proof === 'source' || f.proof === 'dead-code' ? 'code' : 'upgrade');
+  const rows = GROUPS.map(([key, title, note]) => {
+    const items = SEVERITIES.flatMap((sev) => result.findings.filter((f) => f.severity === sev && !isBump(f) && groupOf(f) === key).map((f) => card(f, sev)));
+    const extra = key === 'upgrade' ? bumpTable : '';
+    if (!items.length && !extra) return '';
+    return `<li class="group"><h3>${title}</h3><p class="muted">${note}</p></li>\n${items.join('\n')}${extra}`;
+  }).filter(Boolean).join('\n').trim();
 
   const planHtml = plan
     ? `<section><h2>${plan.phases.some((ph) => /^Upgrade (React Native|Expo SDK)/.test(ph.title)) ? 'Upgrade plan' : 'Action plan'} <small>scope: ${esc(plan.complexity.size)}</small></h2>${plan.phases
@@ -66,6 +84,7 @@ main{overflow-wrap:anywhere}code{overflow-wrap:anywhere;word-break:break-word}.f
 li.bumps summary{cursor:pointer}li.bumps table{width:100%;border-collapse:collapse;margin-top:10px;font-size:14px}li.bumps th,li.bumps td{text-align:left;padding:4px 8px;border-top:1px solid var(--line)}.muted{color:var(--muted);font-weight:400}
 .f{display:flex;gap:12px;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--low);border-radius:8px;padding:10px 14px}
 .f p{margin:2px 0 0;color:var(--muted);font-size:14px}.f strong{overflow-wrap:anywhere}
+.proof{display:block;font-size:12px;color:var(--muted);margin-top:2px}li.group{list-style:none;border:0;background:none;padding:0;margin-top:18px}li.group h3{margin:0}li.group p{margin:2px 0 4px}
 .fid{display:block;width:fit-content;max-width:100%;margin-top:2px;font-size:12px;color:var(--muted);overflow-wrap:anywhere}
 .tag{flex:none;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;min-width:64px;padding-top:2px}
 .critical{border-left-color:var(--critical)}.critical .tag{color:var(--critical)}

@@ -182,6 +182,10 @@ function lowContrast(tree, kinds, sheets, rel, out) {
     }
   };
   const checkText = (el, ancestors) => {
+    // A Text that holds only a symbol (✓, •, →, ★) and no letter or digit is an icon or a
+    // decoration, not text to read; WCAG's text contrast does not apply to it.
+    const literal = el.children.filter((c) => c.kind === 'text').map((c) => c.value).join('');
+    if (literal && el.children.every((c) => c.kind === 'text') && !/[\p{L}\p{N}]/u.test(literal)) return;
     const style = el.attrs.get('style');
     const own = styleRead(style, sheets, colorProps);
     if (!own || own.color === undefined || own.opacity !== undefined) return;
@@ -291,7 +295,7 @@ export function uiChecks(project) {
     const rel = file.split(path.sep).join('/');
     if (!/react-native/.test(text)) continue;
     // Developer-only screens (a debug menu, dev tools, storybook) are not seen by users.
-    if (/(?:^|\/)(?:debug|dev-?tools?|dev-?menu|developer|__dev__|storybook|\.storybook)\/|(?:^|\/)(?:Debug|DevMenu|DevTools)\w*\.[jt]sx?$/i.test(rel)) continue;
+    if (/(?:^|\/)(?:debug|dev-?tools?|dev-?menu|developer|__dev__|storybook|\.storybook|[\w-]*inspector|flipper)\/|(?:^|\/)(?:Debug|DevMenu|DevTools|\w*Inspector)\w*\.[jt]sx?$/i.test(rel)) continue;
     const kinds = classify(text);
     for (const m of text.matchAll(DEFAULT_PROPS)) {
       const before = text.slice(0, m.index);

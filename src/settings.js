@@ -1,5 +1,6 @@
 import fs from './read-boundary.js';
 import path from 'node:path';
+import { findingLocations } from './locations.js';
 
 // .nativekeel.json in the app folder: a team's decisions, committed with the code.
 //   { "failOn": "high", "ignore": [{ "id": "flipper", "reason": "Removed in the next sprint" }],
@@ -30,9 +31,13 @@ export function readSettings(root) {
   for (const entry of Array.isArray(data.ignore) ? data.ignore : []) {
     const id = entry && typeof entry.id === 'string' ? entry.id.trim() : '';
     const reason = entry && typeof entry.reason === 'string' ? entry.reason.trim() : '';
+    // "until": an accepted finding comes back for review on that date instead of staying hidden.
+    const until = entry && typeof entry.until === 'string' ? entry.until.trim() : '';
     if (!id || id === '*') warnings.push(`${SETTINGS_FILE}: an ignore entry has no usable id.`);
     else if (!reason) warnings.push(`${SETTINGS_FILE}: ignore "${id}" has no reason, so it was not applied.`);
-    else ignore.push({ id, reason });
+    else if (until && !/^\d{4}-\d{2}-\d{2}$/.test(until)) warnings.push(`${SETTINGS_FILE}: ignore "${id}" has until "${until}"; use YYYY-MM-DD. It was not applied.`);
+    else if (until && until < new Date().toISOString().slice(0, 10)) warnings.push(`${SETTINGS_FILE}: the exception for "${id}" ended on ${until} ("${reason}"); the finding is shown again. Review it, then fix it or set a new date.`);
+    else ignore.push({ id, reason, ...(until ? { until } : {}) });
   }
   // Folders that are not part of the app (a web dashboard, a backend, an example project): a
   // finding whose files all sit in them is left out. Findings without a file always stay.
@@ -60,7 +65,7 @@ const matches = (rule, id) => (rule.endsWith('*') ? id.startsWith(rule.slice(0, 
 const NEVER_IGNORED = new Set(['malicious-code', 'vscode-autorun-task']);
 
 // Returns { findings, ignored }: ignored lists each finding left out, with the rule's reason.
-const findingFiles = (f) => [...new Set([f.fix && f.fix.file, ...(Array.isArray(f.evidence) ? f.evidence.map((e) => e && e.file) : [])].filter((x) => typeof x === 'string' && x).map((x) => x.split(path.sep).join('/').replace(/^\.\//, '')))];
+const findingFiles = (f) => [...new Set(findingLocations(f).map((l) => l.file))];
 const inside = (file, dir) => file === dir || file.startsWith(`${dir}/`);
 
 export function applySettings(findings, settings) {
@@ -74,7 +79,7 @@ export function applySettings(findings, settings) {
     const files = never || rule ? [] : findingFiles(f);
     const dirs = files.length ? files.map((file) => exclude.find((e) => inside(file, e.path))) : [];
     const excluded = dirs.length && dirs.every(Boolean) ? dirs[0] : null;
-    if (rule) ignored.push({ id: f.id, severity: f.severity, title: f.title, reason: rule.reason });
+    if (rule) ignored.push({ id: f.id, severity: f.severity, title: f.title, reason: rule.reason, ...(rule.until ? { until: rule.until } : {}) });
     else if (excluded) ignored.push({ id: f.id, severity: f.severity, title: f.title, reason: `${excluded.path}/ excluded: ${excluded.reason}` });
     else kept.push(f);
   }

@@ -22,6 +22,7 @@ export function compareScans(before, after) {
       native: [before.deps.filter((d) => d.native).length, after.deps.filter((d) => d.native).length],
     },
     dates: [before.scannedAt, after.scannedAt],
+    tools: [before.toolVersion || null, after.toolVersion || null],
     ratings: { before: ratings(before.findings), after: ratings(after.findings) },
   };
 }
@@ -56,5 +57,8 @@ export function compareToMarkdown(c, { title = 'Health report: before and after'
     lines.push('');
   }
   if (!c.fixed.length && !c.added.length) lines.push('No changes in findings.', '');
+  // Different tool versions: part of the change can come from the checks (fewer false alarms, new
+  // checks), not from the app.
+  if (c.tools && c.tools[0] !== c.tools[1]) lines.push(`_Scanned with NativeKeel ${c.tools[0] || 'an older version'} and then ${c.tools[1] || 'an unknown version'}: some of these changes may come from the checks, not from the app. To separate them, scan the earlier commit again with ${c.tools[1] || 'the newer version'}._`, '');
   return `${lines.join('\n')}\n`;
 }

@@ -362,8 +362,11 @@ async function main() {
   if (flags.markdown) write(flags.markdown, markdownReport(result, { verbose: !!flags.verbose }));
   if (flags.sarif) write(flags.sarif, `${JSON.stringify(sarifReport(result, { version: packageVersion() }), null, 2)}\n`);
   if (flags.sonar) {
-    const { sonarReport } = await import('../src/report-sonar.js');
-    write(flags.sonar, `${JSON.stringify(sonarReport(result), null, 2)}\n`);
+    const { sonarReport, sonarScopeWarning } = await import('../src/report-sonar.js');
+    const sonar = sonarReport(result);
+    write(flags.sonar, `${JSON.stringify(sonar, null, 2)}\n`);
+    const scope = sonarScopeWarning(sonar);
+    if (scope) console.error(`nativekeel: ${scope}`);
   }
   if (flags.upload && command !== 'security') {
     const { uploadReport, summaryFindings } = await import('../src/upload.js');

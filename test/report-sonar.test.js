@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
+import fs from 'node:fs';
 import { sonarReport } from '../src/report-sonar.js';
 import { makeProject } from './helpers.js';
 
@@ -28,4 +29,21 @@ test('sonar: generic issue format with rules, impacts and paths relative to the 
   assert.equal(rule('crash-removed-core-imports').type, 'BUG');
   assert.ok(rule('vuln.high') && rule('vuln.medium'), 'one rule per severity when a check has several');
   assert.ok(r.rules.every((x) => x.engineId === 'nativekeel' && x.name && x.description));
+});
+
+test('sonar: locations given as "file:line" or only in the text; secondary locations; scope warning', async () => {
+  const { sonarScopeWarning } = await import('../src/report-sonar.js');
+  const f = (id, extra) => ({ id, severity: 'medium', area: 'accessibility', title: 't', detail: 'd', ...extra });
+  const root = makeProject({ 'package.json': '{"name":"a"}' });
+  const result = { project: { root }, findings: [
+    f('a11y-icon-button-unlabeled', { evidence: [{ kind: 'source', at: 'src/A.tsx:4' }, { kind: 'source', at: 'src/B.tsx:9' }] }),
+    f('perf-console-in-release', { detail: 'see src/screens/Home.tsx:12 and more' }),
+  ] };
+  const r = sonarReport(result, { base: root });
+  assert.deepEqual(r.issues.map((i) => [i.primaryLocation.filePath, i.primaryLocation.textRange.startLine]), [['src/A.tsx', 4], ['src/screens/Home.tsx', 12]]);
+  assert.deepEqual(r.issues[0].secondaryLocations.map((l) => l.filePath), ['src/B.tsx']);
+  fs.writeFileSync(path.join(root, 'sonar-project.properties'), 'sonar.sources=app\n');
+  assert.match(sonarScopeWarning(r, { cwd: root }), /^2 of 2 issues point at files outside sonar.sources \(app\)/);
+  fs.writeFileSync(path.join(root, 'sonar-project.properties'), 'sonar.sources=src\n');
+  assert.equal(sonarScopeWarning(r, { cwd: root }), null);
 });

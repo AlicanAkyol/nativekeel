@@ -211,6 +211,8 @@ test('release recency: stale packages are flagged, revived "unmaintained" ones a
   assert.match(byId['dep-revived:revived-image'].title, /marked unmaintained, but 2026-10-02 saw a new release/);
   assert.equal(byId['dep-risk:fresh-lib'], undefined, 'packages the directory knows as maintained are not re-checked');
   assert.equal(byId['dep-risk:base64-js'], undefined, 'an old pure-JS utility that does not depend on React Native is fine');
+  assert.match(byId['dep-risk:ui-kit'].detail, /^No release for \d years\. That alone does not mean it is abandoned/, 'an old release date is not called abandoned');
+  assert.doesNotMatch(byId['dep-risk:ui-kit'].detail, /No fixes will come/);
 });
 
 test('linear-gradient: high only when a LinearGradient file also renders a Modal', async () => {
@@ -583,4 +585,14 @@ test('a finding in a file the app never imports is lowered and labelled as dead 
   assert.ok(d && d.deadCode, JSON.stringify(d && d.title));
   assert.equal(d.severity, 'low');
   assert.match(d.title, /in code the app never imports/);
+});
+
+test('compare says when two scans come from different NativeKeel versions', async () => {
+  const { compareScans, compareToMarkdown } = await import('../src/compare.js');
+  const base = { project: { newArch: {} }, deps: [], findings: [], scannedAt: '2026-10-20T00:00:00Z' };
+  const md = compareToMarkdown(compareScans({ ...base, toolVersion: '0.1.109' }, { ...base, toolVersion: '0.1.111' }));
+  assert.match(md, /Scanned with NativeKeel 0\.1\.109 and then 0\.1\.111: some of these changes may come from the checks/);
+  assert.doesNotMatch(compareToMarkdown(compareScans({ ...base, toolVersion: '0.1.111' }, { ...base, toolVersion: '0.1.111' })), /Scanned with NativeKeel/);
+  const r = await analyze(loadProject(makeProject({ 'package.json': { name: 'a', dependencies: { 'react-native': '0.80.0' } } })), { get: async () => null, now: NOW });
+  assert.match(r.toolVersion, /^\d+\.\d+\.\d+$/);
 });
