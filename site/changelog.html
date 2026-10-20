@@ -40,6 +40,12 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.110</h2><p class="date">20 October 2026</p>
+<ul>
+<li><span class="tag">Security</span><b>Reads the database rules allow too widely.</b> Firestore rules that let any signed-in user read a collection of people or private records (<code>users</code>, <code>profiles</code>, <code>messages</code>, <code>orders</code>, <code>payments</code>…) with only <code>request.auth != null</code>, and Storage rules that do the same for every file in the bucket. Supabase: a table of people (users, profiles, patients, customers…) with columns such as email, phone or address and a SELECT policy <code>using (true)</code> for anon or authenticated users. A hospital's or shop's phone is public on purpose, so only tables of people count.</li>
+<li><span class="tag">Security</span><b>Public storage buckets with private names.</b> A Supabase bucket such as <code>receipts</code>, <code>documents</code> or <code>kyc</code> created with <code>public = true</code>: every file can be downloaded by URL without signing in. Found in an open-source expense app's receipts bucket.</li>
+</ul></div>
+
 <div class="rel"><h2>0.1.109</h2><p class="date">20 October 2026</p>
 <ul>
 <li><span class="tag">Security</span><b>CI workflows that run a fork's code with your secrets.</b> A GitHub Actions workflow started by <code>pull_request_target</code> has the repository's secrets and a token that can write to it, for pull requests from any fork. If it checks out the pull request and then runs anything (<code>npm ci</code> runs the package's own scripts), the fork's author gets your EXPO_TOKEN, App Store Connect or Play credentials. Jellyfin's iOS app was exposed exactly this way (GHSA-7qhm-2m45-7fmh); NativeKeel reports its workflow before the fix and nothing after. Jobs limited to the repository's own branches or behind an approval environment, directly or through <code>needs:</code>, are left alone. Workflows are read from the repository root, also when the app is a folder of a monorepo.</li>

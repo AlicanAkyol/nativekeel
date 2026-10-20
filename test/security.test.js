@@ -443,3 +443,18 @@ test('server secrets read by app code: provider names and generic *_SECRET; SDK 
   assert.match(run('const s = process.env.EXPO_PUBLIC_API_SHARED_SECRET;')[0] || '', /^Server secret ships/);
   for (const code of ['const s = process.env.EXPO_PUBLIC_SINGULAR_SDK_SECRET;', 'const a = process.env.EXPO_PUBLIC_ADJUST_APP_SECRET;', 'const k = process.env.EXPO_PUBLIC_RAINBOW_MASTER_KEY;', 'const k = process.env.EXPO_PUBLIC_SECRET_SANTA_URL;']) assert.deepEqual(run(code), [], code);
 });
+
+test('reads open to any signed-in user on people and private records; public buckets with private names; people tables readable by everyone', async () => {
+  const { firebaseBroadWrites, supabaseBroadPolicies } = await import('../src/authorization.js');
+  const fb = (files) => firebaseBroadWrites(makeProject(files)).filter((f) => f.id.startsWith('firebase-auth-only-read')).map((f) => f.title);
+  const rules = "service cloud.firestore {\n  match /databases/{database}/documents {\n    match /users/{userId} {\n      allow read: if request.auth != null;\n    }\n    match /products/{id} {\n      allow read: if request.auth != null;\n    }\n  }\n}";
+  assert.deepEqual(fb({ 'firestore.rules': rules }), ['Any signed-in user can read every users document (firestore.rules:4)']);
+  assert.equal(fb({ 'storage.rules': 'service firebase.storage { match /b/{bucket}/o { match /{allPaths=**} { allow read: if request.auth != null; } } }' }).length, 1);
+  assert.deepEqual(fb({ 'storage.rules': 'service firebase.storage { match /b/{bucket}/o { match /User/{uid}/icon/{allPaths=**} { allow read: if request.auth != null; } } }' }), []);
+  const sb = (sql) => supabaseBroadPolicies(makeProject({ 'supabase/migrations/0001.sql': sql })).filter((f) => /broad-read|private-bucket/.test(f.id)).map((f) => f.title);
+  const profiles = 'create table public.profiles (id uuid primary key, email text, display_name text);\nalter table public.profiles enable row level security;\ncreate policy "read all" on public.profiles for select to anon using (true);';
+  assert.match(sb(profiles)[0] || '', /^Anyone can read every row of public\.profiles, which holds email/);
+  assert.deepEqual(sb(profiles.replace(/profiles/g, 'hospitals')), [], 'a hospital phone/email is public on purpose');
+  assert.match(sb("insert into storage.buckets (id, name, public) values ('receipts', 'receipts', true);")[0] || '', /Storage bucket "receipts" is public/);
+  assert.deepEqual(sb("insert into storage.buckets (id, name, public) values ('avatars', 'avatars', true);"), []);
+});
