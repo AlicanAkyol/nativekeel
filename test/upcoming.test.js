@@ -74,3 +74,12 @@ test('upcoming: expo-file-system File.write is flagged only on a real File insta
   assert.ok(ids(inline).includes('expo58-file-write'), 'inline form');
   assert.ok(!ids(other).includes('expo58-file-write'), 'unrelated .write() is not flagged');
 });
+
+test('upcoming: additional React Native 0.87 removals and deprecations are catalogued', () => {
+  const root = makeProject({
+    'package.json': { name: 'app', dependencies: { 'react-native': '0.86.0' } },
+    'src/A.ts': "import IO from 'react-native/src/private/webapis/intersectionobserver/IntersectionObserver';\nimport { DrawerLayoutAndroid } from 'react-native';\nimport { registerAssetsDir } from '@react-native/assets-registry';\n",
+  });
+  const got = ids(root);
+  for (const id of ['rn87-src-private', 'rn87-drawer-layout-android', 'rn87-assets-registry']) assert.ok(got.includes(id), id);
+});
