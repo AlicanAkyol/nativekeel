@@ -40,6 +40,13 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.117</h2><p class="date">21 October 2026</p>
+<p>The question every team asks before an upgrade, answered directly: <code>npx nativekeel upgrade</code>.</p>
+<ul>
+<li><span class="tag">New</span><b>Upgrade readiness.</b> <code>npx nativekeel upgrade</code> gives a go/no-go for moving to the newest React Native / Expo: what breaks in <em>your</em> code and dependencies, with file and line, as blockers; behavior and tooling changes to review; and a clear verdict — READY, NOT READY (with the blockers), a multi-version jump (upgrade one step at a time), or already current. It exits 1 when blockers remain, so a CI job can gate the upgrade pull request. Also the MCP tool <code>upgrade_readiness</code> for AI agents.</li>
+<li><span class="tag">Trust</span><b>Honest about multi-version jumps.</b> An app several versions behind is never shown a clean "ready": the verdict says the catalog covers the newest step and the earlier steps have their own breaking changes, and points to <code>plan</code> for the staged path.</li>
+<li><span class="tag">Fix</span><b>Fewer false alarms in the expo-file-system change.</b> <code>File.write()</code> becoming async is now flagged only on a real <code>new File(...)</code> instance, not on any <code>.write()</code> in a file that happens to import expo-file-system (a database transaction was being flagged).</li>
+</ul></div>
 <div class="rel"><h2>0.1.116</h2><p class="date">21 October 2026</p>
 <p>A reliability release from a third production review, with no new checks: outputs that crashed, a comparison that missed regressions, and labels that claimed more than the scan knew.</p>
 <ul>

@@ -18,7 +18,7 @@ import { buildImprovementPlan, improvementToMarkdown, improvementToText } from '
 import { SITE_URL } from '../src/config.js';
 
 const VALUE_FLAGS = new Set(['--html', '--out', '--baseline', '--save-baseline', '--brand', '--sarif', '--markdown', '--fail-on', '--sonar', '--path', '--base', '--comment', '--report-url', '--artifact']);
-const COMMANDS = new Set(['scan', 'security', 'improve', 'bundle', 'plan', 'compare', 'compare-imports', 'prepare-imports', 'explain', 'verify', 'fleet', 'mcp', 'help']);
+const COMMANDS = new Set(['scan', 'security', 'upgrade', 'improve', 'bundle', 'plan', 'compare', 'compare-imports', 'prepare-imports', 'explain', 'verify', 'fleet', 'mcp', 'help']);
 
 function parseArgs(argv) {
   const flags = { artifacts: [] };
@@ -54,6 +54,9 @@ Usage
                                  What the release JavaScript bundle is made of, measured
                                  from the source map a release build wrote; with --base,
                                  what grew, shrank or was added since that build (--json)
+  npx nativekeel upgrade [path]  Readiness for the newest React Native / Expo:
+                                 what breaks in your code and deps, with a
+                                 go/no-go verdict (exit 1 when blockers remain)
   npx nativekeel plan [path]     Write a step-by-step upgrade plan
   npx nativekeel fleet [folder ...] [--base fleet.json]
                                  Several apps side by side: versions, A–E ratings
@@ -323,6 +326,21 @@ async function main() {
     if (flags.out) write(flags.out, output);
     else console.log(output);
     return plan.safety.blocked ? 1 : 0;
+  }
+
+  if (command === 'upgrade') {
+    const { upgradeReport, upgradeText } = await import('../src/upgrade.js');
+    const result = await runScan(root, flags);
+    const report = upgradeReport(result);
+    if (flags.json) {
+      console.log(JSON.stringify(report, null, 2));
+    } else {
+      const useColor = process.stdout.isTTY && !flags['no-color'];
+      const paint = (code) => (s) => (useColor ? `\x1b[${code}m${s}\x1b[0m` : s);
+      const color = { red: paint('31'), yellow: paint('33'), gray: paint('90'), bold: paint('1'), green: paint('32') };
+      console.log(upgradeText(report, { color }));
+    }
+    return report.status === 'blocked' ? 1 : 0;
   }
 
   if (command === 'plan') {

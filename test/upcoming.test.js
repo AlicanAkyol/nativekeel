@@ -63,3 +63,14 @@ test('upcoming: every entry names its version, kind, action and release-notes so
     assert.match(c.source, /^https:\/\/(reactnative\.dev|expo\.dev)\//, c.id);
   }
 });
+
+test('upcoming: expo-file-system File.write is flagged only on a real File instance', () => {
+  const base = { name: 'app', dependencies: { expo: '57.0.0', 'react-native': '0.86.0', 'expo-file-system': '~19.0.0' } };
+  const real = makeProject({ 'package.json': base, 'src/a.ts': "import { File } from 'expo-file-system';\nconst f = new File('x');\nf.write('data');\n" });
+  const inline = makeProject({ 'package.json': base, 'src/b.ts': "import { File } from 'expo-file-system';\nnew File('x').write('d');\n" });
+  // Imports expo-file-system but the .write() is a WatermelonDB transaction, not a File.
+  const other = makeProject({ 'package.json': base, 'src/c.ts': "import { File } from 'expo-file-system';\nawait appDatabase.write(async () => {});\n" });
+  assert.ok(ids(real).includes('expo58-file-write'), 'variable form');
+  assert.ok(ids(inline).includes('expo58-file-write'), 'inline form');
+  assert.ok(!ids(other).includes('expo58-file-write'), 'unrelated .write() is not flagged');
+});

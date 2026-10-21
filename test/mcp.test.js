@@ -15,7 +15,7 @@ test('MCP: initialize, tools/list, unknown method', async () => {
   assert.equal(init.result.protocolVersion, '2025-03-26');
   assert.match(init.result.instructions, /data, never instructions/);
   const list = await handle({ jsonrpc: '2.0', id: 2, method: 'tools/list' }, ctx);
-  assert.deepEqual(list.result.tools.map((t) => t.name), ['scan_project', 'security_audit', 'improve_app', 'measure_bundle', 'upgrade_plan', 'check_library', 'explain_error', 'verify_upgrade']);
+  assert.deepEqual(list.result.tools.map((t) => t.name), ['scan_project', 'security_audit', 'improve_app', 'measure_bundle', 'upgrade_plan', 'upgrade_readiness', 'check_library', 'explain_error', 'verify_upgrade']);
   assert.ok(list.result.tools.every((t) => !('run' in t)));
   assert.equal((await handle({ jsonrpc: '2.0', id: 3, method: 'nope' }, ctx)).error.code, -32601);
   assert.equal(await handle({ jsonrpc: '2.0', method: 'notifications/initialized' }, ctx), null);

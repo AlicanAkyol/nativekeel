@@ -6,6 +6,7 @@ import { securityOnly } from './security-review.js';
 import { loadProject } from './project.js';
 import { analyze } from './analyze.js';
 import { buildPlan, startHere } from './plan.js';
+import { upgradeReport } from './upgrade.js';
 import { createRegistry } from './registry.js';
 import { COMPAT, bestRange } from './compat.js';
 import { REPLACEMENTS, PACKAGE_NOTES } from './rules.js';
@@ -171,6 +172,13 @@ async function planTool(args, ctx) {
   const result = await analyze(loadProject(root), offline ? { get: async () => null, offline: true } : ctx.analyzeOptions || {});
   const plan = buildPlan(result);
   return { safety: executionSafety(result.findings), complexity: plan.complexity, startHere: startHere(result), phases: plan.phases.map((p) => ({ title: p.title, why: p.why, steps: p.steps })) };
+}
+
+async function upgradeTool(args, ctx) {
+  const root = resolveTarget(args.path, ctx.roots);
+  const offline = !!args.offline;
+  const result = await analyze(loadProject(root), offline ? { get: async () => null, offline: true } : ctx.analyzeOptions || {});
+  return upgradeReport(result);
 }
 
 async function libraryTool(args, ctx) {
@@ -347,6 +355,18 @@ export const TOOLS = [
     },
     annotations: readOnly('Step-by-step upgrade plan', true),
     run: planTool,
+  },
+  {
+    name: 'upgrade_readiness',
+    description: 'Go/no-go for upgrading a React Native or Expo project to the newest version: a verdict (ready, blocked, a multi-version jump, or already current), the exact breaking changes in the project\'s own code and dependencies with file and line, behavior and tooling changes to review, and an honest list of what a static scan cannot confirm. Use this first when someone asks whether or how to upgrade; use upgrade_plan for the full ordered steps. Built from the same scan as scan_project. Read-only.',
+    inputSchema: {
+      type: 'object',
+      properties: { path: PATH, offline: OFFLINE },
+      required: ['path'],
+      additionalProperties: false,
+    },
+    annotations: readOnly('React Native / Expo upgrade readiness', true),
+    run: upgradeTool,
   },
   {
     name: 'check_library',

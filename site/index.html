@@ -218,6 +218,7 @@ New Architecture  android: <span class="r">off</span>  ios: <span class="r">off<
     <p class="section-lead">Everything you need to do the upgrade yourself, step by step.</p>
     <div class="steps">
       <div class="card"><h3>Scan</h3><p>Run <code>npx nativekeel</code> in your app folder. Share the HTML report with your team or client.</p></div>
+      <div class="card"><h3>Upgrade readiness</h3><p><code>nativekeel upgrade</code> answers the one question before you start: what breaks in your own code and dependencies on the newest React Native / Expo, with file and line, and a clear go / no-go. Exit 1 when blockers remain, so CI can gate the upgrade pull request.</p></div>
       <div class="card"><h3>Plan</h3><p><code>nativekeel plan</code> orders the work: stop leaks, replace blockers, switch architecture, then upgrade React Native in reviewable hops.</p></div>
       <div class="card"><h3>Verify</h3><p>After each step, <code>nativekeel verify</code> shows what got fixed and what is new compared with your last commit, so nothing slips in unnoticed.</p></div>
     </div>
