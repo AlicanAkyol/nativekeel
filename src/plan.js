@@ -667,7 +667,11 @@ export function buildPlan(result) {
     ],
   });
 
-  return { phases, complexity: complexity(result.findings) };
+  // A fix with no step text (an unknown or partial shape) must not reach the renderers as undefined.
+  const kept = phases
+    .map((p) => ({ ...p, steps: p.steps.filter((s) => typeof s === 'string' && s) }))
+    .filter((p) => p.steps.length);
+  return { phases: kept, complexity: complexity(result.findings) };
 }
 
 export function planToMarkdown(result, plan) {

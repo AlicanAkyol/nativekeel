@@ -1,7 +1,14 @@
 // Where a finding is, in one shape: [{ file, line, role }]. Checks record locations in several
 // ways (evidence[].file/line, evidence[].at "file:line", fix.file, or only "file:line" in the
 // title or detail); every exporter and post-processing step reads them through here.
-const CODE_REF = /(?:^|[\s(`'",;])((?:[\w@.~-]+\/)*[\w@.~[\]()-]+\.(?:[cm]?[jt]sx?|json|kt|java|swift|m|mm|h|xml|plist|gradle|kts|yml|yaml|sql|rules|properties)):(\d+)/g;
+// Folder and file names may contain () and [] (Expo Router: app/(tabs)/[id].tsx); a "(" with no
+// matching ")" belongs to the sentence ("… (index.js:6)"), not to the path.
+const CODE_REF = /(?:^|[\s(`'",;])((?:[\w@.~()[\]-]+\/)*[\w@.~()[\]-]+\.(?:[cm]?[jt]sx?|json|kt|java|swift|m|mm|h|xml|plist|gradle|kts|yml|yaml|sql|rules|properties)):(\d+)/g;
+const balance = (file) => {
+  let f = file;
+  while (f.startsWith('(') && (f.match(/\(/g) || []).length > (f.match(/\)/g) || []).length) f = f.slice(1);
+  return f;
+};
 
 function split(ref) {
   const m = String(ref).match(/^(.*?):(\d+)$/);
@@ -13,7 +20,7 @@ export function findingLocations(finding) {
   const seen = new Set();
   const push = (file, line, role) => {
     if (!file || typeof file !== 'string') return;
-    const f = file.replace(/^\.\//, '').split('\\').join('/');
+    const f = balance(file.replace(/^\.\//, '').split('\\').join('/'));
     const key = `${f}:${line || 1}`;
     if (seen.has(key)) return;
     seen.add(key);
@@ -32,6 +39,6 @@ export function findingLocations(finding) {
   const fix = finding.fix || {};
   if (fix.file) push(fix.file, fix.line, null);
   // Last resort: file:line written in the text ("… (src/screens/Home.tsx:12)").
-  if (!out.length) for (const m of `${finding.title || ''} ${finding.detail || ''}`.matchAll(CODE_REF)) push(m[1], m[2], null);
+  if (!out.length) for (const m of `${finding.title || ''} ${finding.detail || ''}`.matchAll(CODE_REF)) push(balance(m[1]), m[2], null);
   return out;
 }

@@ -2,7 +2,7 @@ import fs from './read-boundary.js';
 import path from 'node:path';
 import { compareVersions } from './known-issues.js';
 import { gitIgnored } from './git.js';
-import { consoleRemovedInRelease, devOnlyRemoved } from './performance.js';
+import { consoleSilenced, devOnlyRemoved } from './performance.js';
 
 // Security checks beyond leaked keys: known vulnerabilities in shipped dependencies, passwords
 // that flow into logs or remote writes, unsafe WebView settings, and Android backups.
@@ -197,7 +197,8 @@ function insideOtherProject(root, file) {
 }
 const LOGGED_SECRET = /\b(?:[\w$]*(?:access|refresh|auth|id|session|bearer|jwt|api)_?(?:token|key)|token|jwt|password|passwd|secret|apiKey|privateKey|mnemonic)\b/i;
 export function sensitiveLogs(root) {
-  if (consoleRemovedInRelease(root)) return [];
+  const silenced = consoleSilenced(root);
+  if (['log', 'info', 'warn', 'error', 'debug'].every((x) => silenced.has(x))) return [];
   const hits = [];
   for (const file of jsFiles(root)) {
     const rel = path.relative(root, file).split(path.sep).join('/');
@@ -208,7 +209,8 @@ export function sensitiveLogs(root) {
     const text = read(file);
     if (!text || !/\bconsole\./.test(text) || !LOGGED_SECRET.test(text)) continue;
     const code = devOnlyRemoved(text.replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' ')).replace(/(^|[^:])\/\/[^\n]*/g, '$1'));
-    for (const m of code.matchAll(/\bconsole\.(?:log|info|warn|error|debug)\s*\(/g)) {
+    for (const m of code.matchAll(/\bconsole\.(log|info|warn|error|debug)\s*\(/g)) {
+      if (silenced.has(m[1])) continue;
       const args = callArguments(code.slice(m.index, m.index + 600), /\bconsole\.(?:log|info|warn|error|debug)\s*\(/);
       // Identifiers only: words inside strings ("token refreshed") are not values.
       const values = args.replace(/(['"])(?:\\.|(?!\1)[^\\\n])*\1/g, ' ').replace(/`(?:\\.|\$\{([^}]*)\}|[^`\\])*`/g, (t) => [...t.matchAll(/\$\{([^}]*)\}/g)].map((x) => x[1]).join(' '));
@@ -1121,6 +1123,9 @@ export function backendAdminInBundle(root, deps = {}) {
           const name = raw.replace(/^EXPO_PUBLIC_/, '');
           const rule = BACKEND_ADMIN_NAMES.find(([r]) => r.test(name));
           if (!rule || keys.has(rule[1])) continue;
+          // A startup guard reads the variable to refuse it: its name is written as text next to a
+          // throw (`['EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY', process.env.…]` … throw "remove it").
+          if (new RegExp(`['"\`]${raw}['"\`]`).test(code) && /\bthrow\b/.test(code)) continue;
           const shown = m[0].startsWith('process.env.') ? m[1] : m[0].startsWith('Config.') ? `Config.${raw}` : raw;
           keys.set(rule[1], { rule, name: shown, how, where: `${rel}:${lineAt(m.index)}` });
         }

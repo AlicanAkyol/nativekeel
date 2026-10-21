@@ -113,7 +113,7 @@ test('pull request comment lists new and fixed findings by severity, with the ma
   assert.match(md, /\*\*2 new\*\*, \*\*1 fixed\*\* compared with `abcdef1`/);
   assert.ok(md.indexOf('Stripe key') < md.indexOf('Small img thing'));
   assert.match(md, /Whole app: 1 critical · 2 medium · 1 low\. \[Full report\]\(https:\/\/github\.com\/o\/r\/actions\/runs\/9\)/);
-  assert.match(md, /Quality gate: ❌ failed\*\*, 1 new critical or high finding\./);
+  assert.match(md, /Quality gate: ❌ failed\*\*, 1 new or worse critical or high finding\./);
   const clean = prComment({ commit: 'abc1234', diff: { added: [], fixed: [], counts: { after: {} } } });
   assert.match(clean, /No new findings and nothing fixed/);
   assert.match(clean, /Quality gate: ✅ passed/);

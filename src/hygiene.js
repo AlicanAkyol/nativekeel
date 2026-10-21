@@ -7,7 +7,7 @@ import { gitIgnored } from './git.js';
 // for review under "cleanup"; they do not change the A–E ratings.
 
 const SKIP = new Set(['node_modules', '.git', 'android', 'ios', 'build', 'dist', '.expo', 'coverage', 'vendor', 'Pods', 'web-build', '.next', '.turbo', 'storybook-static']);
-const NOT_APP = /^(?:server|backend|functions|api|scripts?|cli|tools|bin|docs?|website|e2e|test|tests|__tests__|__mocks__|supabase|patches)\/|(?:^|\/)(?:__tests__|__mocks__|__fixtures__|fixtures|stories|storybook|\.storybook)\//;
+const NOT_APP = /^(?:server|backend|functions|api|scripts?|cli|tools|bin|docs?|website|e2e|test|tests|__tests__|__mocks__|supabase|patches)\/|(?:^|\/)(?:__tests__|__mocks__|__fixtures__|fixtures|tests?|stories|storybook|\.storybook)\//;
 const CODE = /\.[cm]?[jt]sx?$/;
 const IMAGE = /\.(?:png|jpe?g|gif|webp|svg|mp4|mp3|wav|lottie)$/i;
 // Names only an editor or a person making a quick copy produces: "App copy.tsx", "App (2).tsx",
@@ -78,7 +78,9 @@ function aliases(root) {
 }
 
 const EXTS = ['', '.tsx', '.ts', '.jsx', '.js', '.mjs', '.cjs', '.json'];
-const PLATFORMS = ['', '.native', '.ios', '.android', '.web'];
+// Node built-ins scripts import without a node: prefix.
+const NODE_BUILTINS = new Set(['assert', 'buffer', 'child_process', 'cluster', 'crypto', 'dns', 'events', 'fs', 'http', 'http2', 'https', 'net', 'os', 'path', 'perf_hooks', 'process', 'querystring', 'readline', 'stream', 'string_decoder', 'timers', 'tls', 'tty', 'url', 'util', 'v8', 'vm', 'worker_threads', 'zlib']);
+const PLATFORMS = ['', '.native', '.ios', '.android', '.web', '.windows', '.macos', '.visionos'];
 
 function resolver(files) {
   const set = new Set(files);
@@ -87,7 +89,8 @@ function resolver(files) {
     for (const p of PLATFORMS) for (const e of EXTS) {
       for (const cand of [`${base}${p}${e}`, `${base}/index${p}${e}`]) {
         const n = path.posix.normalize(cand);
-        if (e && set.has(n)) found.push(n);
+        // No added extension only when the import already names one (`./Screen.js`).
+        if ((e || EXTS.includes(path.posix.extname(n))) && set.has(n)) found.push(n);
       }
     }
     return found;
@@ -152,11 +155,56 @@ export function hygieneChecks(project) {
     // Config plugins and other files the Expo config points at ("./plugins/withX").
     const config = read(root, 'app.json') + read(root, 'app.config.js') + read(root, 'app.config.ts');
     for (const m of config.matchAll(/['"]\.\/([^'"]+)['"]/g)) addEntry(m[1].replace(/\.[cm]?[jt]sx?$/, ''));
+    // Files package.json scripts run by path (`electron public/electron.js`, `node tools/x.mjs`).
+    const scripts = JSON.stringify(pkg.scripts || {});
+    // Their own imports (express, child_process) are not app imports the graph failed to follow.
+    const tooling = new Set();
+    for (const f of code) if (scripts.includes(f)) { entries.add(f); tooling.add(f); }
+    // Node scripts run by hand (a shebang, or Node built-ins with no React Native or Expo import),
+    // and Flow library definitions named in .flowconfig, are not app code that lost its import.
+    const flow = read(root, '.flowconfig');
+    // A file named with its extension in a string is read some other way (fs.readFileSync, a
+    // preval or WebView script): `'sso.js'`.
+    const quoted = new Set([...[...texts.values()].join('\n').matchAll(/['"`]([^'"`\n]*?\.[cm]?[jt]sx?)['"`]/g)].map((m) => path.posix.basename(m[1])));
+    for (const f of code) if (quoted.has(path.posix.basename(f))) entries.add(f);
+    for (const f of code) {
+      if (flow.includes(f)) { entries.add(f); continue; }
+      const t = texts.get(f) || '';
+      if ((/^#!/.test(t) || /(?:from\s*|require\(\s*)['"](?:node:\w+|fs|child_process|path|os)['"]/.test(t)) && !/(?:from\s*|require\(\s*)['"](?:react-native|expo)/.test(t)) { entries.add(f); tooling.add(f); }
+    }
+    // A folder with its own package.json (or a HarmonyOS oh-package.json5) is another project.
+    const projects = everything.filter((f) => /(?:^|\/)(?:package\.json|oh-package\.json5)$/.test(f) && f.includes('/')).map((f) => `${path.posix.dirname(f)}/`);
+    for (const f of code) if (projects.some((d) => f.startsWith(d))) { entries.add(f); tooling.add(f); }
+    // Codegen specs are read by the native build (package.json codegenConfig.jsSrcsDir), and a
+    // Next.js app (next.config next to it) routes every file under pages/ or app/.
+    const specs = pkg.codegenConfig && pkg.codegenConfig.jsSrcsDir && `${pkg.codegenConfig.jsSrcsDir.replace(/^\.\/|\/$/g, '')}/`;
+    const next = everything.filter((f) => /(?:^|\/)next\.config\.[cm]?[jt]s$/.test(f)).map((f) => { const d = path.posix.dirname(f); return d === '.' ? '' : `${d}/`; });
+    for (const f of code) {
+      if (specs && f.startsWith(specs)) entries.add(f);
+      if (next.some((d) => f.startsWith(d) && /^(?:src\/)?(?:pages|app)\//.test(f.slice(d.length)))) { entries.add(f); tooling.add(f); }
+    }
+    // A web service worker is built as its own entry and loaded by URL, never imported.
+    for (const f of code) if (/(?:^|\/)(?:service-?worker|sw)\.[cm]?[jt]s$/i.test(f)) entries.add(f);
     // expo-router: every file under app/ is a route.
     for (const f of code) if (/^(?:src\/)?app\//.test(f) && /expo-router/.test(JSON.stringify(pkg.dependencies || {}))) entries.add(f);
     // Tests, server functions, scripts and stories count as users too: a file only they import is
     // not dead, just not in the app.
     for (const f of everything) if (CODE.test(f) && (NOT_APP.test(f) || /\.(?:test|spec|stories)\.[cm]?[jt]sx?$/.test(f))) { entries.add(f); if (!texts.has(f)) texts.set(f, strip(read(root, f))); }
+    // Files loaded by a computed path cannot be followed. require.context('./screens', …) loads a
+    // whole folder: every file in it counts as used. Any other import()/require() of a variable or
+    // template string leaves the graph incomplete: then nothing is called unused.
+    let dynamic = false;
+    for (const [f, t] of texts) {
+      for (const m of t.matchAll(/\brequire\.context\s*\(\s*['"]([^'"]+)['"]/g)) {
+        const dir = path.posix.normalize(path.posix.join(path.posix.dirname(f), m[1]));
+        for (const c of code) if (c === dir || c.startsWith(`${dir}/`)) entries.add(c);
+      }
+      // Only app code makes the graph incomplete: a build script or test loading by path does not.
+      // Quoted strings emptied first: code written inside a string (`"require(\"ws\")"`) loads nothing.
+      if (NOT_APP.test(f) || /\.(?:test|spec|stories)\.[cm]?[jt]sx?$/.test(f)) continue;
+      const bare = t.replace(/'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"/g, (q) => q[0] + q[0]);
+      if (/\brequire\.context\s*\(\s*[^'"\s]/.test(bare) || /\b(?:import|require)\s*\(\s*(?![\s'"]|`[^`$]*`)[^)]/.test(bare)) dynamic = true;
+    }
     const reached = new Set();
     const stack = [...entries];
     const unresolvedSpecs = new Set();
@@ -175,8 +223,8 @@ export function hygieneChecks(project) {
           const pkgName = spec.startsWith('@') ? spec.split('/').slice(0, 2).join('/') : spec.split('/')[0];
           // A bare path that is no installed package ("components/Header", "@/lib/x") is a root or
           // alias this check could not read: then the import graph cannot be trusted.
-          const implicit = /^(?:node:|react-native\/|@react-native\/|@expo\/|expo-|react-dom|@babel\/runtime)/.test(spec) || ['react', 'react-native', 'expo', 'fs', 'path', 'url', 'crypto', 'buffer', 'events', 'util', 'stream'].includes(pkgName);
-          if (!targets.length && !known.has(pkgName) && !implicit) unresolvedSpecs.add(spec);
+          const implicit = NODE_BUILTINS.has(pkgName) || /^(?:node:|react-native\/|@react-native\/|@expo\/|expo-|react-dom|@babel\/runtime|workbox-)/.test(spec) || ['react', 'react-native', 'expo', 'fs', 'path', 'url', 'crypto', 'buffer', 'events', 'util', 'stream'].includes(pkgName);
+          if (!targets.length && !known.has(pkgName) && !implicit && !tooling.has(f)) unresolvedSpecs.add(spec);
         }
         for (const t of targets) if (!reached.has(t)) stack.push(t);
       }
@@ -193,14 +241,15 @@ export function hygieneChecks(project) {
     // "components/x" with a components folder) means part of the graph is missing: no report.
     const dirs = new Set(everything.filter((f) => f.includes('/')).flatMap((f) => [f.split('/')[0], f.startsWith('src/') ? f.split('/')[1] : null]).filter(Boolean));
     const aliasLike = [...unresolvedSpecs].some((sp) => /^[~#]|^@\//.test(sp) || dirs.has(sp.split('/')[0]));
-    if (entries.size && reached.size >= 5 && !aliasLike && unresolvedSpecs.size <= 2 && orphans.length < appCode.length / 2) deadCache.set(project, new Set(orphans));
-    if (entries.size && reached.size >= 5 && !aliasLike && unresolvedSpecs.size <= 2 && orphans.length && orphans.length < appCode.length / 2) {
+    const trusted = entries.size && reached.size >= 5 && !aliasLike && !dynamic && unresolvedSpecs.size <= 2 && orphans.length < appCode.length / 2;
+    if (trusted) deadCache.set(project, new Set(orphans));
+    if (trusted && orphans.length) {
       findings.push({
         id: 'cleanup-unused-files',
         severity: 'low',
         area: 'cleanup',
         title: `${orphans.length} source file${orphans.length === 1 ? '' : 's'} that nothing imports (${orphans[0]}${orphans.length > 1 ? ', …' : ''})`,
-        detail: `${orphans.slice(0, 10).join(', ')}${orphans.length > 10 ? `, and ${orphans.length - 10} more` : ''}. Followed every import from the app's entry point${entries.size > 1 ? 's' : ''}; these files are never reached, so they are not in the app. Dead files still cost type-check and review time and get copied from by mistake. Check for a use outside the app (a script, a test helper), then delete them.`,
+        detail: `${orphans.slice(0, 10).join(', ')}${orphans.length > 10 ? `, and ${orphans.length - 10} more` : ''}. Followed every import from the app's entry point${entries.size > 1 ? 's' : ''}; no import NativeKeel could follow reaches these files. Dead files still cost type-check and review time and get copied from by mistake. Check that nothing loads them another way (a script, a test helper, native code) before deleting them.`,
         fix: { kind: 'cleanup', step: `Delete source files nothing imports (${orphans.slice(0, 3).join(', ')}${orphans.length > 3 ? ', …' : ''}) after checking they are not used outside the app.` },
         evidence: orphans.slice(0, 20).map((f) => ({ file: f, line: 1, role: 'unused' })),
       });

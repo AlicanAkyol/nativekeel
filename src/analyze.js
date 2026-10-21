@@ -677,12 +677,14 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
   if (dead && dead.size) {
     const order = ['critical', 'high', 'medium', 'low', 'info'];
     for (const f of findings) {
-      if (['secret', 'store', 'dependency', 'cleanup', 'expo', 'react-native', 'native'].includes(f.area) || f.severity === 'info' || f.severity === 'low') continue;
+      if (['secret', 'store', 'dependency', 'cleanup', 'expo', 'react-native', 'native'].includes(f.area) || f.severity === 'info') continue;
       const list = [...new Set(findingLocations(f).map((l) => l.file))];
       if (!list.length || !list.every((x) => dead.has(x))) continue;
-      f.severity = order[Math.min(order.length - 2, order.indexOf(f.severity) + 2)];
-      f.title = `${f.title} (in code the app never imports)`;
-      f.detail = `${list.length === 1 ? 'This file is' : 'These files are'} not reached from the app's entry point, so this cannot happen in the app as it is; it would once the code is imported again. Delete the dead code, or fix it before reusing it. ${f.detail || ''}`;
+      // A static import graph can miss a file loaded another way, so this lowers crash, performance
+      // and accessibility findings but never a security one: those are only labelled.
+      if (f.area !== 'security' && f.severity !== 'low') f.severity = order[Math.min(order.length - 2, order.indexOf(f.severity) + 2)];
+      f.title = `${f.title} (in code no import reaches)`;
+      f.detail = `No import NativeKeel could follow from the app's entry point reaches ${list.length === 1 ? 'this file' : 'these files'}. If nothing loads ${list.length === 1 ? 'it' : 'them'} another way, this does not happen in the app as it is, but would once the code is used again: fix it or remove the dead code. ${f.detail || ''}`;
       f.deadCode = true;
     }
   }

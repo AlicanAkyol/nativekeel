@@ -27,7 +27,7 @@ export function htmlReport(result, { brand = null, plan = null } = {}) {
         .join('')}</tbody></table></details></div></li>`
     : '';
   // Evidence strength, apart from severity.
-  const PROOF = { config: 'Seen in a configuration file', source: 'Found in source code; whether it runs was not verified', 'dead-code': 'In code the app never imports', 'built-app': 'Found in the built app', versions: 'From package versions' };
+  const PROOF = { config: 'Seen in a configuration file', source: 'Found in source code; whether it runs was not verified', 'dead-code': 'In code no import reaches (if nothing loads it another way)', 'built-app': 'Found in the built app', versions: 'From package versions' };
   const card = (f, sev) => `<li class="f ${sev}"><span class="tag">${sevLabel[sev]}</span><div><strong>${rich(f.title)}</strong><code class="fid">${esc(String(f.id))}</code>${PROOF[f.proof] ? `<span class="proof">${PROOF[f.proof]}</span>` : ''}<p>${rich(f.detail)}</p>${f.attack ? `<p><b>Verify:</b> ${esc(f.attack.validation)}</p><p><b>Fix:</b> ${rich(f.fix.step)}</p>` : ''}</div></li>`;
   // Grouped by what to do with them, then by severity: confirmed configuration problems first,
   // code findings to check, upgrade work, performance signals to measure, cleanup, notes.

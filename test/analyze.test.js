@@ -584,7 +584,7 @@ test('a finding in a file the app never imports is lowered and labelled as dead 
   const d = r.findings.find((x) => x.id === 'crash-removed-core-imports');
   assert.ok(d && d.deadCode, JSON.stringify(d && d.title));
   assert.equal(d.severity, 'low');
-  assert.match(d.title, /in code the app never imports/);
+  assert.match(d.title, /in code no import reaches/);
 });
 
 test('compare says when two scans come from different NativeKeel versions', async () => {
@@ -595,4 +595,44 @@ test('compare says when two scans come from different NativeKeel versions', asyn
   assert.doesNotMatch(compareToMarkdown(compareScans({ ...base, toolVersion: '0.1.111' }, { ...base, toolVersion: '0.1.111' })), /Scanned with NativeKeel/);
   const r = await analyze(loadProject(makeProject({ 'package.json': { name: 'a', dependencies: { 'react-native': '0.80.0' } } })), { get: async () => null, now: NOW });
   assert.match(r.toolVersion, /^\d+\.\d+\.\d+$/);
+});
+
+test('compare: a finding gone with its file, or after a tool change, is not called fixed', async () => {
+  const { compareScans, compareToMarkdown } = await import('../src/compare.js');
+  const root = makeProject({ 'src/kept.ts': 'x', 'package.json': '{}' });
+  const f = (id, file) => ({ id, severity: 'medium', area: 'security', title: id, detail: '', evidence: [{ file, line: 1 }] });
+  const before = { project: { root, newArch: {} }, deps: [], scannedAt: '2026-10-20T00:00:00Z', toolVersion: '0.1.115', findings: [f('a', 'src/kept.ts'), f('b', 'src/deleted.ts')] };
+  const after = { ...before, findings: [] };
+  const c = compareScans(before, after);
+  assert.deepEqual(c.fixed.map((x) => [x.id, x.gone]), [['a', 'fixed'], ['b', 'file-removed']]);
+  assert.match(compareToMarkdown(c), /❔ b _\(its file was removed or moved/);
+  assert.equal(compareScans({ ...before, toolVersion: '0.1.110' }, after).fixed[0].gone, 'tool-changed');
+});
+
+test('a security finding in code no import reaches is labelled but keeps its severity', async () => {
+  const files = {
+    'package.json': { name: 'a', main: 'index.js', dependencies: { react: '19.1.0', 'react-native': '0.80.0' } },
+    'index.js': "import { AppRegistry } from 'react-native';\nimport App from './src/App';\nAppRegistry.registerComponent('a', () => App);",
+    'src/App.tsx': "import { a } from './u/a';\nimport { b } from './u/b';\nimport { c } from './u/c';\nexport default () => null;",
+    'src/u/a.ts': 'export const a = 1;', 'src/u/b.ts': 'export const b = 1;', 'src/u/c.ts': 'export const c = 1;',
+    'src/old/remote.ts': "export async function run() {\n  const res = await fetch('https://example.org/rules.js');\n  const code = await res.text();\n  return eval(code);\n}\n",
+  };
+  const r = await analyze(loadProject(makeProject(files)), { get: async () => null, now: NOW });
+  const f = r.findings.find((x) => x.id.startsWith('remote-code-eval'));
+  assert.ok(f, r.findings.map((x) => x.id).join(','));
+  assert.ok(f.deadCode);
+  assert.equal(f.severity, 'high', 'not lowered');
+});
+
+test('compare: a finding that got worse or spread to a new file is reported; moved lines are not', async () => {
+  const { compareScans, compareToMarkdown } = await import('../src/compare.js');
+  const f = (sev, ...files) => ({ id: 'webview-file-access', severity: sev, area: 'security', title: 'WebView file access', detail: '', evidence: files.map(([file, line]) => ({ file, line })) });
+  const scan = (...findings) => ({ project: { newArch: {} }, deps: [], scannedAt: '2026-10-21T00:00:00Z', findings });
+  const worse = compareScans(scan(f('medium', ['src/a.tsx', 3])), scan(f('high', ['src/a.tsx', 3])));
+  assert.equal(worse.worsened[0].was, 'medium');
+  const spread = compareScans(scan(f('high', ['src/a.tsx', 3])), scan(f('high', ['src/a.tsx', 3], ['src/b.tsx', 9])));
+  assert.deepEqual(spread.spread[0].newFiles, ['src/b.tsx']);
+  assert.match(compareToMarkdown(spread), /now also in src\/b\.tsx/);
+  const moved = compareScans(scan(f('high', ['src/a.tsx', 3])), scan(f('high', ['src/a.tsx', 40])));
+  assert.deepEqual([moved.worsened.length, moved.spread.length, moved.added.length], [0, 0, 0]);
 });

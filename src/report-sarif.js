@@ -55,7 +55,10 @@ export function sarifReport(result, { version = '0.0.0' } = {}) {
             // Stable across runs so code scanning tracks one alert per finding.
             partialFingerprints: { nativekeelId: f.id },
             properties: { severity: f.severity, area: f.area, confidence: f.confidence, attack: f.attack },
-            ...(f.evidence?.length > 1 ? { relatedLocations: f.evidence.slice(1).map((e, i) => ({ id: i + 1, physicalLocation: { artifactLocation: { uri: toUri(e.file) }, region: { startLine: e.line || 1 } }, message: { text: e.role || "Related source evidence" } })) } : {}),
+            ...(() => {
+              const more = findingLocations(f).slice(1);
+              return more.length ? { relatedLocations: more.map((e, i) => ({ id: i + 1, physicalLocation: { artifactLocation: { uri: toUri(e.file) }, region: { startLine: e.line } }, message: { text: e.role || 'Related source evidence' } })) } : {};
+            })(),
           };
         }),
       },

@@ -43,3 +43,57 @@ test('cleanup: no unused-file report when an import cannot be resolved', () => {
   const root = run({ ...app, 'src/App.tsx': tilde, 'src/utils/dead.ts': 'export const z = 1;', 'babel.config.js': "module.exports = { plugins: [['babel-plugin-root-import', { rootPathSuffix: 'src' }]] };" });
   assert.deepEqual(root['cleanup-unused-files']?.evidence.map((e) => e.file), ['src/utils/dead.ts']);
 });
+
+test('cleanup: files loaded with require.context count as used; a computed import makes the graph incomplete', () => {
+  const ctx = run({ ...app, 'src/App.tsx': "import Home from './screens/Home';\nimport { Button } from '@/ui/Button';\nconst more = require.context('./extra', true, /\\.tsx$/);\nexport default () => <Home />;", 'src/extra/Web.tsx': 'export default () => null;', 'src/utils/dead.ts': 'export const z = 1;' });
+  assert.deepEqual(ctx['cleanup-unused-files']?.evidence.map((e) => e.file), ['src/utils/dead.ts'], 'the require.context folder is used');
+  const dyn = run({ ...app, 'src/App.tsx': "import Home from './screens/Home';\nimport { Button } from '@/ui/Button';\nconst load = (name) => import(`./extra/${name}`);\nexport default () => <Home />;", 'src/utils/dead.ts': 'export const z = 1;' });
+  assert.equal(dyn['cleanup-unused-files'], undefined, 'import(`./extra/${name}`) cannot be followed');
+});
+
+test('cleanup: an import that names its extension reaches the file', () => {
+  const r = run({
+    ...app,
+    'src/screens/Home.tsx': "import Checkout from './Checkout.js';\nimport { fmt } from '../utils/format';\nexport default () => null;",
+    'src/screens/Checkout.js': 'export default () => null;',
+    'src/screens/Old.tsx': 'export default () => null;',
+  });
+  assert.deepEqual(r['cleanup-unused-files'].evidence.map((e) => e.file), ['src/screens/Old.tsx']);
+});
+
+test('cleanup: loading by path in a string, script or test keeps the graph; service workers are entries', () => {
+  const r = run({
+    ...app,
+    'src/utils/format.ts': "export const fmt = (x) => x;\nexport const code = 'return import(specifier)';",
+    'scripts/build.mjs': 'const m = await import(file);',
+    'src/feature/tests/gen.mjs': 'const m = await import(file);',
+    'src/service-worker.ts': 'self.addEventListener("fetch", () => {});',
+    'src/screens/Old.tsx': 'export default () => null;',
+  });
+  assert.deepEqual(r['cleanup-unused-files'].evidence.map((e) => e.file), ['src/screens/Old.tsx']);
+});
+
+test('cleanup: files used without an import are not unused', () => {
+  const r = run({
+    ...app,
+    'package.json': { ...pkg, scripts: { desktop: 'electron public/electron.js' }, codegenConfig: { jsSrcsDir: './codegen' } },
+    'public/electron.js': 'const { app } = require("electron");',
+    'verify/run.js': "const fs = require('fs');\nfs.readFileSync(process.argv[2]);",
+    'tools/gen.mjs': '#!/usr/bin/env node\nconsole.log(1);',
+    'src/helpers/inject.js': 'window.x = 1;',
+    'src/helpers/inject.preval.js': "module.exports = require('fs').readFileSync('inject.js', 'utf8');",
+    'config/flow/libdef.js': "declare module 'x' { declare module.exports: any; }",
+    '.flowconfig': '[libs]\nconfig/flow/libdef.js',
+    'scripts2/serve.js': "const express = require('express');\nconst http = require('http');\nconst os = require('os');",
+    'watch/oh-package.json5': '{}',
+    'watch/entry/app.js': 'export default {};',
+    'codegen/NativeThing.ts': "export default TurboModuleRegistry.get('Thing');",
+    'web/next.config.mjs': 'export default {};',
+    'web/src/pages/_app.tsx': 'export default () => null;',
+    'src/utils/quick.windows.ts': 'export const q = 1;',
+    'src/utils/quick.ts': 'export const q = 1;',
+    'src/screens/Home.tsx': "import logo from '../assets/logo.png';\nimport { fmt } from '../utils/format';\nimport { q } from '../utils/quick';\nexport default () => null;",
+    'src/screens/Old.tsx': 'export default () => null;',
+  });
+  assert.deepEqual(r['cleanup-unused-files'].evidence.map((e) => e.file), ['src/screens/Old.tsx'], 'a script importing express does not make the graph untrusted; a nested project is not the app');
+});

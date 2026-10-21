@@ -8,13 +8,13 @@
     "url": "https://github.com/AlicanAkyol/nativekeel",
     "source": "github"
   },
-  "version": "0.1.115",
+  "version": "0.1.116",
   "packages": [
     {
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "nativekeel",
-      "version": "0.1.115",
+      "version": "0.1.116",
       "runtimeHint": "npx",
       "transport": {
         "type": "stdio"

@@ -134,3 +134,12 @@ test("console calls silenced by the project's own Babel plugin or replaced at ru
   assert.ok(ids({ 'src/A.js': logs, 'tests/setup.js': 'console.log = () => {};' }).includes('perf-console-in-release'), 'silenced only in tests');
   assert.ok(!ids({ 'src/A.js': logs, 'src/console-override.ts': 'const noop = () => {};\nif (!__DEV__) console.log = noop;' }).includes('perf-console-in-release'));
 });
+
+test('only console methods removed from release builds are left out; development-only silencing does not count', () => {
+  const info = Array.from({ length: 35 }, (_, i) => `console.info('x${i}');`).join('\n');
+  assert.ok(ids({ 'src/A.js': info, 'index.js': 'if (__DEV__) { console.log = () => {}; }' }).includes('perf-console-in-release'), 'silenced in development only');
+  assert.ok(ids({ 'src/A.js': info, 'index.js': 'if (!__DEV__) { console.log = () => {}; }' }).includes('perf-console-in-release'), 'console.log silenced, console.info still logs');
+  assert.ok(!ids({ 'src/A.js': info, 'index.js': 'if (!__DEV__) { console.info = () => {}; }' }).includes('perf-console-in-release'));
+  assert.ok(!ids({ 'src/A.js': info, 'metro.config.js': "config.transformer.minifierConfig = { compress: { pure_funcs: ['console.info'] } };" }).includes('perf-console-in-release'));
+  assert.ok(ids({ 'src/A.js': info, 'metro.config.js': "config.transformer.minifierConfig = { compress: { pure_funcs: ['console.log'] } };" }).includes('perf-console-in-release'), 'pure_funcs lists only console.log');
+});

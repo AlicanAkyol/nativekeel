@@ -73,36 +73,43 @@ export function devOnlyRemoved(code) {
 
 // True when the release build strips console calls: babel-plugin-transform-remove-console, or
 // Metro's minifier with drop_console (Terser) or pure_funcs listing console.log.
-// Also a project's own Babel plugin that rewrites console calls (a local file listed in plugins),
-// and console methods replaced at run time (console.log = () => {} in app code), which
-// several teams use to silence release builds.
+// Console methods removed from release builds, as a Set (log, info, debug, warn, error). Babel's
+// transform-remove-console, Metro's drop_console and a project's own Babel plugin that rewrites
+// console calls remove them all; Metro's pure_funcs only the ones it lists; a no-op assigned at run
+// time (console.info = () => {}) only that method, and only when the assignment is not inside a
+// development-only branch (if (__DEV__) …). A wrapper that still writes the message keeps it.
+const ALL_CONSOLE = ['log', 'info', 'debug', 'warn', 'error'];
 const consoleCache = new Map();
-export function consoleRemovedInRelease(root) {
+export function consoleSilenced(root) {
   const hit = consoleCache.get(root);
-  if (hit && Date.now() - hit.at < 30000) return hit.removed;
+  if (hit && Date.now() - hit.at < 30000) return hit.methods;
+  const methods = new Set();
   const babel = ['babel.config.js', '.babelrc', 'babel.config.json', 'babel.config.cjs'].map((f) => read(path.join(root, f))).join('\n');
   const metro = ['metro.config.js', 'metro.config.cjs', 'metro.config.mjs', 'metro.config.ts'].map((f) => read(path.join(root, f))).join('\n').replace(/\/\/[^\n]*/g, '');
-  let removed = /transform-remove-console|remove-console/.test(babel) || /drop_console['"]?\s*[:=]\s*(?:true|\[)/.test(metro) || /pure_funcs['"]?\s*[:=]\s*\[[^\]]*console\.log/.test(metro);
-  if (!removed) {
+  let all = /transform-remove-console|remove-console/.test(babel) || /drop_console['"]?\s*[:=]\s*(?:true|\[)/.test(metro);
+  for (const m of metro.matchAll(/pure_funcs['"]?\s*[:=]\s*\[([^\]]*)\]/g)) for (const f of m[1].matchAll(/console\.(\w+)/g)) methods.add(f[1]);
+  if (!all) {
     for (const m of babel.matchAll(/['"](\.{1,2}\/[^'"]+)['"]/g)) {
       const base = path.join(root, m[1]);
       const plugin = [base, `${base}.js`, `${base}.cjs`, path.join(base, 'index.js')].map(read).find(Boolean) || '';
-      if (/\bconsole\b/.test(plugin) && /\.remove\(\)|replaceWith|CallExpression|MemberExpression/.test(plugin)) { removed = true; break; }
+      if (/\bconsole\b/.test(plugin) && /\.remove\(\)|replaceWith|CallExpression|MemberExpression/.test(plugin)) { all = true; break; }
     }
   }
-  if (!removed) {
-    // Only a no-op assigned outside tests: a wrapper that still writes the message (to a file, to
-    // a log service) keeps the logs.
-    const NOOP = /\bconsole\s*\.\s*(?:log|info|debug)\s*=\s*(?:\(\s*\.{0,3}\w*\s*\)\s*=>\s*(?:\{\s*\}|null\b|undefined\b|void\s+0)|function\s*\w*\s*\(\s*\)\s*\{\s*\}|\w*[Nn]oop\b|(?:lodash|_)\.noop\b|__DEV__\s*\?\s*console\.\w+\s*:\s*\(\s*\)\s*=>\s*\{\s*\})/;
+  if (!all) {
+    const NOOP = /\bconsole\s*\.\s*(log|info|debug|warn|error)\s*=\s*(?:\(\s*\.{0,3}\w*\s*\)\s*=>\s*(?:\{\s*\}|null\b|undefined\b|void\s+0)|function\s*\w*\s*\(\s*\)\s*\{\s*\}|\w*[Nn]oop\b|(?:lodash|_)\.noop\b|__DEV__\s*\?\s*console\.\w+\s*:\s*[^;\n]*?(?:\(\s*\)\s*=>\s*\{\s*\}|[Nn]oop\b))/g;
     for (const file of walk(root, JS_EXT)) {
       if (/(?:^|[\\/])(?:tests?|__tests__|e2e|jest)[\\/]|(?:setup|jest)[\w.-]*\.[jt]s$|\.(?:test|spec)\./i.test(path.relative(root, file))) continue;
       const text = read(file);
-      if (text && NOOP.test(text.replace(/\/\/[^\n]*/g, ''))) { removed = true; break; }
+      if (!text || !/console\s*\.\s*\w+\s*=/.test(text)) continue;
+      // Development-only branches are masked first: what they silence still logs in release.
+      for (const m of devOnlyRemoved(text.replace(/\/\/[^\n]*/g, '')).matchAll(NOOP)) methods.add(m[1]);
     }
   }
-  consoleCache.set(root, { at: Date.now(), removed });
-  return removed;
+  if (all) for (const x of ALL_CONSOLE) methods.add(x);
+  consoleCache.set(root, { at: Date.now(), methods });
+  return methods;
 }
+export const consoleRemovedInRelease = (root) => ['log', 'info', 'debug'].every((x) => consoleSilenced(root).has(x));
 
 export function performanceChecks(project) {
   const root = project.root;
@@ -111,6 +118,7 @@ export function performanceChecks(project) {
   let jsDriver = 0;
   let jsDriverAt = null;
   let logs = 0;
+  const silenced = consoleSilenced(root);
   const heavyImports = new Map();
   const selectors = [];
   for (const file of walk(root, JS_EXT)) {
@@ -141,7 +149,7 @@ export function performanceChecks(project) {
       jsDriver++;
       jsDriverAt = jsDriverAt || `${rel}:${code.slice(0, m.index).split('\n').length}`;
     }
-    logs += (devOnlyRemoved(code).match(/\bconsole\.(?:log|debug|info)\s*\(/g) || []).length;
+    for (const m of devOnlyRemoved(code).matchAll(/\bconsole\.(log|debug|info)\s*\(/g)) if (!silenced.has(m[1])) logs++;
     // Redux selectors that build a new object or array on every call ({ ... }, or `|| {}` / `|| []`
     // as a fallback) without an equality function: the component re-renders on every store update.
     for (const m of code.matchAll(/\buseSelector\s*(?:<[^>]*>)?\s*\(\s*\(?\s*\w+\s*(?::\s*[\w$.<>[\]|\s]+)?\)?\s*(?::\s*[\w$.<>[\]|\s]+)?=>\s*(\(\s*\{|[^,;\n]*\|\|\s*(?:\{\s*\}|\[\s*\]))/g)) {
@@ -173,7 +181,7 @@ export function performanceChecks(project) {
       fix: { kind: 'performance', step: 'Switch transform/opacity animations to `useNativeDriver: true` (or Reanimated for layout properties).' },
     });
   }
-  if (logs >= 30 && !consoleRemovedInRelease(root)) {
+  if (logs >= 30) {
     findings.push({
       id: 'perf-console-in-release',
       severity: 'low',

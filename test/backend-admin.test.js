@@ -25,6 +25,8 @@ test('backend admin: bundled admin credentials and server SDKs in app code', () 
   assert.doesNotMatch(sdk.detail, /firebase-admin|bskylink/, 'only files that also import React Native or Expo');
   assert.ok(!JSON.stringify(f).includes('functions/'), 'server folders are not the app');
   assert.deepEqual(backendAdminInBundle(makeProject({ 'src/a.ts': 'const k = process.env.EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;' }), { 'react-native': '0.80.0' }), [], 'no Expo, no EXPO_PUBLIC_ inlining');
+  const guard = "const FORBIDDEN = [['EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY', process.env.EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY]];\nfor (const [n, v] of FORBIDDEN) if (v) throw new Error(`remove ${n}`);";
+  assert.deepEqual(backendAdminInBundle(makeProject({ 'src/env.ts': guard }), deps), [], 'a startup guard that refuses the variable');
 });
 
 test('secrets: database URLs with passwords and Hasura admin secrets, not local or placeholder ones', () => {

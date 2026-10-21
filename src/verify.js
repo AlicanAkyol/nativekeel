@@ -32,7 +32,10 @@ export async function verifyUpgrade(root, { base = 'HEAD', offline = true, analy
     const after = await analyze(loadProject(root), options);
     const diff = compareScans(before, after);
     // The team's gate list (.nativekeel.json) decides which new findings can fail the gate.
-    const bad = diff.added.filter((f) => (f.severity === 'critical' || f.severity === 'high') && gates(after.settings, f.id));
+    // New serious findings, existing ones that became serious, and serious ones that spread to a
+    // new file all fail the gate (when the team's gate list includes the check).
+    const serious = (f) => (f.severity === 'critical' || f.severity === 'high') && gates(after.settings, f.id);
+    const bad = [...diff.added.filter(serious), ...diff.worsened.filter(serious), ...diff.spread.filter(serious)];
     const notes = [];
     // node_modules is never committed: the committed side reads versions from the lockfile.
     if (after.project && fs.existsSync(path.join(root, 'node_modules')) && !fs.existsSync(path.join(tmp, 'node_modules'))) {
@@ -51,18 +54,24 @@ export const PR_COMMENT_MARKER = '<!-- nativekeel-pr-comment -->';
 const ICON = { critical: '🔴', high: '🟠', medium: '🟡', low: '⚪' };
 const clean = (s) => String(s).replace(/[<>]/g, '').replace(/\s+/g, ' ').trim();
 export function prComment(r, { reportUrl = null } = {}) {
-  const { added, fixed, counts } = r.diff;
+  const { added, counts } = r.diff;
+  // A finding gone together with its file is not a fix: the code may have moved.
+  const fixed = r.diff.fixed.filter((f) => f.gone !== 'file-removed');
+  const moved = r.diff.fixed.filter((f) => f.gone === 'file-removed');
   const order = ['critical', 'high', 'medium', 'low'];
   const sorted = (list) => [...list].sort((a, b) => order.indexOf(a.severity) - order.indexOf(b.severity));
   const line = (f) => `- ${ICON[f.severity] || '⚪'} **${f.severity}** · ${clean(f.title)}`;
   const out = [PR_COMMENT_MARKER, '### NativeKeel'];
   // The gate is the one `verify` exits on: no new critical or high findings.
   const serious = (r.newSerious || added.filter((f) => f.severity === 'critical' || f.severity === 'high')).length;
-  out.push(serious ? `**Quality gate: ❌ failed**, ${serious} new critical or high finding${serious === 1 ? '' : 's'}.` : '**Quality gate: ✅ passed**, no new critical or high findings.', '');
+  out.push(serious ? `**Quality gate: ❌ failed**, ${serious} new or worse critical or high finding${serious === 1 ? '' : 's'}.` : '**Quality gate: ✅ passed**, no new or worse critical or high findings.', '');
   if (!added.length && !fixed.length) out.push('No new findings and nothing fixed compared with the base of this pull request.');
   else out.push(`This pull request: **${added.length} new**, **${fixed.length} fixed** compared with \`${r.commit.slice(0, 7)}\`.`);
   if (added.length) out.push('', '**New**', ...sorted(added).slice(0, 15).map(line), ...(added.length > 15 ? [`- …and ${added.length - 15} more`] : []));
   if (fixed.length) out.push('', '**Fixed**', ...sorted(fixed).slice(0, 10).map(line), ...(fixed.length > 10 ? [`- …and ${fixed.length - 10} more`] : []));
+  if (r.diff.worsened && r.diff.worsened.length) out.push('', '**Worse**', ...sorted(r.diff.worsened).slice(0, 10).map((f) => `${line(f)} (was ${f.was})`));
+  if (r.diff.spread && r.diff.spread.length) out.push('', '**In new files**', ...sorted(r.diff.spread).slice(0, 10).map((f) => `${line(f)}: now also in ${f.newFiles.slice(0, 3).map((x) => `\`${clean(x)}\``).join(', ')}`));
+  if (moved.length) out.push('', '**Gone with their file** (deleted or moved: check the code did not move elsewhere)', ...sorted(moved).slice(0, 5).map(line), ...(moved.length > 5 ? [`- …and ${moved.length - 5} more`] : []));
   const total = order.filter((s) => counts.after[s]).map((s) => `${counts.after[s]} ${s}`).join(' · ');
   out.push('', `Whole app: ${total || 'no findings'}.${reportUrl ? ` [Full report](${reportUrl})` : ''}`);
   if (r.ratings) {

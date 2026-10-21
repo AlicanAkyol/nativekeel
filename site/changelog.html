@@ -40,6 +40,17 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.116</h2><p class="date">21 October 2026</p>
+<p>A reliability release from a third production review, with no new checks: outputs that crashed, a comparison that missed regressions, and labels that claimed more than the scan knew.</p>
+<ul>
+<li><span class="tag">Fix</span><b>SARIF export no longer stops.</b> A finding with several locations made <code>--sarif</code> fail (on 53 of 143 open-source apps we re-ran). Related locations now go through the same resolver as the main one. A new test passes every location shape through text, JSON, HTML, Markdown, SARIF and SonarQube output and checks that no path is missing or broken.</li>
+<li><span class="tag">Fix</span><b>Paths with parentheses.</b> Expo Router folders like <code>app/(tabs)/index.tsx</code> are kept whole, and a sentence's opening bracket no longer becomes part of a file name (<code>(index.js</code>).</li>
+<li><span class="tag">Teams</span><b>Pull request gate sees regressions, not only new ids.</b> A finding whose severity went up, or the same problem appearing in a new file, now counts as new and can fail the gate. The PR comment lists them under "Worse" and "In new files".</li>
+<li><span class="tag">Accuracy</span><b>Unsure is not dead.</b> When a project loads files by a computed path (<code>require.context</code>, <code>import(variable)</code>), no file is labelled as code nothing imports; folders given to <code>require.context</code> count as used. Security findings in unreached code keep their severity, and the label says "no import reaches", not "never runs".</li>
+<li><span class="tag">Accuracy</span><b>Fewer files wrongly called unused.</b> An import that names its extension (<code>./CheckoutScreen.js</code>) now reaches the file; files run by a package.json script, Node scripts run by hand, web service workers, Flow library definitions, files inside another project in the repository (its own <code>package.json</code>) and files read by name (<code>readFileSync('sso.js')</code>) count as used; code inside a string or in a build script no longer makes the whole check give up.</li>
+<li><span class="tag">Accuracy</span><b>A guard is not a leak.</b> Code that reads <code>EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY</code> only to stop the app when it is set is no longer reported as shipping the key.</li>
+<li><span class="tag">Accuracy</span><b>Log silencing per method.</b> A run-time no-op for <code>console.log</code> no longer hides <code>console.info</code> or <code>console.debug</code> calls, and a no-op inside a development-only branch does not count for release builds.</li>
+</ul></div>
 <div class="rel"><h2>0.1.115</h2><p class="date">20 October 2026</p>
 <p>From a second production review: "the biggest gain is not more findings, but tying them to the right place, showing how strong the evidence is, and turning them into priorities".</p>
 <ul>
