@@ -40,6 +40,11 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.118</h2><p class="date">21 October 2026</p>
+<p>A critical, actively exploited React Native vulnerability, found even when it hides in your lockfile.</p>
+<ul>
+<li><span class="tag">Security</span><b>Metro development-server RCE (CVE-2025-11953).</b> The Metro dev server's <code>/open-url</code> endpoint in <code>@react-native-community/cli</code> / <code>cli-server-api</code> runs OS commands from a request (CVSS 9.8, in CISA's Known Exploited Vulnerabilities list): while <code>react-native start</code> runs, a web page a developer opens can take over their machine. NativeKeel reads the exact version resolved in your lockfile and <code>node_modules</code> — so it catches it even when the cli is only a transitive dependency of React Native — and flags versions below the fixes (18.0.1, 19.1.2, 20.0.0). Found in 8 of 1,162 open-source apps, two of them crypto wallets.</li>
+</ul></div>
 <div class="rel"><h2>0.1.117</h2><p class="date">21 October 2026</p>
 <p>The question every team asks before an upgrade, answered directly: <code>npx nativekeel upgrade</code>.</p>
 <ul>
