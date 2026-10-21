@@ -6,7 +6,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "nativekeel@0.1.117",
+        "nativekeel@0.1.118",
         "mcp"
       ]
     }
