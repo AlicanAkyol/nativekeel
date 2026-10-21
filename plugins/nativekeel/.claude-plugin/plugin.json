@@ -1,7 +1,7 @@
 {
   "name": "nativekeel",
   "displayName": "NativeKeel",
-  "version": "0.1.115",
+  "version": "0.1.116",
   "description": "React Native and Expo health check for coding agents: upgrade blockers, store rules (target SDK, 16 KB pages, Xcode 27 UIScene, privacy manifests), crash risks, OWASP MASVS security findings and planted malware, before you upgrade, add a library or run an unfamiliar project.",
   "author": {
     "name": "Alican Akyol",
