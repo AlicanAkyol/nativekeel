@@ -83,3 +83,17 @@ test('upcoming: additional React Native 0.87 removals and deprecations are catal
   const got = ids(root);
   for (const id of ['rn87-src-private', 'rn87-drawer-layout-android', 'rn87-assets-registry']) assert.ok(got.includes(id), id);
 });
+
+test('upcoming: React Native 0.85 removals are catalogued (absoluteFillObject, jest preset)', () => {
+  const root = makeProject({
+    'package.json': { name: 'app', dependencies: { 'react-native': '0.81.0' } },
+    'src/styles.ts': 'export const overlay = StyleSheet.absoluteFillObject;\n',
+    'jest.config.js': "module.exports = { preset: 'react-native' };\n",
+  });
+  const got = ids(root);
+  assert.ok(got.includes('rn85-absolute-fill-object'), 'absoluteFillObject');
+  assert.ok(got.includes('rn85-jest-preset'), 'jest preset');
+  // Already on 0.85+: not reported.
+  const current = makeProject({ 'package.json': { name: 'app', dependencies: { 'react-native': '0.86.0' } }, 'src/styles.ts': 'const x = StyleSheet.absoluteFillObject;\n' });
+  assert.ok(!ids(current).includes('rn85-absolute-fill-object'));
+});

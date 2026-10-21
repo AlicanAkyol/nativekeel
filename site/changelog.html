@@ -40,6 +40,11 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.120</h2><p class="date">21 October 2026</p>
+<p>The upgrade catalog now reaches back a version: apps a few releases behind get real breaking-change content, not just a "multi-version jump" note.</p>
+<ul>
+<li><span class="tag">Accuracy</span><b>React Native 0.85 breaking changes.</b> <code>StyleSheet.absoluteFillObject</code> was removed in 0.85 (use <code>StyleSheet.absoluteFill</code>) and the Jest preset moved to <code>@react-native/jest-preset</code>. <code>npx nativekeel upgrade</code> now reports both for any app upgrading from 0.84 or below — 146 and 133 of 1,162 open-source apps use them. (0.82–0.84 and 0.86 were checked against the release notes; 0.83 and 0.86 have no user-facing breaking changes.)</li>
+</ul></div>
 <div class="rel"><h2>0.1.119</h2><p class="date">21 October 2026</p>
 <p>Upgrade readiness you can trust: the breaking-change catalog audited against the official release notes.</p>
 <ul>
