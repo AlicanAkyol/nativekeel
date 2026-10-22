@@ -300,7 +300,7 @@ export const TOOLS = [
   {
     name: 'scan_project',
     description:
-      'Health check for a React Native or Expo project: upgrade blockers, New Architecture, Google Play and App Store rules (target SDK, 16 KB pages, Xcode 27 UIScene, privacy manifests), crash risks, accessibility (unlabeled icon buttons and text fields, small touch targets, low text contrast, text scaling), OWASP MASVS security findings, leaked secrets, and signs of malware planted in the project (run it before installing or starting a project you did not write). Read-only, never runs project code; returns findings with file:line references and fixes, never source code.',
+      'Health check for a React Native or Expo project: upgrade blockers, New Architecture, Google Play and App Store rules (target SDK, 16 KB pages, Xcode 27 UIScene, privacy manifests), crash risks, accessibility (unlabeled icon buttons and text fields, small touch targets, low text contrast, text scaling), OWASP MASVS security findings, leaked secrets, and signs of malware planted in the project or known malware anywhere in its lockfile dependency tree (run it before installing or starting a project you did not write). Use this for a general "how healthy is this app" or "what is wrong with it" question; it covers every area at a glance. For a deeper security review with attacker prerequisites use security_audit; for "should we upgrade" use upgrade_readiness. Read-only, never runs project code; returns findings with file:line references and fixes, never source code.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -316,14 +316,14 @@ export const TOOLS = [
   },
   {
     name: 'security_audit',
-    description: 'Review mobile app data exposure, account access, unsafe code execution, backend rules and dependency risks. Returns source evidence, attacker prerequisites, fixes, validation steps and explicit coverage limits. Static and read-only; does not claim a live penetration test or a clean bill of health.',
+    description: 'Review mobile app data exposure, account access, unsafe code execution, backend rules and dependency risks. Returns source evidence, attacker prerequisites, fixes, validation steps and explicit coverage limits. Use this when the question is specifically about security ("can this app be hacked", "is user data safe", before a security review or release); it goes deeper than the security part of scan_project and explains what an attacker would need for each finding. For an overall health check use scan_project. Static and read-only; does not claim a live penetration test or a clean bill of health.',
     inputSchema: { type: 'object', properties: { path: PATH, offline: OFFLINE, min_severity: MIN_SEVERITY }, required: ['path'], additionalProperties: false },
     annotations: readOnly('Security audit of a mobile app', true),
     run: (args, ctx) => scanTool(args, ctx, true),
   },
   {
     name: 'improve_app',
-    description: 'Prioritize existing security, crash, accessibility, performance, store and dependency findings into a review plan with prerequisites, expected effects and validation. No project code runs, no automatic changes or unmeasured performance claims. Reports unassessed areas explicitly.',
+    description: 'Prioritize existing security, crash, accessibility, performance, store and dependency findings into a review plan with prerequisites, expected effects and validation. Use this when someone asks what to fix first or how to make the app better overall, across all areas. Do not use it for upgrade questions: use upgrade_readiness for whether to upgrade and upgrade_plan for the upgrade steps. No project code runs, no automatic changes or unmeasured performance claims. Reports unassessed areas explicitly.',
     inputSchema: { type: 'object', properties: { path: PATH, offline: OFFLINE }, required: ['path'], additionalProperties: false },
     annotations: readOnly('Prioritized improvement plan', true),
     run: improveTool,
@@ -346,7 +346,7 @@ export const TOOLS = [
   },
   {
     name: 'upgrade_plan',
-    description: 'Ordered, step-by-step upgrade plan for a React Native or Expo project: phases in the order to do them (security fixes, crash risks, store deadlines, React Native and Expo upgrades, library replacements), the reason for each phase and concrete steps with file names. Built from the same scan as scan_project; stops with a warning if the project contains planted malware. Read-only.',
+    description: 'Ordered, step-by-step upgrade plan for a React Native or Expo project: phases in the order to do them (security fixes, crash risks, store deadlines, React Native and Expo upgrades, library replacements), the reason for each phase and concrete steps with file names. Use this once the decision to upgrade is made and the user wants the work in order; call upgrade_readiness first for the go/no-go. For non-upgrade priorities use improve_app. Built from the same scan as scan_project; stops with a warning if the project contains planted malware. Read-only.',
     inputSchema: {
       type: 'object',
       properties: { path: PATH, offline: OFFLINE },
