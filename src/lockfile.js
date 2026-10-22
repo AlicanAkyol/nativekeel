@@ -161,3 +161,82 @@ export function lockedCopies(root, name) {
   }
   return [...found];
 }
+
+// Every package the lockfile resolves, transitive ones included: Map name -> Set of versions.
+// Supply-chain attacks land deep in the tree (a compromised dependency of a dependency), so
+// security advisories are matched against all of it, not only package.json. Registry packages
+// only: workspace, link, file, git and patch entries are other code that merely shares a name.
+// Returns { file, packages } or null without a lockfile.
+export function lockedInventory(root) {
+  const file = findUp(root, ['package-lock.json', 'npm-shrinkwrap.json', 'pnpm-lock.yaml', 'yarn.lock', 'bun.lock']);
+  const text = file && readText(file);
+  if (!text) return null;
+  const packages = new Map();
+  const add = (name, version) => {
+    if (!name || !/^\d+\.\d+\.\d+/.test(version || '')) return;
+    if (!packages.has(name)) packages.set(name, new Set());
+    packages.get(name).add(version);
+  };
+  if (file.endsWith('.json')) {
+    let lock;
+    try {
+      lock = JSON.parse(text);
+    } catch {
+      return null;
+    }
+    for (const [key, v] of Object.entries(lock.packages || {})) {
+      const at = key.lastIndexOf('node_modules/');
+      if (at < 0 || !v || v.link || (v.resolved && !/^https?:/.test(v.resolved))) continue;
+      add(v.name || key.slice(at + 'node_modules/'.length), v.version);
+    }
+    // lockfileVersion 1: a nested dependencies tree.
+    const walk = (deps) => {
+      for (const [name, v] of Object.entries(deps || {})) {
+        if (v && !(v.version || '').includes(':')) add(name, v.version);
+        walk(v && v.dependencies);
+      }
+    };
+    if (!lock.packages) walk(lock.dependencies);
+  } else if (file.endsWith('pnpm-lock.yaml')) {
+    // Package keys sit at two spaces under packages:/snapshots: ("/name@1.2.3", "name@1.2.3(peer)").
+    for (const m of text.matchAll(/^ {2}['"]?\/?((?:@[^/\s'"]+\/)?[^@\s'"/]+)@(\d+\.\d+\.\d+[^(:'"\s]*)/gm)) add(m[1], m[2]);
+  } else if (file.endsWith('bun.lock')) {
+    for (const m of text.matchAll(/^\s*"[^"]+": \["((?:@[^@"/]+\/)?[^@"]+)@(\d[^"]*)"/gm)) add(m[1], m[2]);
+  } else {
+    // yarn v1 ("name@^1", "name@~1":) and berry ("name@npm:^1":), version on a following line.
+    // An alias ("local@npm:real@^1") installs `real`: advisories belong to that name, never to
+    // the local one (a squatted package can carry the local name and a malware advisory).
+    const realName = (p) => {
+      const local = p.slice(0, p.indexOf('@', 1));
+      const alias = p.slice(local.length + 1).match(/^npm:((?:@[^@/]+\/)?[^@]+)@/);
+      return alias ? alias[1] : local;
+    };
+    let names = null;
+    let version = null;
+    const flush = () => {
+      if (names && version) for (const n of new Set(names)) add(n, version);
+      names = null;
+      version = null;
+    };
+    for (const line of text.split('\n')) {
+      if (/^\S.*:\s*$/.test(line) && !line.startsWith('#') && !line.startsWith('__metadata')) {
+        flush();
+        names = line
+          .replace(/:\s*$/, '')
+          .split(/,\s*/)
+          .map((p) => p.trim().replace(/^"|"$/g, ''))
+          .filter((p) => !/@(?:patch|workspace|link|file|portal|exec|git\+|https?):/.test(p.slice(1)))
+          .map(realName);
+        continue;
+      }
+      if (!names) continue;
+      const ver = line.match(/^\s+version:?\s+"?([0-9][^"\s]*)"?/);
+      if (ver) version = ver[1];
+      // berry names the package actually installed: "@swc/helpers@npm:0.4.14".
+      const res = line.match(/^\s+resolution:\s+"((?:@[^@/"]+\/)?[^@"]+)@npm:/);
+      if (res) names = [res[1]];
+    }
+    flush();
+  }
+  return { file, packages };
+}

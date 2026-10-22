@@ -5,7 +5,7 @@ const severity = ['critical', 'high', 'medium', 'low', 'info'];
 const domains = ['security', 'stability', 'accessibility', 'performance', 'delivery', 'upgrade', 'dependencies'];
 const UPGRADE_AREAS = new Set(['react-native', 'expo', 'new-architecture', 'native']);
 function domain(f) {
-  if (f.area === 'security' || f.area === 'secret' || f.masvs || f.id === 'malicious-code') return 'security';
+  if (f.area === 'security' || f.area === 'secret' || f.masvs || f.id === 'malicious-code' || f.id.startsWith('malware-dep:')) return 'security';
   if (f.area === 'crash') return 'stability';
   if (f.area === 'accessibility') return 'accessibility';
   if (f.area === 'performance') return 'performance';
@@ -119,7 +119,7 @@ export function buildImprovementPlan(result, { limit = 80 } = {}) {
   const safety = executionSafety(result.findings);
   const findings = result.findings.filter(f => f.severity !== 'info');
   const sorted = [...findings].sort((a, b) =>
-    Number(b.id === 'malicious-code') - Number(a.id === 'malicious-code') ||
+    Number(b.id === 'malicious-code' || b.id.startsWith('malware-dep:')) - Number(a.id === 'malicious-code' || a.id.startsWith('malware-dep:')) ||
     severity.indexOf(a.severity) - severity.indexOf(b.severity) ||
     domains.indexOf(domain(a)) - domains.indexOf(domain(b)) || a.id.localeCompare(b.id));
   const cap = Number.isInteger(limit) && limit >= 0 ? Math.min(limit, 1000) : 80;
@@ -130,7 +130,7 @@ export function buildImprovementPlan(result, { limit = 80 } = {}) {
     return {
       order: i + 1, findingId: f.id, domain: category, severity: f.severity,
       title: f.title, reason: f.detail,
-      priorityReason: f.id === 'malicious-code' ? 'Execution safety takes precedence over all improvements.' : `Review ${f.severity} findings first; this order does not estimate exploit likelihood or measured benefit.`,
+      priorityReason: f.id === 'malicious-code' || f.id.startsWith('malware-dep:') ? 'Execution safety takes precedence over all improvements.' : `Review ${f.severity} findings first; this order does not estimate exploit likelihood or measured benefit.`,
       confidence: f.confidence || 'not-specified-by-check',
       evidence: f.evidence || f.recommendation?.evidence || [],
       evidenceLimit: 'Static scan finding; reachability, build inclusion and runtime impact are not independently verified by this plan.',

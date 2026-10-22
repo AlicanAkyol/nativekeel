@@ -91,6 +91,42 @@ export async function vulnerableDependencies(registry, versions, latestOf = {}) 
   return findings;
 }
 
+// Malware anywhere in the dependency tree the lockfile resolves, not only in package.json.
+// Supply-chain attacks (a hijacked maintainer account publishing a credential-stealing version,
+// a worm spreading to more packages) land deep in the tree, where package.json never names them.
+// `inventory` is lockedInventory(): Map name -> Set of versions. Only advisories GitHub files as
+// malware are reported here: ordinary advisories on packages the app does not name are mostly
+// build tooling and Node-only paths (measured: a critical one in 83% of 1,080 apps), the noise
+// that makes `npm audit` ignored. Direct dependencies keep their full advisory check.
+const MALWARE = /^(?:Malware|Malicious code) in /i;
+export async function dependencyTreeAdvisories(registry, inventory) {
+  if (!inventory || !inventory.packages.size) return [];
+  const ask = {};
+  for (const [name, versions] of inventory.packages) ask[name] = [...versions];
+  const advisories = await registry.advisories(ask);
+  if (!advisories) return null;
+  const lock = path.basename(inventory.file);
+  const findings = [];
+  for (const [name, list] of Object.entries(advisories)) {
+    if (!Array.isArray(list) || !ask[name]) continue;
+    for (const version of ask[name]) {
+      const malware = list.filter((a) => MALWARE.test(a.title || '') && applies(version, a.vulnerable_versions));
+      if (!malware.length) continue;
+      const whole = malware.some((a) => /^>=\s*0(?:\.0\.0)?$/.test(String(a.vulnerable_versions || '').trim()));
+      findings.push({
+        id: `malware-dep:${name}`,
+        severity: 'critical',
+        area: 'security',
+        title: `Known malware in the dependency tree: ${name}@${version} (${lock})`,
+        // One GHSA can come back twice (a whole-package entry and an exact-version entry).
+        detail: `${[...new Set(malware.map((a) => `${a.title}${a.url ? ` (${a.url})` : ''}`))].join('; ')}. ${whole ? 'GitHub marks every version of this package as malicious.' : `GitHub lists ${version} as malicious.`} It is resolved in ${lock}, so installing this project can run it, and code run at install can steal npm, GitHub, cloud and AI-provider credentials and spread to your own packages. Do not run install here until it is removed. If it was already installed on a machine or in CI, treat that machine and its credentials as compromised: rotate tokens and keys and check for unknown workflows and npm publishes. Then remove it (\`npm ls ${name}\` / \`yarn why ${name}\` shows what pulls it in) and pin a clean version with an override or resolution.`,
+        fix: { kind: 'security', step: `Remove ${name}@${version} from ${lock} (find the parent with \`npm ls ${name}\` or \`yarn why ${name}\`, pin a clean version via overrides/resolutions), then rotate every credential on machines that installed it.` },
+      });
+    }
+  }
+  return findings;
+}
+
 // "<1.2.3", ">=1.0.0 <1.2.3", "<=1.2.2" and "||" lists. Unknown syntax: trust the endpoint.
 function applies(version, range) {
   if (!range) return true;

@@ -63,6 +63,8 @@ export function readSettings(root) {
 const matches = (rule, id) => (rule.endsWith('*') ? id.startsWith(rule.slice(0, -1)) : id === rule);
 // The file comes with the repository, so a planted one must not be able to hide planted malware.
 const NEVER_IGNORED = new Set(['malicious-code', 'vscode-autorun-task']);
+// A dependency version GitHub lists as malware is just as unhideable.
+const neverIgnored = (id) => NEVER_IGNORED.has(id) || String(id).startsWith('malware-dep:');
 
 // Returns { findings, ignored }: ignored lists each finding left out, with the rule's reason.
 const findingFiles = (f) => [...new Set(findingLocations(f).map((l) => l.file))];
@@ -74,7 +76,7 @@ export function applySettings(findings, settings) {
   const kept = [];
   const ignored = [];
   for (const f of findings) {
-    const never = NEVER_IGNORED.has(f.id);
+    const never = neverIgnored(f.id);
     const rule = !never && settings.ignore.find((r) => matches(r.id, String(f.id)));
     const files = never || rule ? [] : findingFiles(f);
     const dirs = files.length ? files.map((file) => exclude.find((e) => inside(file, e.path))) : [];
@@ -90,5 +92,5 @@ export function applySettings(findings, settings) {
 // malware always may.
 export function gates(settings, id) {
   const list = settings && settings.gate;
-  return !list || NEVER_IGNORED.has(id) || list.some((g) => matches(g, String(id)));
+  return !list || neverIgnored(id) || list.some((g) => matches(g, String(id)));
 }

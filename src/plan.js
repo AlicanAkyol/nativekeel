@@ -176,8 +176,10 @@ function bumpSteps(list, extra = () => '') {
 export function buildPlan(result) {
   const safety = executionSafety(result.findings);
   if (safety.blocked) return { complexity: complexity(result.findings), phases: [{
-    title: 'Stop: inspect suspected malware', why: safety.warning,
-    steps: ['Keep this project closed in editors that run workspace tasks. Do not install dependencies or run its code. Review the malicious-code finding and restore a trusted copy before planning an upgrade.'],
+    title: safety.reason === 'malware-dependency' ? 'Stop: remove a known-malicious dependency' : 'Stop: inspect suspected malware', why: safety.warning,
+    steps: [safety.reason === 'malware-dependency'
+      ? 'Do not run install in this project. Remove the malicious version named in the malware-dep finding from the lockfile and pin a clean one; if it was already installed anywhere, rotate every credential on that machine or CI runner before planning an upgrade.'
+      : 'Keep this project closed in editors that run workspace tasks. Do not install dependencies or run its code. Review the malicious-code finding and restore a trusted copy before planning an upgrade.'],
   }] };
   const isExpo = !!result.project.expo;
   const basePm = commands[packageManager(result.project.root)];

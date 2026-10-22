@@ -37,7 +37,9 @@ export async function fetchJson(url, headers = {}, stats = null, { retries = 3, 
 }
 
 // All network access goes through one `get` function so tests can replace it.
-export function createRegistry(get = fetchJson) {
+// `get(url, headers, body)`: the default maps a POST body to fetchJson's option, so a registry
+// made without arguments can also query the advisory endpoint.
+export function createRegistry(get = (url, headers, body) => fetchJson(url, headers, null, { body })) {
   return {
     // React Native Directory supports looking up many packages in one request.
     async directoryInfo(names) {
@@ -145,7 +147,8 @@ export function createRegistry(get = fetchJson) {
       const out = {};
       const names = Object.keys(versions);
       for (let i = 0; i < names.length; i += 200) {
-        const chunk = Object.fromEntries(names.slice(i, i + 200).map((n) => [n, [versions[n]]]));
+        // A name can map to one version or to every version the lockfile resolves for it.
+        const chunk = Object.fromEntries(names.slice(i, i + 200).map((n) => [n, Array.isArray(versions[n]) ? versions[n] : [versions[n]]]));
         const data = await get('https://registry.npmjs.org/-/npm/v1/security/advisories/bulk', { 'Content-Type': 'application/json' }, JSON.stringify(chunk));
         if (!data) return null;
         Object.assign(out, data);

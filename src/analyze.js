@@ -16,13 +16,13 @@ import { stabilityChecks } from './stability.js';
 import { performanceChecks } from './performance.js';
 import { uiChecks } from './ui.js';
 import { bundleChecks, annotateWithBundle } from './bundle-map.js';
-import { vulnerableDependencies, passwordLeaks, webViewRisks, androidBackup, exportedComponents, plainHttpCalls, cloudRules, insecureTls, weakCrypto, tokenStorage, sensitiveLogs, reverseEngineering, expoConfigSecrets, aiKeysInBundle, backendAdminInBundle, clipboardSecrets, keychainAccessibility, deepLinks, supabaseRls, playRestrictedPermissions, masvsOf, MASVS_GROUPS } from './security.js';
+import { vulnerableDependencies, dependencyTreeAdvisories, passwordLeaks, webViewRisks, androidBackup, exportedComponents, plainHttpCalls, cloudRules, insecureTls, weakCrypto, tokenStorage, sensitiveLogs, reverseEngineering, expoConfigSecrets, aiKeysInBundle, backendAdminInBundle, clipboardSecrets, keychainAccessibility, deepLinks, supabaseRls, playRestrictedPermissions, masvsOf, MASVS_GROUPS } from './security.js';
 import { mobileSecurity } from './mobile-security.js';
 import { nativeSecurity } from './native-security.js';
 import { securityOverview } from './security-review.js';
 import { maliciousCode } from './malware.js';
 import { supabaseBroadPolicies, firebaseBroadWrites } from './authorization.js';
-import { lockedVersions } from './lockfile.js';
+import { lockedVersions, lockedInventory } from './lockfile.js';
 import { devServerCve } from './dev-server-cve.js';
 import { storeReviewRules } from './store-rules.js';
 import { expoPinnedNames, movesWithExpoSdk } from './expo-pins.js';
@@ -591,7 +591,12 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
     }
     const vulns = await vulnerableDependencies(registry, exact, latest);
     if (vulns === null) net.failed++;
-    for (const f of vulns || []) add(f);
+    // The rest of the tree the lockfile resolves: where supply-chain malware lands.
+    const tree = await dependencyTreeAdvisories(registry, lockedInventory(project.root));
+    if (tree === null) net.failed++;
+    const malware = new Set((tree || []).filter((f) => f.id.startsWith('malware-dep:')).map((f) => f.id.slice('malware-dep:'.length)));
+    for (const f of vulns || []) if (!malware.has(f.id.slice('vuln:'.length))) add(f);
+    for (const f of tree || []) add(f);
   }
 
   const sourceSecrets = scanSecrets(project.root);

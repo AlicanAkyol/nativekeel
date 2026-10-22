@@ -40,6 +40,12 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.121</h2><p class="date">22 October 2026</p>
+<p>Supply-chain attacks land deep in the dependency tree, where package.json never names them. NativeKeel now looks there.</p>
+<ul>
+<li><span class="tag">Security</span><b>Known malware anywhere in the lockfile.</b> Every package your lockfile resolves (npm, pnpm, yarn v1/berry, bun; often 1,000–4,000 of them, against 50–150 in package.json) is checked against GitHub's malware advisories, such as the October 2026 Shai-Hulud worm in <code>tensorlake@0.5.144</code> that steals credentials on install. A hit is critical, cannot be ignored from <code>.nativekeel.json</code>, fails the CI gate, and stops <code>plan</code>, <code>improve</code> and AI agents with a "do not install this project" warning. Only package names and versions are sent to npm, as <code>npm audit</code> does.</li>
+<li><span class="tag">Accuracy</span><b>Aliases are matched by what they install.</b> An npm alias such as <code>legacy-swc-helpers → @swc/helpers</code> is checked as <code>@swc/helpers</code>; a squatted package that only shares the local name is not reported. Ordinary advisories on packages the app does not name are left out: on 1,080 open-source apps, 83% had a critical one, almost all in build tooling, the noise that makes <code>npm audit</code> ignored.</li>
+</ul></div>
 <div class="rel"><h2>0.1.120</h2><p class="date">21 October 2026</p>
 <p>The upgrade catalog now reaches back a version: apps a few releases behind get real breaking-change content, not just a "multi-version jump" note.</p>
 <ul>
