@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Expo Router SDK 58: initialRouteName and beforeRemove gone</title>
+<meta name="description" content="Expo SDK 58 reworked the Expo Router navigation core. initialRouteName, freezeOnBlur and beforeRemove stop working without an error: what replaces each.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#0b5d55">
+<link rel="canonical" href="https://nativekeel.com/fix/expo-router-sdk-58-initialroutename-freezeonblur-beforeremove">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="NativeKeel">
+<meta property="og:url" content="https://nativekeel.com/fix/expo-router-sdk-58-initialroutename-freezeonblur-beforeremove">
+<meta property="og:title" content="Expo Router SDK 58: initialRouteName and beforeRemove gone">
+<meta property="og:description" content="Expo SDK 58 reworked the Expo Router navigation core. initialRouteName, freezeOnBlur and beforeRemove stop working without an error: what replaces each.">
+<meta property="og:image" content="https://nativekeel.com/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:description" content="Expo SDK 58 reworked the Expo Router navigation core. initialRouteName, freezeOnBlur and beforeRemove stop working without an error: what replaces each.">
+<meta name="twitter:image" content="https://nativekeel.com/og.png">
+<style>:root{--bg:#fbfaf7;--text:#15171b;--muted:#5d6470;--accent:#0b5d55;--line:#e3e1db;--card:#ffffff;--code:#f1efea}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1013;--text:#e9ebef;--muted:#9aa2ad;--accent:#3cc4b4;--line:#262a31;--card:#15181d;--code:#1b1f25}}
+:root[data-theme="dark"]{--bg:#0e1013;--text:#e9ebef;--muted:#9aa2ad;--accent:#3cc4b4;--line:#262a31;--card:#15181d;--code:#1b1f25}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.65 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:760px;margin:0 auto;padding:40px 16px 64px;overflow-wrap:anywhere}
+h1{font-size:28px;line-height:1.25;margin:0 0 6px}h2{font-size:18px;margin:28px 0 6px}a{color:var(--accent)}p,li{color:var(--muted)}strong{color:var(--text)}
+code{font:14px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--code);padding:1px 5px;border-radius:5px}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow-x:auto}pre code{background:none;padding:0;white-space:pre-wrap}
+.cta{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:28px 0}.cta code{font-size:15px}
+.meta{font-size:14px;color:var(--muted)}ul.list li{margin:8px 0}table{border-collapse:collapse;width:100%;font-size:15px;margin:12px 0;display:block;overflow-x:auto}th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}th{font-weight:600}</style>
+</head>
+<body><main>
+<p class="meta"><a href="/">NativeKeel</a> · <a href="/fix/">React Native fixes</a></p>
+<h1>Expo Router SDK 58: initialRouteName, freezeOnBlur and beforeRemove</h1>
+<p class="meta">Updated 2026-10-23</p>
+<p>Expo SDK 58 reworked the navigation core of Expo Router: "navigation state is deterministic and easier to reason about", and the router "no longer carries most of the forked React Navigation API". The release notes say most apps won't notice. The ones that do usually hit one of the changes below, and none of them shows an error: the old option is simply ignored.</p>
+<p><strong><code>initialRouteName</code> is removed,</strong> both in <code>unstable_settings</code> and as a prop on a layout's navigator. It was in Expo's own app template (<code>export const unstable_settings = { initialRouteName: '(tabs)' }</code>), so many apps have it. Replace it with an anchor, which adds a back destination below a deep-linked screen:</p>
+<pre><code>- export const unstable_settings = { initialRouteName: '(tabs)' };
++ export const unstable_settings = { anchor: '(tabs)' };
+
+- return &lt;Stack initialRouteName="index" /&gt;;
++ return &lt;Stack /&gt;;</code></pre>
+<p>Do not use the anchor to choose the first screen: the launch URL decides that. When you navigate in code and want the anchor inserted below the destination, pass <code>{ withAnchor: true }</code>.</p>
+<p><strong><code>beforeRemove</code> is removed.</strong> A listener on it (the usual "discard unsaved changes?" prompt) no longer fires, so the user leaves without being asked. Use <code>usePreventRemove</code> from <code>expo-router</code>; its callback receives <code>repeat</code>, which continues the navigation that was blocked:</p>
+<pre><code>import { usePreventRemove } from 'expo-router';
+
+usePreventRemove(hasUnsavedChanges, ({ repeat }) =&gt; {
+  confirmDiscard(() =&gt; {
+    setHasUnsavedChanges(false);
+    repeat();
+  });
+});</code></pre>
+<p>To navigate somewhere else instead, keep the <code>disablePrevention</code> function the hook returns: set the condition to <code>false</code>, call <code>disablePrevention()</code>, then navigate.</p>
+<p><strong><code>freezeOnBlur</code> has no effect.</strong> Screens are no longer frozen in the background. Use <code>activityEnabled</code> on the navigator or a screen (<code>true</code>, or a number that sets the threshold on stacks), or wrap part of a screen in <code>NavigationAwareActivity</code>.</p>
+<p><strong>Layout <code>Screen</code> props <code>redirect</code>, <code>initialParams</code> and <code>navigationKey</code> are removed.</strong> Use a <code>Redirect</code> route, or <code>Stack.Protected</code> with <code>redirectTo</code>, and default values inside the screen instead of <code>initialParams</code>.</p>
+<p><strong>Also in the guide:</strong> nested navigation with <code>navigate('(tabs)', { screen: 'feed', params })</code> no longer works (navigate to a complete href with <code>useRouter().push({ pathname, params })</code>), parent route params are no longer copied into child routes, <code>useNavigation</code> throws outside a navigator, and tabs and drawers only show screens declared in the layout (<code>options={{ href: null }}</code> hides a route). Imports from <code>expo-router/react-navigation</code> lost many exports; the guide has a table with the replacement for each.</p>
+<p><strong>Check before you upgrade.</strong> <code>npx nativekeel upgrade</code> lists each of these with file and line when your app uses Expo Router below SDK 58. In our scan of 401 open-source apps that use Expo Router below SDK 58, 78 still set <code>initialRouteName</code>, 16 listen to <code>beforeRemove</code> and 16 use <code>freezeOnBlur</code>.</p>
+<div class="cta"><strong>Check your whole app in one command:</strong> <code>npx nativekeel</code><br><span class="meta">Free, runs locally (your code is not uploaded), no account. It reports this along with the other upgrade, store, crash and security problems it checks for.</span></div>
+<h2>Sources</h2>
+<ul><li><a href="https://expo.dev/changelog/sdk-58">Expo SDK 58 release notes</a></li><li><a href="https://docs.expo.dev/router/migrate/sdk-57-to-58/">Expo Router: migrate from SDK 57 to SDK 58</a></li><li><a href="https://github.com/expo/expo/blob/main/packages/expo-router/CHANGELOG.md">expo-router changelog</a></li></ul>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"Expo Router SDK 58: initialRouteName and beforeRemove gone","description":"Expo SDK 58 reworked the Expo Router navigation core. initialRouteName, freezeOnBlur and beforeRemove stop working without an error: what replaces each.","dateModified":"2026-10-23","author":{"@type":"Organization","name":"NativeKeel","url":"https://nativekeel.com"},"mainEntityOfPage":"https://nativekeel.com/fix/expo-router-sdk-58-initialroutename-freezeonblur-beforeremove"}</script>
+</main></body>
+</html>

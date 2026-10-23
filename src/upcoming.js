@@ -10,7 +10,8 @@ import { gitIgnored } from './git.js';
 
 const RN_085 = 'https://reactnative.dev/blog/2026/04/07/react-native-0.85';
 const RN_087 = 'https://reactnative.dev/blog/2026/08/11/react-native-0.87';
-const EXPO_58 = 'https://expo.dev/changelog/sdk-58-beta';
+const EXPO_58 = 'https://expo.dev/changelog/sdk-58';
+const EXPO_58_ROUTER = 'https://docs.expo.dev/router/migrate/sdk-57-to-58/';
 
 // Expo SDK → React Native minor it ships (SDK 58 beta uses 0.88 release candidates).
 export const EXPO_RN = { 54: 81, 55: 83, 56: 85, 57: 86, 58: 88 };
@@ -53,10 +54,14 @@ export const CHANGES = [
   // Only a write/md5 on an actual expo-file-system File instance — inline `new File(...).write(...)`
   // or a variable assigned from `new File(...)` — so an unrelated `.write()` (a database transaction,
   // a stream) in a file that merely imports expo-file-system is not flagged.
-  { id: 'expo58-file-write', expo: 58, kind: 'removed', title: 'expo-file-system: `File.write()` is now async, and `File.md5` is deprecated', action: 'Await `file.write(...)` or use `file.writeSync(...)`; replace `.md5` with `file.digest()`.', code: [/\bnew\s+File\s*\([\s\S]{0,160}?\)\s*\.\s*(?:write|md5)\b/, /\b(\w+)\s*=\s*new\s+File\b[\s\S]{0,400}?\b\1\s*\.\s*(?:write|md5)\b/], requireImport: 'expo-file-system', source: EXPO_58 },
+  { id: 'expo58-file-write', expo: 58, kind: 'removed', title: 'expo-file-system: `File.write()` is now async, and `File.md5` is deprecated', action: "Await `file.write(...)` or use `file.writeSync(...)`; replace `.md5` with `await file.digest('MD5')`. It still compiles without await, but reads can race the write and try/catch no longer catches write errors. https://nativekeel.com/fix/expo-file-system-file-write-async-sdk-58", code: [/\bnew\s+File\s*\([\s\S]{0,160}?\)\s*\.\s*(?:write|md5)\b/, /\b(\w+)\s*=\s*new\s+File\b[\s\S]{0,400}?\b\1\s*\.\s*(?:write|md5)\b/], requireImport: 'expo-file-system', source: EXPO_58 },
   { id: 'expo58-libsql', expo: 58, kind: 'removed', title: 'expo-sqlite: libSQL support is removed', action: 'Remove `syncLibSQL()`, `libSQLOptions` and the `useLibSQL` config plugin option.', code: [/\bsyncLibSQL\b|\blibSQLOptions\b|\buseLibSQL\b/], config: true, source: EXPO_58 },
   { id: 'expo58-notifications-foreground', expo: 58, kind: 'behavior', title: 'expo-notifications: notifications are now shown while the app is open, unless your handler says otherwise', action: 'If foreground notifications should stay hidden, call `Notifications.setNotificationHandler` and return `shouldShowBanner: false`, `shouldShowList: false`.', dep: 'expo-notifications', unlessCode: /setNotificationHandler/, source: EXPO_58 },
   { id: 'expo58-router-react-navigation', expo: 58, kind: 'removed', title: 'expo-router: the navigation core was reworked and most of the forked React Navigation API is gone', action: 'Check each import from `expo-router/react-navigation` and custom navigators against the SDK 58 migration guide; JavaScript Tabs, TopTabs and Drawer now use standard-navigation.', code: [/from\s*['"]expo-router\/react-navigation['"]/, /\bwithLayoutContext\s*\(/], source: EXPO_58 },
+  { id: 'expo58-router-initial-route-name', expo: 58, kind: 'behavior', title: 'expo-router: `initialRouteName` is removed (in `unstable_settings` and on layout navigators)', action: "Export `unstable_settings = { anchor: 'index' }` instead; the anchor only adds a back destination below a deep-linked screen. Pass `{ withAnchor: true }` when navigating imperatively and the anchor should be inserted. https://nativekeel.com/fix/expo-router-sdk-58-initialroutename-freezeonblur-beforeremove", code: [/unstable_settings\s*=\s*\{[^}]*\binitialRouteName\b/, /<(?:Stack|Tabs|Drawer)(?=[\s/>])[^>]*\binitialRouteName\b/], requireDep: 'expo-router', source: EXPO_58_ROUTER },
+  { id: 'expo58-router-freeze-on-blur', expo: 58, kind: 'behavior', title: 'expo-router: `freezeOnBlur` no longer has any effect', action: 'Use `activityEnabled` on the navigator or screen, or wrap part of a screen in `NavigationAwareActivity`. https://nativekeel.com/fix/expo-router-sdk-58-initialroutename-freezeonblur-beforeremove', code: [/\bfreezeOnBlur\b/], requireDep: 'expo-router', source: EXPO_58_ROUTER },
+  { id: 'expo58-router-before-remove', expo: 58, kind: 'behavior', title: 'expo-router: the `beforeRemove` event is removed, so its listeners stop firing', action: 'Use `usePreventRemove` from `expo-router` to block leaving a screen; its callback gets `{ repeat }` to continue the blocked navigation. https://nativekeel.com/fix/expo-router-sdk-58-initialroutename-freezeonblur-beforeremove', code: [/['"]beforeRemove['"]/], requireDep: 'expo-router', source: EXPO_58_ROUTER },
+  { id: 'expo58-router-screen-props', expo: 58, kind: 'behavior', title: 'expo-router: layout `Screen` props `redirect`, `initialParams` and `navigationKey` are removed', action: 'Use a `Redirect` route or `Stack.Protected` with `redirectTo`, and default values inside the screen instead of `initialParams`.', code: [/<(?:Stack|Tabs|Drawer)\.Screen\b[^>]*\b(?:redirect|initialParams|navigationKey)\b/], requireDep: 'expo-router', source: EXPO_58_ROUTER },
   { id: 'expo58-localization-rtl', expo: 58, kind: 'behavior', title: 'expo-localization: `supportsRTL` no longer forces right-to-left layout on iOS', action: 'Layout direction now follows `I18nManager`: call `I18nManager.allowRTL(true)` / `forceRTL` where you need it, and test an RTL language.', configText: /supportsRTL/, source: EXPO_58 },
   { id: 'expo58-require-full-screen', expo: 58, kind: 'behavior', title: 'iOS 27: `requireFullScreen` no longer stops the app from being resized, so orientation locks may not apply', action: 'Test layouts at different window sizes on iPad and do not rely on `ScreenOrientation.lockAsync` alone.', configText: /requireFullScreen/, source: EXPO_58 },
   { id: 'expo58-media-library-video', expo: 58, kind: 'behavior', title: 'expo-media-library: video URIs now point to the current (edited) version on iOS', action: 'Pass `version: AssetUriVersion.ORIGINAL` where you need the original video.', code: [/\bgetUri\s*\(|\bgetAssetInfoAsync\s*\(/], requireImport: 'expo-media-library', source: EXPO_58 },
@@ -145,6 +150,8 @@ export function upcomingChanges(project) {
 
   const out = [];
   for (const c of candidates) {
+    // Changes inside one library apply only to projects that depend on it.
+    if (c.requireDep && !deps[c.requireDep]) continue;
     const hits = [];
     if (c.code) {
       const pool = c.config ? [...files, ...configFiles.filter((f) => !files.some((x) => x.rel === f.rel))] : files;

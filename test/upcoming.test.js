@@ -60,7 +60,7 @@ test('upcoming: every entry names its version, kind, action and release-notes so
     assert.ok(c.rn || c.expo, c.id);
     assert.ok(['removed', 'behavior', 'tooling'].includes(c.kind), c.id);
     assert.ok(c.action && c.title, c.id);
-    assert.match(c.source, /^https:\/\/(reactnative\.dev|expo\.dev)\//, c.id);
+    assert.match(c.source, /^https:\/\/(reactnative\.dev|(docs\.)?expo\.dev)\//, c.id); // official notes or official docs
   }
 });
 
@@ -96,4 +96,28 @@ test('upcoming: React Native 0.85 removals are catalogued (absoluteFillObject, j
   // Already on 0.85+: not reported.
   const current = makeProject({ 'package.json': { name: 'app', dependencies: { 'react-native': '0.86.0' } }, 'src/styles.ts': 'const x = StyleSheet.absoluteFillObject;\n' });
   assert.ok(!ids(current).includes('rn85-absolute-fill-object'));
+});
+
+test('upcoming: expo-router SDK 58 migration items, only in projects that use expo-router', () => {
+  const files = {
+    'app/_layout.tsx': "import { Stack } from 'expo-router';\nexport const unstable_settings = { initialRouteName: '(tabs)' };\nexport default function Layout() { return <Stack screenOptions={{ freezeOnBlur: true }}><Stack.Screen name=\"old\" redirect /></Stack>; }\n",
+    'app/edit.tsx': "import { useNavigation } from 'expo-router';\nexport default function Edit() { const navigation = useNavigation(); navigation.addListener('beforeRemove', (e) => e.preventDefault()); return null; }\n",
+  };
+  const router = makeProject({ 'package.json': { name: 'app', dependencies: { expo: '57.0.0', 'react-native': '0.86.0', 'expo-router': '~57.0.0' } }, ...files });
+  const got = ids(router);
+  for (const id of ['expo58-router-initial-route-name', 'expo58-router-freeze-on-blur', 'expo58-router-before-remove', 'expo58-router-screen-props']) assert.ok(got.includes(id), id);
+  const change = upcomingChanges(loadProject(router)).find((c) => c.id === 'expo58-router-initial-route-name');
+  assert.equal(change.kind, 'behavior', 'a behaviour change, not a build break');
+  assert.deepEqual(change.hits, ['app/_layout.tsx:2']);
+  // Plain React Navigation keeps beforeRemove and freezeOnBlur.
+  const plain = makeProject({ 'package.json': { name: 'app', dependencies: { expo: '57.0.0', 'react-native': '0.86.0', '@react-navigation/native': '^7.0.0' } }, ...files });
+  assert.ok(!ids(plain).some((id) => id.startsWith('expo58-router-') && id !== 'expo58-router-react-navigation'));
+});
+
+test('upcoming: expo-router initialRouteName does not flag a plain React Navigation navigator', () => {
+  const base = { name: 'app', dependencies: { expo: '57.0.0', 'react-native': '0.86.0', 'expo-router': '~57.0.0' } };
+  const layout = makeProject({ 'package.json': base, 'app/_layout.tsx': "import { Stack } from 'expo-router';\nexport default function L() { return <Stack initialRouteName=\"index\" />; }\n" });
+  assert.ok(ids(layout).includes('expo58-router-initial-route-name'));
+  const nested = makeProject({ 'package.json': base, 'src/Nested.tsx': "import { createStackNavigator } from '@react-navigation/stack';\nconst Stack = createStackNavigator();\nexport default () => <Stack.Navigator initialRouteName=\"Home\" />;\n" });
+  assert.ok(!ids(nested).includes('expo58-router-initial-route-name'));
 });

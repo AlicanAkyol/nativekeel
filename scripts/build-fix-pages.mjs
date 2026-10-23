@@ -811,6 +811,93 @@ Search the project for \`setBackgroundColor\`, \`setTranslucent\` and \`setNetwo
 `,
     sources: [['React Native 0.87 release notes: API removals', 'https://reactnative.dev/blog/2026/08/11/react-native-0.87'], ['React Native 0.87.1 StatusBar.js', 'https://github.com/facebook/react-native/blob/v0.87.1/packages/react-native/Libraries/Components/StatusBar/StatusBar.js'], ['React Native 0.86.0 StatusBar.js (the setters before removal)', 'https://github.com/facebook/react-native/blob/v0.86.0/packages/react-native/Libraries/Components/StatusBar/StatusBar.js'], ['Android 15 behavior changes: edge-to-edge enforcement', 'https://developer.android.com/about/versions/15/behavior-changes-15']],
   },
+  {
+    slug: 'expo-file-system-file-write-async-sdk-58',
+    updated: '2026-10-23',
+    error: 'expo-file-system File.write() is async in Expo SDK 58',
+    title: 'expo-file-system File.write() is now async in Expo SDK 58',
+    description: 'In Expo SDK 58, File.write() returns a promise and File.md5 is deprecated. Code still compiles, but reads can race the write and try/catch misses errors.',
+    body: `
+Expo SDK 58 changed the \`File\` class of expo-file-system. The release notes list it under breaking changes: "\`File.write()\` is now async and returns a promise; use \`File.writeSync()\` for the previous behavior." They also deprecate \`File.md5\` in favour of \`File.digest()\`.
+
+**Why it is easy to miss.** In SDK 57, \`write()\` returned \`void\`; in SDK 58 it returns \`Promise<void>\`. Calling a function that returns a promise without \`await\` is still valid TypeScript, so the project compiles and nothing warns you. What changes is behaviour:
+
+- **The next line can run before the file is written.** Code that writes and then reads, uploads, shares or hashes the file in the same function can see the old content, or no file at all, depending on timing.
+- **Errors escape your try/catch.** A failing write (full disk, a bad path) used to throw where you called it. Now it rejects the promise; if nobody awaits it, the \`try/catch\` around it never sees the error and it surfaces as an unhandled promise rejection.
+
+**Fix.** Await the write, or keep the old synchronous behaviour where you depend on it:
+
+\`\`\`
+const file = new File(Paths.document, 'cache.json');
+
+- file.write(JSON.stringify(data));
+- upload(file.uri);
++ await file.write(JSON.stringify(data));
++ upload(file.uri);
+
+// or, where the call must stay synchronous:
++ file.writeSync(JSON.stringify(data));
+\`\`\`
+
+For checksums, \`File.md5\` still works but is deprecated. Its replacement is a promise too, and supports more algorithms (MD5, SHA-1, SHA-256, SHA-384, SHA-512):
+
+\`\`\`
+- const hash = file.md5;
++ const hash = await file.digest('MD5');
+\`\`\`
+
+To find calls that drop a promise anywhere in the project, the \`@typescript-eslint/no-floating-promises\` lint rule reports them.
+
+**Check before you upgrade.** \`npx nativekeel upgrade\` lists the files that write with the expo-file-system \`File\` class or read \`.md5\` when your app is below Expo SDK 58, with the other breaking changes between your SDK and the newest one. In our scan of 947 open-source React Native apps, 65 that are still below SDK 58 use them.
+`,
+    sources: [['Expo SDK 58 release notes', 'https://expo.dev/changelog/sdk-58'], ['expo-file-system 58.0.10 type definitions (write, writeSync, digest)', 'https://www.npmjs.com/package/expo-file-system/v/58.0.10?activeTab=code'], ['expo-file-system documentation', 'https://docs.expo.dev/versions/latest/sdk/filesystem/']],
+  },
+  {
+    slug: 'expo-router-sdk-58-initialroutename-freezeonblur-beforeremove',
+    updated: '2026-10-23',
+    error: 'Expo Router SDK 58: initialRouteName, freezeOnBlur and beforeRemove',
+    title: 'Expo Router SDK 58: initialRouteName and beforeRemove gone',
+    description: 'Expo SDK 58 reworked the Expo Router navigation core. initialRouteName, freezeOnBlur and beforeRemove stop working without an error: what replaces each.',
+    body: `
+Expo SDK 58 reworked the navigation core of Expo Router: "navigation state is deterministic and easier to reason about", and the router "no longer carries most of the forked React Navigation API". The release notes say most apps won't notice. The ones that do usually hit one of the changes below, and none of them shows an error: the old option is simply ignored.
+
+**\`initialRouteName\` is removed,** both in \`unstable_settings\` and as a prop on a layout's navigator. It was in Expo's own app template (\`export const unstable_settings = { initialRouteName: '(tabs)' }\`), so many apps have it. Replace it with an anchor, which adds a back destination below a deep-linked screen:
+
+\`\`\`
+- export const unstable_settings = { initialRouteName: '(tabs)' };
++ export const unstable_settings = { anchor: '(tabs)' };
+
+- return <Stack initialRouteName="index" />;
++ return <Stack />;
+\`\`\`
+
+Do not use the anchor to choose the first screen: the launch URL decides that. When you navigate in code and want the anchor inserted below the destination, pass \`{ withAnchor: true }\`.
+
+**\`beforeRemove\` is removed.** A listener on it (the usual "discard unsaved changes?" prompt) no longer fires, so the user leaves without being asked. Use \`usePreventRemove\` from \`expo-router\`; its callback receives \`repeat\`, which continues the navigation that was blocked:
+
+\`\`\`
+import { usePreventRemove } from 'expo-router';
+
+usePreventRemove(hasUnsavedChanges, ({ repeat }) => {
+  confirmDiscard(() => {
+    setHasUnsavedChanges(false);
+    repeat();
+  });
+});
+\`\`\`
+
+To navigate somewhere else instead, keep the \`disablePrevention\` function the hook returns: set the condition to \`false\`, call \`disablePrevention()\`, then navigate.
+
+**\`freezeOnBlur\` has no effect.** Screens are no longer frozen in the background. Use \`activityEnabled\` on the navigator or a screen (\`true\`, or a number that sets the threshold on stacks), or wrap part of a screen in \`NavigationAwareActivity\`.
+
+**Layout \`Screen\` props \`redirect\`, \`initialParams\` and \`navigationKey\` are removed.** Use a \`Redirect\` route, or \`Stack.Protected\` with \`redirectTo\`, and default values inside the screen instead of \`initialParams\`.
+
+**Also in the guide:** nested navigation with \`navigate('(tabs)', { screen: 'feed', params })\` no longer works (navigate to a complete href with \`useRouter().push({ pathname, params })\`), parent route params are no longer copied into child routes, \`useNavigation\` throws outside a navigator, and tabs and drawers only show screens declared in the layout (\`options={{ href: null }}\` hides a route). Imports from \`expo-router/react-navigation\` lost many exports; the guide has a table with the replacement for each.
+
+**Check before you upgrade.** \`npx nativekeel upgrade\` lists each of these with file and line when your app uses Expo Router below SDK 58. In our scan of 401 open-source apps that use Expo Router below SDK 58, 78 still set \`initialRouteName\`, 16 listen to \`beforeRemove\` and 16 use \`freezeOnBlur\`.
+`,
+    sources: [['Expo SDK 58 release notes', 'https://expo.dev/changelog/sdk-58'], ['Expo Router: migrate from SDK 57 to SDK 58', 'https://docs.expo.dev/router/migrate/sdk-57-to-58/'], ['expo-router changelog', 'https://github.com/expo/expo/blob/main/packages/expo-router/CHANGELOG.md']],
+  },
 ];
 
 const STYLE = `:root{--bg:#fbfaf7;--text:#15171b;--muted:#5d6470;--accent:#0b5d55;--line:#e3e1db;--card:#ffffff;--code:#f1efea}

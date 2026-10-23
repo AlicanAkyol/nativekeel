@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>expo-file-system File.write() is now async in Expo SDK 58</title>
+<meta name="description" content="In Expo SDK 58, File.write() returns a promise and File.md5 is deprecated. Code still compiles, but reads can race the write and try/catch misses errors.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#0b5d55">
+<link rel="canonical" href="https://nativekeel.com/fix/expo-file-system-file-write-async-sdk-58">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="NativeKeel">
+<meta property="og:url" content="https://nativekeel.com/fix/expo-file-system-file-write-async-sdk-58">
+<meta property="og:title" content="expo-file-system File.write() is now async in Expo SDK 58">
+<meta property="og:description" content="In Expo SDK 58, File.write() returns a promise and File.md5 is deprecated. Code still compiles, but reads can race the write and try/catch misses errors.">
+<meta property="og:image" content="https://nativekeel.com/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:description" content="In Expo SDK 58, File.write() returns a promise and File.md5 is deprecated. Code still compiles, but reads can race the write and try/catch misses errors.">
+<meta name="twitter:image" content="https://nativekeel.com/og.png">
+<style>:root{--bg:#fbfaf7;--text:#15171b;--muted:#5d6470;--accent:#0b5d55;--line:#e3e1db;--card:#ffffff;--code:#f1efea}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1013;--text:#e9ebef;--muted:#9aa2ad;--accent:#3cc4b4;--line:#262a31;--card:#15181d;--code:#1b1f25}}
+:root[data-theme="dark"]{--bg:#0e1013;--text:#e9ebef;--muted:#9aa2ad;--accent:#3cc4b4;--line:#262a31;--card:#15181d;--code:#1b1f25}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.65 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:760px;margin:0 auto;padding:40px 16px 64px;overflow-wrap:anywhere}
+h1{font-size:28px;line-height:1.25;margin:0 0 6px}h2{font-size:18px;margin:28px 0 6px}a{color:var(--accent)}p,li{color:var(--muted)}strong{color:var(--text)}
+code{font:14px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--code);padding:1px 5px;border-radius:5px}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow-x:auto}pre code{background:none;padding:0;white-space:pre-wrap}
+.cta{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:28px 0}.cta code{font-size:15px}
+.meta{font-size:14px;color:var(--muted)}ul.list li{margin:8px 0}table{border-collapse:collapse;width:100%;font-size:15px;margin:12px 0;display:block;overflow-x:auto}th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}th{font-weight:600}</style>
+</head>
+<body><main>
+<p class="meta"><a href="/">NativeKeel</a> · <a href="/fix/">React Native fixes</a></p>
+<h1>expo-file-system File.write() is async in Expo SDK 58</h1>
+<p class="meta">Updated 2026-10-23</p>
+<p>Expo SDK 58 changed the <code>File</code> class of expo-file-system. The release notes list it under breaking changes: "<code>File.write()</code> is now async and returns a promise; use <code>File.writeSync()</code> for the previous behavior." They also deprecate <code>File.md5</code> in favour of <code>File.digest()</code>.</p>
+<p><strong>Why it is easy to miss.</strong> In SDK 57, <code>write()</code> returned <code>void</code>; in SDK 58 it returns <code>Promise&lt;void&gt;</code>. Calling a function that returns a promise without <code>await</code> is still valid TypeScript, so the project compiles and nothing warns you. What changes is behaviour:</p>
+<ul><li><strong>The next line can run before the file is written.</strong> Code that writes and then reads, uploads, shares or hashes the file in the same function can see the old content, or no file at all, depending on timing.</li><li><strong>Errors escape your try/catch.</strong> A failing write (full disk, a bad path) used to throw where you called it. Now it rejects the promise; if nobody awaits it, the <code>try/catch</code> around it never sees the error and it surfaces as an unhandled promise rejection.</li></ul>
+<p><strong>Fix.</strong> Await the write, or keep the old synchronous behaviour where you depend on it:</p>
+<pre><code>const file = new File(Paths.document, 'cache.json');
+
+- file.write(JSON.stringify(data));
+- upload(file.uri);
++ await file.write(JSON.stringify(data));
++ upload(file.uri);
+
+// or, where the call must stay synchronous:
++ file.writeSync(JSON.stringify(data));</code></pre>
+<p>For checksums, <code>File.md5</code> still works but is deprecated. Its replacement is a promise too, and supports more algorithms (MD5, SHA-1, SHA-256, SHA-384, SHA-512):</p>
+<pre><code>- const hash = file.md5;
++ const hash = await file.digest('MD5');</code></pre>
+<p>To find calls that drop a promise anywhere in the project, the <code>@typescript-eslint/no-floating-promises</code> lint rule reports them.</p>
+<p><strong>Check before you upgrade.</strong> <code>npx nativekeel upgrade</code> lists the files that write with the expo-file-system <code>File</code> class or read <code>.md5</code> when your app is below Expo SDK 58, with the other breaking changes between your SDK and the newest one. In our scan of 947 open-source React Native apps, 65 that are still below SDK 58 use them.</p>
+<div class="cta"><strong>Check your whole app in one command:</strong> <code>npx nativekeel</code><br><span class="meta">Free, runs locally (your code is not uploaded), no account. It reports this along with the other upgrade, store, crash and security problems it checks for.</span></div>
+<h2>Sources</h2>
+<ul><li><a href="https://expo.dev/changelog/sdk-58">Expo SDK 58 release notes</a></li><li><a href="https://www.npmjs.com/package/expo-file-system/v/58.0.10?activeTab=code">expo-file-system 58.0.10 type definitions (write, writeSync, digest)</a></li><li><a href="https://docs.expo.dev/versions/latest/sdk/filesystem/">expo-file-system documentation</a></li></ul>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"expo-file-system File.write() is now async in Expo SDK 58","description":"In Expo SDK 58, File.write() returns a promise and File.md5 is deprecated. Code still compiles, but reads can race the write and try/catch misses errors.","dateModified":"2026-10-23","author":{"@type":"Organization","name":"NativeKeel","url":"https://nativekeel.com"},"mainEntityOfPage":"https://nativekeel.com/fix/expo-file-system-file-write-async-sdk-58"}</script>
+</main></body>
+</html>
