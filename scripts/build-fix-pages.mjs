@@ -687,6 +687,88 @@ Then run prebuild again. SDK 58 has it by default. SDK 56 and earlier need an up
       ['Expo: Xcode 27 support for SDK 57', 'https://github.com/expo/expo/issues/46664#issuecomment-5683396867'],
     ],
   },
+  {
+    slug: 'cve-2025-11953-react-native-metro',
+    updated: '2026-10-23',
+    error: 'CVE-2025-11953 (Metro4Shell) in React Native',
+    title: 'CVE-2025-11953 (Metro4Shell): check your React Native app',
+    description: 'Metro dev server command injection (CVSS 9.8, exploited in the wild). Which @react-native-community/cli versions are affected, and how to check and fix.',
+    body: `
+CVE-2025-11953 is a critical flaw in the Metro development server that \`npx react-native start\` runs. The server binds to external network interfaces by default and has an endpoint, \`/open-url\`, that passes part of a POST request to an operating-system \`open\` call. Anyone who can reach the server, on the same network or from a web page, can run programs on the developer's machine; on Windows, shell commands with any arguments. It is rated **9.8 (critical)** and is in CISA's Known Exploited Vulnerabilities catalog since 5 February 2026.
+
+**What it affects.** Developer machines and CI runners that start the bundler, not the app you ship to users.
+
+**Affected versions** (official CVE record and GitHub advisory GHSA-399j-vxmf-hjvr; the same ranges for \`@react-native-community/cli\` and \`@react-native-community/cli-server-api\`):
+
+| Version line | Affected | Fixed in |
+|---|---|---|
+| 18.x | 18.0.0 | 18.0.1 |
+| 19.x | 19.0.0 to 19.1.1 | 19.1.2 |
+| 20.x | 20.0.0 alpha releases | 20.0.0 |
+
+**Check your project.** The CLI usually comes in through \`react-native\`, so your package.json does not name it. Ask the package manager which version is installed:
+
+\`\`\`
+npm ls @react-native-community/cli-server-api
+yarn why @react-native-community/cli-server-api
+pnpm why @react-native-community/cli-server-api
+\`\`\`
+
+\`npx nativekeel\` reads the exact versions resolved in your lockfile and \`node_modules\`, transitive copies included, and reports this as a critical finding when one of them is affected.
+
+**Fix.** Move to the fixed release of the line you are on (18.0.1, 19.1.2 or 20.0.0), then reinstall. If it comes in through \`react-native\`, force it with your package manager:
+
+\`\`\`
+// package.json, npm
+"overrides": { "@react-native-community/cli-server-api": "19.1.2" }
+
+// package.json, Yarn
+"resolutions": { "@react-native-community/cli-server-api": "19.1.2" }
+
+// package.json, pnpm
+"pnpm": { "overrides": { "@react-native-community/cli-server-api": "19.1.2" } }
+\`\`\`
+
+Use the version from your own line (the table above), not a newer major. Run \`npm ls\` again to confirm no affected copy is left.
+
+**Until you can update,** start Metro on localhost only, so other machines cannot reach it:
+
+\`\`\`
+npx react-native start --host 127.0.0.1
+\`\`\`
+`,
+    sources: [['NVD: CVE-2025-11953', 'https://nvd.nist.gov/vuln/detail/CVE-2025-11953'], ['GitHub advisory GHSA-399j-vxmf-hjvr', 'https://github.com/advisories/GHSA-399j-vxmf-hjvr'], ['JFrog: the research and the localhost workaround', 'https://jfrog.com/blog/cve-2025-11953-critical-react-native-community-cli-vulnerability/'], ['CISA Known Exploited Vulnerabilities catalog', 'https://www.cisa.gov/known-exploited-vulnerabilities-catalog']],
+  },
+  {
+    slug: 'stylesheet-absolutefillobject-removed-react-native-0-85',
+    updated: '2026-10-23',
+    error: 'StyleSheet.absoluteFillObject removed in React Native 0.85',
+    title: 'StyleSheet.absoluteFillObject removed in React Native 0.85',
+    description: 'React Native 0.85 removed StyleSheet.absoluteFillObject. Overlays silently lose their layout in JavaScript and TypeScript fails to build: the one-line fix.',
+    body: `
+React Native 0.85 removed \`StyleSheet.absoluteFillObject\`, deprecated since earlier releases. The release notes put it under breaking changes: "The deprecated \`StyleSheet.absoluteFillObject\` API has been removed. Use \`StyleSheet.absoluteFill\` or define your own absolute positioning styles instead."
+
+**Why it is easy to miss.** React Native 0.85 has no error or warning for it: the property is simply gone, so it reads as \`undefined\`.
+
+- In **TypeScript**, the build fails: \`absoluteFillObject\` no longer exists on \`StyleSheet\` in the 0.85 type definitions.
+- In **JavaScript**, nothing fails. \`{ ...StyleSheet.absoluteFillObject, top: 10 }\` spreads \`undefined\`, which adds nothing, so the style quietly loses \`position: 'absolute'\` and its edges. Overlays, backdrops and full-screen layers stop covering their parent, and it shows up only on screen.
+
+**Fix.** \`StyleSheet.absoluteFill\` is now a plain style object with the same values (\`position: 'absolute'\`, \`top\`, \`right\`, \`bottom\` and \`left\` at 0), so it can be spread the same way. React Native's own type tests made exactly this change.
+
+\`\`\`
+- overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)' },
++ overlay: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.5)' },
+
+- <View style={StyleSheet.absoluteFillObject} />
++ <View style={StyleSheet.absoluteFill} />
+\`\`\`
+
+Search the project for \`absoluteFillObject\`, including code that libraries you patched contain. A library that still uses it needs an update.
+
+**Check before you upgrade.** \`npx nativekeel upgrade\` lists every file that uses \`absoluteFillObject\` when your app is on React Native 0.84 or earlier, with the other changes between your version and the newest one. In our scan of 1,162 open-source React Native projects, 146 that are still on 0.84 or earlier use it.
+`,
+    sources: [['React Native 0.85 release notes: breaking changes', 'https://reactnative.dev/blog/2026/04/07/react-native-0.85'], ['React Native 0.85.0 StyleSheetExports.js', 'https://github.com/facebook/react-native/blob/v0.85.0/packages/react-native/Libraries/StyleSheet/StyleSheetExports.js'], ['React Native 0.84.0 StyleSheet.d.ts (deprecated there)', 'https://github.com/facebook/react-native/blob/v0.84.0/packages/react-native/Libraries/StyleSheet/StyleSheet.d.ts']],
+  },
 ];
 
 const STYLE = `:root{--bg:#fbfaf7;--text:#15171b;--muted:#5d6470;--accent:#0b5d55;--line:#e3e1db;--card:#ffffff;--code:#f1efea}

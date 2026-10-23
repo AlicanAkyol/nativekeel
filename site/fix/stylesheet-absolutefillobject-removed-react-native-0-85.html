@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StyleSheet.absoluteFillObject removed in React Native 0.85</title>
+<meta name="description" content="React Native 0.85 removed StyleSheet.absoluteFillObject. Overlays silently lose their layout in JavaScript and TypeScript fails to build: the one-line fix.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#0b5d55">
+<link rel="canonical" href="https://nativekeel.com/fix/stylesheet-absolutefillobject-removed-react-native-0-85">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="NativeKeel">
+<meta property="og:url" content="https://nativekeel.com/fix/stylesheet-absolutefillobject-removed-react-native-0-85">
+<meta property="og:title" content="StyleSheet.absoluteFillObject removed in React Native 0.85">
+<meta property="og:description" content="React Native 0.85 removed StyleSheet.absoluteFillObject. Overlays silently lose their layout in JavaScript and TypeScript fails to build: the one-line fix.">
+<meta property="og:image" content="https://nativekeel.com/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:description" content="React Native 0.85 removed StyleSheet.absoluteFillObject. Overlays silently lose their layout in JavaScript and TypeScript fails to build: the one-line fix.">
+<meta name="twitter:image" content="https://nativekeel.com/og.png">
+<style>:root{--bg:#fbfaf7;--text:#15171b;--muted:#5d6470;--accent:#0b5d55;--line:#e3e1db;--card:#ffffff;--code:#f1efea}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1013;--text:#e9ebef;--muted:#9aa2ad;--accent:#3cc4b4;--line:#262a31;--card:#15181d;--code:#1b1f25}}
+:root[data-theme="dark"]{--bg:#0e1013;--text:#e9ebef;--muted:#9aa2ad;--accent:#3cc4b4;--line:#262a31;--card:#15181d;--code:#1b1f25}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.65 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:760px;margin:0 auto;padding:40px 16px 64px;overflow-wrap:anywhere}
+h1{font-size:28px;line-height:1.25;margin:0 0 6px}h2{font-size:18px;margin:28px 0 6px}a{color:var(--accent)}p,li{color:var(--muted)}strong{color:var(--text)}
+code{font:14px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--code);padding:1px 5px;border-radius:5px}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow-x:auto}pre code{background:none;padding:0;white-space:pre-wrap}
+.cta{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:28px 0}.cta code{font-size:15px}
+.meta{font-size:14px;color:var(--muted)}ul.list li{margin:8px 0}table{border-collapse:collapse;width:100%;font-size:15px;margin:12px 0;display:block;overflow-x:auto}th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}th{font-weight:600}</style>
+</head>
+<body><main>
+<p class="meta"><a href="/">NativeKeel</a> · <a href="/fix/">React Native fixes</a></p>
+<h1>StyleSheet.absoluteFillObject removed in React Native 0.85</h1>
+<p class="meta">Updated 2026-10-23</p>
+<p>React Native 0.85 removed <code>StyleSheet.absoluteFillObject</code>, deprecated since earlier releases. The release notes put it under breaking changes: "The deprecated <code>StyleSheet.absoluteFillObject</code> API has been removed. Use <code>StyleSheet.absoluteFill</code> or define your own absolute positioning styles instead."</p>
+<p><strong>Why it is easy to miss.</strong> React Native 0.85 has no error or warning for it: the property is simply gone, so it reads as <code>undefined</code>.</p>
+<ul><li>In <strong>TypeScript</strong>, the build fails: <code>absoluteFillObject</code> no longer exists on <code>StyleSheet</code> in the 0.85 type definitions.</li><li>In <strong>JavaScript</strong>, nothing fails. <code>{ ...StyleSheet.absoluteFillObject, top: 10 }</code> spreads <code>undefined</code>, which adds nothing, so the style quietly loses <code>position: 'absolute'</code> and its edges. Overlays, backdrops and full-screen layers stop covering their parent, and it shows up only on screen.</li></ul>
+<p><strong>Fix.</strong> <code>StyleSheet.absoluteFill</code> is now a plain style object with the same values (<code>position: 'absolute'</code>, <code>top</code>, <code>right</code>, <code>bottom</code> and <code>left</code> at 0), so it can be spread the same way. React Native's own type tests made exactly this change.</p>
+<pre><code>- overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)' },
++ overlay: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.5)' },
+
+- &lt;View style={StyleSheet.absoluteFillObject} /&gt;
++ &lt;View style={StyleSheet.absoluteFill} /&gt;</code></pre>
+<p>Search the project for <code>absoluteFillObject</code>, including code that libraries you patched contain. A library that still uses it needs an update.</p>
+<p><strong>Check before you upgrade.</strong> <code>npx nativekeel upgrade</code> lists every file that uses <code>absoluteFillObject</code> when your app is on React Native 0.84 or earlier, with the other changes between your version and the newest one. In our scan of 1,162 open-source React Native projects, 146 that are still on 0.84 or earlier use it.</p>
+<div class="cta"><strong>Check your whole app in one command:</strong> <code>npx nativekeel</code><br><span class="meta">Free, runs locally (your code is not uploaded), no account. It reports this along with the other upgrade, store, crash and security problems it checks for.</span></div>
+<h2>Sources</h2>
+<ul><li><a href="https://reactnative.dev/blog/2026/04/07/react-native-0.85">React Native 0.85 release notes: breaking changes</a></li><li><a href="https://github.com/facebook/react-native/blob/v0.85.0/packages/react-native/Libraries/StyleSheet/StyleSheetExports.js">React Native 0.85.0 StyleSheetExports.js</a></li><li><a href="https://github.com/facebook/react-native/blob/v0.84.0/packages/react-native/Libraries/StyleSheet/StyleSheet.d.ts">React Native 0.84.0 StyleSheet.d.ts (deprecated there)</a></li></ul>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"StyleSheet.absoluteFillObject removed in React Native 0.85","description":"React Native 0.85 removed StyleSheet.absoluteFillObject. Overlays silently lose their layout in JavaScript and TypeScript fails to build: the one-line fix.","dateModified":"2026-10-23","author":{"@type":"Organization","name":"NativeKeel","url":"https://nativekeel.com"},"mainEntityOfPage":"https://nativekeel.com/fix/stylesheet-absolutefillobject-removed-react-native-0-85"}</script>
+</main></body>
+</html>

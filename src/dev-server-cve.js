@@ -14,6 +14,7 @@ import fs from './read-boundary.js';
 import path from 'node:path';
 import { compareVersions } from './known-issues.js';
 import { lockedCopies } from './lockfile.js';
+import { SITE_URL } from './config.js';
 
 const PACKAGES = ['@react-native-community/cli', '@react-native-community/cli-server-api'];
 
@@ -58,7 +59,7 @@ export function devServerCve(root) {
       severity: 'critical',
       area: 'security',
       title: `Metro development server can be made to run commands on your machine (CVE-2025-11953)`,
-      detail: `${where}. The Metro dev server's \`/open-url\` endpoint passes a request's input to an OS \`open\` call (OS command injection, CVSS 9.8, GHSA-399j-vxmf-hjvr). While \`npx react-native start\` / \`expo start\` is running, any web page a developer opens can send that request and run commands on their machine; the flaw is in CISA's Known Exploited Vulnerabilities list, exploited in the wild to drop malware. This affects the development toolchain, not the app you ship, but it exposes every developer who runs the bundler. Update \`@react-native-community/cli\` and \`@react-native-community/cli-server-api\` to ${patched} or later (the fix is on 18.0.1, 19.1.2 and 20.0.0): bump it in your lockfile (an npm/yarn/pnpm override or resolution if it is transitive) or move to a React Native version that ships a fixed cli, and never bind Metro to a public interface (keep \`--host\` on localhost).`,
+      detail: `${where}. The Metro dev server's \`/open-url\` endpoint passes a request's input to an OS \`open\` call (OS command injection, CVSS 9.8, GHSA-399j-vxmf-hjvr). While \`npx react-native start\` / \`expo start\` is running, any web page a developer opens can send that request and run commands on their machine; the flaw is in CISA's Known Exploited Vulnerabilities list, exploited in the wild to drop malware. This affects the development toolchain, not the app you ship, but it exposes every developer who runs the bundler. Update \`@react-native-community/cli\` and \`@react-native-community/cli-server-api\` to ${patched} or later (the fix is on 18.0.1, 19.1.2 and 20.0.0): bump it in your lockfile (an npm/yarn/pnpm override or resolution if it is transitive) or move to a React Native version that ships a fixed cli, and never bind Metro to a public interface (keep \`--host\` on localhost). How to check and fix: ${SITE_URL}/fix/cve-2025-11953-react-native-metro`,
       fix: { kind: 'security', step: `Update @react-native-community/cli and @react-native-community/cli-server-api to ${patched}+ (patched: 18.0.1, 19.1.2, 20.0.0), re-install, and keep the Metro server bound to localhost.` },
     },
   ];

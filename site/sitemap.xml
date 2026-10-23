@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://nativekeel.com/</loc><lastmod>2026-10-22</lastmod></url>
-  <url><loc>https://nativekeel.com/changelog</loc><lastmod>2026-10-22</lastmod></url>
+  <url><loc>https://nativekeel.com/changelog</loc><lastmod>2026-10-23</lastmod></url>
   <url><loc>https://nativekeel.com/case-study</loc><lastmod>2026-10-10</lastmod></url>
   <url><loc>https://nativekeel.com/ai-keys</loc><lastmod>2026-10-10</lastmod></url>
   <url><loc>https://nativekeel.com/privacy</loc></url>
-  <url><loc>https://nativekeel.com/fix/</loc><lastmod>2026-10-18</lastmod></url>
+  <url><loc>https://nativekeel.com/fix/</loc><lastmod>2026-10-23</lastmod></url>
   <url><loc>https://nativekeel.com/fix/android-exported</loc><lastmod>2026-10-10</lastmod></url>
   <url><loc>https://nativekeel.com/fix/itms-91061-missing-privacy-manifest</loc><lastmod>2026-10-10</lastmod></url>
   <url><loc>https://nativekeel.com/fix/missing-foreground-service-type</loc><lastmod>2026-10-10</lastmod></url>
@@ -26,6 +26,8 @@
   <url><loc>https://nativekeel.com/fix/rcteventemitter-receiveevent-not-registered</loc><lastmod>2026-10-15</lastmod></url>
   <url><loc>https://nativekeel.com/fix/maximum-update-depth-exceeded-react-native</loc><lastmod>2026-10-18</lastmod></url>
   <url><loc>https://nativekeel.com/fix/rctcomponent-h-file-not-found-react-native-0-87</loc><lastmod>2026-10-18</lastmod></url>
+  <url><loc>https://nativekeel.com/fix/cve-2025-11953-react-native-metro</loc><lastmod>2026-10-23</lastmod></url>
+  <url><loc>https://nativekeel.com/fix/stylesheet-absolutefillobject-removed-react-native-0-85</loc><lastmod>2026-10-23</lastmod></url>
   <url><loc>https://nativekeel.com/fix/interactionmanager-removed-react-native-0-87</loc><lastmod>2026-10-16</lastmod></url>
   <url><loc>https://nativekeel.com/teams</loc><lastmod>2026-10-18</lastmod></url>
   <url><loc>https://nativekeel.com/sonarqube</loc><lastmod>2026-10-17</lastmod></url>

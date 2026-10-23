@@ -40,6 +40,12 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.123</h2><p class="date">23 October 2026</p>
+<p>Two new fix pages, linked from the findings that detect them.</p>
+<ul>
+<li><span class="tag">Guides</span><b><a href="/fix/cve-2025-11953-react-native-metro">CVE-2025-11953 (Metro4Shell) in React Native</a>.</b> Which <code>@react-native-community/cli</code> versions are affected (the official record), how to check a transitive copy, the override for each package manager, and the <code>--host 127.0.0.1</code> workaround.</li>
+<li><span class="tag">Guides</span><b><a href="/fix/stylesheet-absolutefillobject-removed-react-native-0-85">StyleSheet.absoluteFillObject removed in React Native 0.85</a>.</b> In JavaScript nothing fails: overlays silently lose their layout. The one-line fix, checked against the React Native 0.85 source.</li>
+</ul></div>
 <div class="rel"><h2>0.1.122</h2><p class="date">22 October 2026</p>
 <p>AI agents pick the right NativeKeel tool more often.</p>
 <ul>
@@ -54,7 +60,7 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <div class="rel"><h2>0.1.120</h2><p class="date">21 October 2026</p>
 <p>The upgrade catalog now reaches back a version: apps a few releases behind get real breaking-change content, not just a "multi-version jump" note.</p>
 <ul>
-<li><span class="tag">Accuracy</span><b>React Native 0.85 breaking changes.</b> <code>StyleSheet.absoluteFillObject</code> was removed in 0.85 (use <code>StyleSheet.absoluteFill</code>) and the Jest preset moved to <code>@react-native/jest-preset</code>. <code>npx nativekeel upgrade</code> now reports both for any app upgrading from 0.84 or below — 146 and 133 of 1,162 open-source apps use them. (0.82–0.84 and 0.86 were checked against the release notes; 0.83 and 0.86 have no user-facing breaking changes.)</li>
+<li><span class="tag">Accuracy</span><b>React Native 0.85 breaking changes.</b> <code>StyleSheet.absoluteFillObject</code> was removed in 0.85 (use <code>StyleSheet.absoluteFill</code>) and the Jest preset moved to <code>@react-native/jest-preset</code>. <code>npx nativekeel upgrade</code> now reports both for any app upgrading from 0.84 or below — 146 and 133 of 1,162 open-source React Native projects use them. (0.82–0.84 and 0.86 were checked against the release notes; 0.83 and 0.86 have no user-facing breaking changes.)</li>
 </ul></div>
 <div class="rel"><h2>0.1.119</h2><p class="date">21 October 2026</p>
 <p>Upgrade readiness you can trust: the breaking-change catalog audited against the official release notes.</p>
@@ -65,7 +71,7 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <div class="rel"><h2>0.1.118</h2><p class="date">21 October 2026</p>
 <p>A critical, actively exploited React Native vulnerability, found even when it hides in your lockfile.</p>
 <ul>
-<li><span class="tag">Security</span><b>Metro development-server RCE (CVE-2025-11953).</b> The Metro dev server's <code>/open-url</code> endpoint in <code>@react-native-community/cli</code> / <code>cli-server-api</code> runs OS commands from a request (CVSS 9.8, in CISA's Known Exploited Vulnerabilities list): while <code>react-native start</code> runs, a web page a developer opens can take over their machine. NativeKeel reads the exact version resolved in your lockfile and <code>node_modules</code> — so it catches it even when the cli is only a transitive dependency of React Native — and flags versions below the fixes (18.0.1, 19.1.2, 20.0.0). Found in 8 of 1,162 open-source apps, two of them crypto wallets.</li>
+<li><span class="tag">Security</span><b>Metro development-server RCE (CVE-2025-11953).</b> The Metro dev server's <code>/open-url</code> endpoint in <code>@react-native-community/cli</code> / <code>cli-server-api</code> runs OS commands from a request (CVSS 9.8, in CISA's Known Exploited Vulnerabilities list): while <code>react-native start</code> runs, a web page a developer opens can take over their machine. NativeKeel reads the exact version resolved in your lockfile and <code>node_modules</code> — so it catches it even when the cli is only a transitive dependency of React Native — and flags versions below the fixes (18.0.1, 19.1.2, 20.0.0). Found in 8 of 1,162 open-source React Native projects, two of them crypto wallets.</li>
 </ul></div>
 <div class="rel"><h2>0.1.117</h2><p class="date">21 October 2026</p>
 <p>The question every team asks before an upgrade, answered directly: <code>npx nativekeel upgrade</code>.</p>

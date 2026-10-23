@@ -27,7 +27,7 @@ const importsFrom = (pkg) => new RegExp(`from\\s*['"]${pkg.replace(/[/.]/g, '\\$
 // needs a newer toolchain or config.
 export const CHANGES = [
   // React Native 0.85 (crossed by any app upgrading from 0.84 or below)
-  { id: 'rn85-absolute-fill-object', rn: 85, kind: 'removed', title: '`StyleSheet.absoluteFillObject` is removed', action: 'Use `StyleSheet.absoluteFill`, or inline your own absolute-positioning style object (`{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }`).', code: [/StyleSheet\.absoluteFillObject\b/], source: RN_085 },
+  { id: 'rn85-absolute-fill-object', rn: 85, kind: 'removed', title: '`StyleSheet.absoluteFillObject` is removed', action: 'Use `StyleSheet.absoluteFill` (same values, can be spread). In JavaScript nothing fails: overlays silently lose their absolute layout. https://nativekeel.com/fix/stylesheet-absolutefillobject-removed-react-native-0-85', code: [/StyleSheet\.absoluteFillObject\b/], source: RN_085 },
   { id: 'rn85-jest-preset', rn: 85, kind: 'tooling', title: "React Native's Jest preset moved to `@react-native/jest-preset`", action: "Install `@react-native/jest-preset` and change `preset: 'react-native'` to `preset: '@react-native/jest-preset'` in your Jest config.", code: [/['"]?preset['"]?\s*:\s*['"]react-native['"]/], config: true, source: RN_085 },
   // React Native 0.87 (also in Expo SDK 58)
   { id: 'rn87-interaction-manager', rn: 87, kind: 'removed', title: '`InteractionManager` is removed', action: 'Use `requestIdleCallback` (or run the work after the interaction finishes).', code: [fromRn('InteractionManager')], source: RN_087 },
