@@ -40,6 +40,14 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.124</h2><p class="date">23 October 2026</p>
+<p>See it before you run it.</p>
+<ul>
+<li><span class="tag">Site</span><b>The upgrade check in action.</b> The README and the homepage show a short recording of <code>npx nativekeel upgrade</code> on a sample app: its real output, regenerated from the tool on every release, never typed by hand. It respects reduced-motion settings.</li>
+<li><span class="tag">Site</span><b>Where NativeKeel is listed.</b> React Native Directory, the official MCP Registry, Glama and GitHub Marketplace.</li>
+<li><span class="tag">CLI</span><b>Colour follows the standards.</b> <code>NO_COLOR</code> and <code>--no-color</code> turn colour off in every command, <code>FORCE_COLOR</code> turns it on where there is no terminal (CI logs).</li>
+<li><span class="tag">Fix</span><b>End of support with the verdict.</b> <code>upgrade</code> showed "React Native 0.84 is no longer supported" under "What this cannot confirm"; it is a known fact, now shown next to the verdict.</li>
+</ul></div>
 <div class="rel"><h2>0.1.123</h2><p class="date">23 October 2026</p>
 <p>Two new fix pages, linked from the findings that detect them.</p>
 <ul>

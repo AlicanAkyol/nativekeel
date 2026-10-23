@@ -87,7 +87,6 @@ export function upgradeReport(result) {
     `Breaking changes are matched from NativeKeel's catalog for the versions ahead of you (up to ${isExpo ? `Expo SDK ${NEXT.expo.sdk}` : `React Native 0.${NEXT.rn.minor}`}); a change not in the catalog is not reported.`,
   ];
   if (coverage === 'partial') cantKnow.unshift(`This is a multi-version jump. NativeKeel's catalog covers the breaking changes from ${coveredFrom} onward; the earlier steps between your version and there have their own breaking changes that are not evaluated here. Upgrade one version at a time and re-run — see \`nativekeel plan\` for the staged path.`);
-  if (unsupported.length) cantKnow.unshift(...unsupported.map((f) => f.title));
 
   return {
     from: { reactNative: fromRn, expo: result.project.expo || null },
@@ -97,6 +96,8 @@ export function upgradeReport(result) {
     blockers,
     notes,
     tooling: toolingItems,
+    // End of support is a known fact, not a limit of the scan: shown with the verdict.
+    support: unsupported.map((f) => f.title),
     cantKnow,
     counts: { blockers: blockers.length, notes: notes.length, tooling: toolingItems.length },
   };
@@ -130,6 +131,7 @@ export function upgradeText(report, { color } = {}) {
       : c.green('READY — no blockers found in your code');
   out.push(`${c.bold(`Upgrade  ${fromLabel} → ${toLabel}`)}`);
   out.push(`  ${verdict}${report.counts.notes || report.counts.tooling ? c.gray(`  ·  ${report.counts.notes} behavior change${report.counts.notes === 1 ? '' : 's'}, ${report.counts.tooling} tooling change${report.counts.tooling === 1 ? '' : 's'} to review`) : ''}`);
+  for (const t of report.support || []) out.push(`  ${c.yellow('!')} ${t}`);
   out.push('');
 
   if (report.blockers.length) {

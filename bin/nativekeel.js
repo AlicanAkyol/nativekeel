@@ -39,6 +39,14 @@ function parseArgs(argv) {
   return { command, flags, positional };
 }
 
+// Colour on a terminal; NO_COLOR (no-color.org) or --no-color turn it off, FORCE_COLOR turns it on
+// where there is no terminal (CI logs, recordings).
+function useColor(flags = {}) {
+  if (process.env.NO_COLOR || flags['no-color']) return false;
+  if (process.env.FORCE_COLOR && process.env.FORCE_COLOR !== '0') return true;
+  return !!process.stdout.isTTY;
+}
+
 function fail(message, code = 2) {
   console.error(`nativekeel: ${message}`);
   process.exit(code);
@@ -178,7 +186,7 @@ async function runFleet(positional, flags, failOn) {
   const sorted = trend ? trend.rows : sortFleet(rows);
   if (flags.html) write(flags.html, fleetHtml(sorted, { brand: flags.brand || null, trend }));
   if (flags.markdown) write(flags.markdown, fleetMarkdown(sorted, { trend }));
-  console.log(flags.json ? JSON.stringify({ tool: 'nativekeel', scannedAt: new Date().toISOString(), apps: sorted, ...(trend ? { comparedWith: trend.since, removed: trend.removed } : {}) }, null, 2) : fleetText(sorted, { color: process.stdout.isTTY, trend }));
+  console.log(flags.json ? JSON.stringify({ tool: 'nativekeel', scannedAt: new Date().toISOString(), apps: sorted, ...(trend ? { comparedWith: trend.since, removed: trend.removed } : {}) }, null, 2) : fleetText(sorted, { color: useColor(flags), trend }));
   if (flags.upload) {
     const { uploadReport, summaryFindings } = await import('../src/upload.js');
     try {
@@ -335,8 +343,8 @@ async function main() {
     if (flags.json) {
       console.log(JSON.stringify(report, null, 2));
     } else {
-      const useColor = process.stdout.isTTY && !flags['no-color'];
-      const paint = (code) => (s) => (useColor ? `\x1b[${code}m${s}\x1b[0m` : s);
+      const color0 = useColor(flags);
+      const paint = (code) => (s) => (color0 ? `\x1b[${code}m${s}\x1b[0m` : s);
       const color = { red: paint('31'), yellow: paint('33'), gray: paint('90'), bold: paint('1'), green: paint('32') };
       console.log(upgradeText(report, { color }));
     }
@@ -398,7 +406,7 @@ async function main() {
     }
   }
   if (flags.json) console.log(JSON.stringify(result, null, 2));
-  else console.log(textReport(result, { color: process.stdout.isTTY, verbose: !!flags.verbose }));
+  else console.log(textReport(result, { color: useColor(flags), verbose: !!flags.verbose }));
   if (failOn === 'never') return 0;
   const threshold = SEVERITIES.indexOf(failOn);
   return result.findings.some((f) => SEVERITIES.indexOf(f.severity) <= threshold && gates(result.settings, f.id)) ? 1 : 0;

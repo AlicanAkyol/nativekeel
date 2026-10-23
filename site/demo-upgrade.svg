@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="788" height="514" viewBox="0 0 788 514" role="img" aria-labelledby="t d">
+<title id="t">npx nativekeel upgrade: NOT READY, 3 blockers in your code</title>
+<desc id="d">$ npx nativekeel upgrade
+Upgrade  React Native 0.84.1 → React Native 0.88.x
+  NOT READY — 3 blockers in your code and dependencies
+  ! React Native 0.84.1 is no longer supported
+
+Blockers (fix before upgrading)
+  ✗ [code · React Native 0.85] `StyleSheet.absoluteFillObject` is removed — 
+    src/components/Overlay.js:13
+      Use `StyleSheet.absoluteFill` (same values, can be spread). In JavaScript nothing fails: 
+        overlays silently lose their absolute layout. 
+        https://nativekeel.com/fix/stylesheet-absolutefillobject-removed-react-native-0-85
+  ✗ [code · React Native 0.87] `InteractionManager` is removed — src/screens/Feed.js:2
+      Use `requestIdleCallback` (or run the work after the interaction finishes).
+  ✗ [code · React Native 0.87] `StatusBar` `backgroundColor`, `translucent` and 
+    `networkActivityIndicatorVisible` (props and setters) are removed — src/App.js:8
+      Remove them from the React Native `StatusBar`: edge-to-edge draws behind the status bar on 
+        Android. expo-status-bar is not affected.
+
+What this cannot confirm:
+  - Native library code and iOS/Android build settings beyond the checks above are not evaluated 
+    here; build once on the target before shipping.
+  - Breaking changes are matched from NativeKeel's catalog for the versions ahead of you (up to 
+    React Native 0.88); a change not in the catalog is not reported.</desc>
+<style>
+text{font:13px ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;fill:#e6edf3;white-space:pre}
+.w,.b{fill:#ffffff;font-weight:600}.r{fill:#ff7b72}.g{fill:#3fb950}.y{fill:#e3b341}.d{fill:#8b949e}
+@keyframes c0{0%,4.29%{opacity:0}4.64%,94.00%{opacity:1}100%{opacity:0}}.c0{opacity:0;animation:c0 14s linear infinite}
+@keyframes c1{0%,4.71%{opacity:0}5.07%,94.00%{opacity:1}100%{opacity:0}}.c1{opacity:0;animation:c1 14s linear infinite}
+@keyframes c2{0%,5.14%{opacity:0}5.50%,94.00%{opacity:1}100%{opacity:0}}.c2{opacity:0;animation:c2 14s linear infinite}
+@keyframes c3{0%,5.57%{opacity:0}5.93%,94.00%{opacity:1}100%{opacity:0}}.c3{opacity:0;animation:c3 14s linear infinite}
+@keyframes c4{0%,6.00%{opacity:0}6.36%,94.00%{opacity:1}100%{opacity:0}}.c4{opacity:0;animation:c4 14s linear infinite}
+@keyframes c5{0%,6.43%{opacity:0}6.79%,94.00%{opacity:1}100%{opacity:0}}.c5{opacity:0;animation:c5 14s linear infinite}
+@keyframes c6{0%,6.86%{opacity:0}7.21%,94.00%{opacity:1}100%{opacity:0}}.c6{opacity:0;animation:c6 14s linear infinite}
+@keyframes c7{0%,7.29%{opacity:0}7.64%,94.00%{opacity:1}100%{opacity:0}}.c7{opacity:0;animation:c7 14s linear infinite}
+@keyframes c8{0%,7.71%{opacity:0}8.07%,94.00%{opacity:1}100%{opacity:0}}.c8{opacity:0;animation:c8 14s linear infinite}
+@keyframes c9{0%,8.14%{opacity:0}8.50%,94.00%{opacity:1}100%{opacity:0}}.c9{opacity:0;animation:c9 14s linear infinite}
+@keyframes c10{0%,8.57%{opacity:0}8.93%,94.00%{opacity:1}100%{opacity:0}}.c10{opacity:0;animation:c10 14s linear infinite}
+@keyframes c11{0%,9.00%{opacity:0}9.36%,94.00%{opacity:1}100%{opacity:0}}.c11{opacity:0;animation:c11 14s linear infinite}
+@keyframes c12{0%,9.43%{opacity:0}9.79%,94.00%{opacity:1}100%{opacity:0}}.c12{opacity:0;animation:c12 14s linear infinite}
+@keyframes c13{0%,9.86%{opacity:0}10.21%,94.00%{opacity:1}100%{opacity:0}}.c13{opacity:0;animation:c13 14s linear infinite}
+@keyframes c14{0%,10.29%{opacity:0}10.64%,94.00%{opacity:1}100%{opacity:0}}.c14{opacity:0;animation:c14 14s linear infinite}
+@keyframes c15{0%,10.71%{opacity:0}11.07%,94.00%{opacity:1}100%{opacity:0}}.c15{opacity:0;animation:c15 14s linear infinite}
+@keyframes c16{0%,11.14%{opacity:0}11.50%,94.00%{opacity:1}100%{opacity:0}}.c16{opacity:0;animation:c16 14s linear infinite}
+@keyframes c17{0%,11.57%{opacity:0}11.93%,94.00%{opacity:1}100%{opacity:0}}.c17{opacity:0;animation:c17 14s linear infinite}
+@keyframes c18{0%,12.00%{opacity:0}12.36%,94.00%{opacity:1}100%{opacity:0}}.c18{opacity:0;animation:c18 14s linear infinite}
+@keyframes c19{0%,12.43%{opacity:0}12.79%,94.00%{opacity:1}100%{opacity:0}}.c19{opacity:0;animation:c19 14s linear infinite}
+@keyframes c20{0%,12.86%{opacity:0}13.21%,94.00%{opacity:1}100%{opacity:0}}.c20{opacity:0;animation:c20 14s linear infinite}
+@keyframes c21{0%,13.29%{opacity:0}13.64%,94.00%{opacity:1}100%{opacity:0}}.c21{opacity:0;animation:c21 14s linear infinite}
+@keyframes l0{0%,18.71%{opacity:0}19.07%,94.00%{opacity:1}100%{opacity:0}}.l0{opacity:0;animation:l0 14s linear infinite}
+@keyframes l1{0%,19.86%{opacity:0}20.21%,94.00%{opacity:1}100%{opacity:0}}.l1{opacity:0;animation:l1 14s linear infinite}
+@keyframes l2{0%,21.00%{opacity:0}21.36%,94.00%{opacity:1}100%{opacity:0}}.l2{opacity:0;animation:l2 14s linear infinite}
+@keyframes l3{0%,22.14%{opacity:0}22.50%,94.00%{opacity:1}100%{opacity:0}}.l3{opacity:0;animation:l3 14s linear infinite}
+@keyframes l4{0%,23.29%{opacity:0}23.64%,94.00%{opacity:1}100%{opacity:0}}.l4{opacity:0;animation:l4 14s linear infinite}
+@keyframes l5{0%,24.43%{opacity:0}24.79%,94.00%{opacity:1}100%{opacity:0}}.l5{opacity:0;animation:l5 14s linear infinite}
+@keyframes l6{0%,25.57%{opacity:0}25.93%,94.00%{opacity:1}100%{opacity:0}}.l6{opacity:0;animation:l6 14s linear infinite}
+@keyframes l7{0%,26.71%{opacity:0}27.07%,94.00%{opacity:1}100%{opacity:0}}.l7{opacity:0;animation:l7 14s linear infinite}
+@keyframes l8{0%,27.86%{opacity:0}28.21%,94.00%{opacity:1}100%{opacity:0}}.l8{opacity:0;animation:l8 14s linear infinite}
+@keyframes l9{0%,29.00%{opacity:0}29.36%,94.00%{opacity:1}100%{opacity:0}}.l9{opacity:0;animation:l9 14s linear infinite}
+@keyframes l10{0%,30.14%{opacity:0}30.50%,94.00%{opacity:1}100%{opacity:0}}.l10{opacity:0;animation:l10 14s linear infinite}
+@keyframes l11{0%,31.29%{opacity:0}31.64%,94.00%{opacity:1}100%{opacity:0}}.l11{opacity:0;animation:l11 14s linear infinite}
+@keyframes l12{0%,32.43%{opacity:0}32.79%,94.00%{opacity:1}100%{opacity:0}}.l12{opacity:0;animation:l12 14s linear infinite}
+@keyframes l13{0%,33.57%{opacity:0}33.93%,94.00%{opacity:1}100%{opacity:0}}.l13{opacity:0;animation:l13 14s linear infinite}
+@keyframes l14{0%,34.71%{opacity:0}35.07%,94.00%{opacity:1}100%{opacity:0}}.l14{opacity:0;animation:l14 14s linear infinite}
+@keyframes l15{0%,35.86%{opacity:0}36.21%,94.00%{opacity:1}100%{opacity:0}}.l15{opacity:0;animation:l15 14s linear infinite}
+@keyframes l16{0%,37.00%{opacity:0}37.36%,94.00%{opacity:1}100%{opacity:0}}.l16{opacity:0;animation:l16 14s linear infinite}
+@keyframes l17{0%,38.14%{opacity:0}38.50%,94.00%{opacity:1}100%{opacity:0}}.l17{opacity:0;animation:l17 14s linear infinite}
+@keyframes l18{0%,39.29%{opacity:0}39.64%,94.00%{opacity:1}100%{opacity:0}}.l18{opacity:0;animation:l18 14s linear infinite}
+@keyframes l19{0%,40.43%{opacity:0}40.79%,94.00%{opacity:1}100%{opacity:0}}.l19{opacity:0;animation:l19 14s linear infinite}
+@keyframes l20{0%,41.57%{opacity:0}41.93%,94.00%{opacity:1}100%{opacity:0}}.l20{opacity:0;animation:l20 14s linear infinite}
+@keyframes l21{0%,42.71%{opacity:0}43.07%,94.00%{opacity:1}100%{opacity:0}}.l21{opacity:0;animation:l21 14s linear infinite}
+@media (prefers-reduced-motion:reduce){text,tspan{animation:none!important;opacity:1!important}}
+</style>
+<rect width="788" height="514" rx="10" fill="#0d1117"/>
+<circle cx="20" cy="18" r="6" fill="#ff5f57"/><circle cx="40" cy="18" r="6" fill="#febc2e"/><circle cx="60" cy="18" r="6" fill="#28c840"/>
+<text x="394" y="22" text-anchor="middle" class="d" style="font-size:12px">acme-shop — zsh</text>
+<text x="18" y="59" class="d">$ </text><text x="33.7" y="59" class="w c0">n</text><text x="41.5" y="59" class="w c1">p</text><text x="49.3" y="59" class="w c2">x</text><text x="57.1" y="59" class="w c3"> </text><text x="65.0" y="59" class="w c4">n</text><text x="72.8" y="59" class="w c5">a</text><text x="80.6" y="59" class="w c6">t</text><text x="88.5" y="59" class="w c7">i</text><text x="96.3" y="59" class="w c8">v</text><text x="104.1" y="59" class="w c9">e</text><text x="112.0" y="59" class="w c10">k</text><text x="119.8" y="59" class="w c11">e</text><text x="127.6" y="59" class="w c12">e</text><text x="135.4" y="59" class="w c13">l</text><text x="143.3" y="59" class="w c14"> </text><text x="151.1" y="59" class="w c15">u</text><text x="158.9" y="59" class="w c16">p</text><text x="166.8" y="59" class="w c17">g</text><text x="174.6" y="59" class="w c18">r</text><text x="182.4" y="59" class="w c19">a</text><text x="190.3" y="59" class="w c20">d</text><text x="198.1" y="59" class="w c21">e</text><text y="97" class="l0"><tspan x="18.0" class="b">Upgrade  React Native 0.84.1 → React Native 0.88.x</tspan></text><text y="116" class="l1"><tspan x="33.7" class="r">NOT READY — 3 blockers in your code and dependencies</tspan></text><text y="135" class="l2"><tspan x="33.7" class="y">!</tspan><tspan x="41.5"> React Native 0.84.1 is no longer supported</tspan></text><text y="173" class="l4"><tspan x="18.0" class="b">Blockers (fix before upgrading)</tspan></text><text y="192" class="l5"><tspan x="33.7" class="r">✗</tspan><tspan x="49.3">[code </tspan><tspan x="96.3">· </tspan><tspan x="112.0">React </tspan><tspan x="158.9">Native </tspan><tspan x="213.8">0.85] </tspan><tspan x="260.7">`StyleSheet.absoluteFillObject` </tspan><tspan x="511.3">is </tspan><tspan x="534.8">removed </tspan><tspan x="597.4">— </tspan></text><text y="211" class="l6"><tspan x="49.3">src/components/Overlay.js:13</tspan></text><text y="230" class="l7"><tspan x="65.0" class="d">Use </tspan><tspan x="96.3" class="d">`StyleSheet.absoluteFill` </tspan><tspan x="299.9" class="d">(same </tspan><tspan x="346.9" class="d">values, </tspan><tspan x="409.5" class="d">can </tspan><tspan x="440.8" class="d">be </tspan><tspan x="464.3" class="d">spread). </tspan><tspan x="534.8" class="d">In </tspan><tspan x="558.3" class="d">JavaScript </tspan><tspan x="644.4" class="d">nothing </tspan><tspan x="707.0" class="d">fails: </tspan></text><text y="249" class="l8"><tspan x="80.6" class="d">overlays </tspan><tspan x="151.1" class="d">silently </tspan><tspan x="221.6" class="d">lose </tspan><tspan x="260.7" class="d">their </tspan><tspan x="307.7" class="d">absolute </tspan><tspan x="378.2" class="d">layout. </tspan></text><text y="268" class="l9"><tspan x="80.6" class="d">https://nativekeel.com/fix/stylesheet-absolutefillobject-removed-react-native-0-85</tspan></text><text y="287" class="l10"><tspan x="33.7" class="r">✗</tspan><tspan x="41.5"> [code · React Native 0.87] `InteractionManager` is removed — src/screens/Feed.js:2</tspan></text><text y="306" class="l11"><tspan x="18.0" class="d">      Use `requestIdleCallback` (or run the work after the interaction finishes).</tspan></text><text y="325" class="l12"><tspan x="33.7" class="r">✗</tspan><tspan x="49.3">[code </tspan><tspan x="96.3">· </tspan><tspan x="112.0">React </tspan><tspan x="158.9">Native </tspan><tspan x="213.8">0.87] </tspan><tspan x="260.7">`StatusBar` </tspan><tspan x="354.7">`backgroundColor`, </tspan><tspan x="503.5">`translucent` </tspan><tspan x="613.1">and </tspan></text><text y="344" class="l13"><tspan x="49.3">`networkActivityIndicatorVisible` </tspan><tspan x="315.5">(props </tspan><tspan x="370.4">and </tspan><tspan x="401.7">setters) </tspan><tspan x="472.1">are </tspan><tspan x="503.5">removed </tspan><tspan x="566.1">— </tspan><tspan x="581.8">src/App.js:8</tspan></text><text y="363" class="l14"><tspan x="65.0" class="d">Remove </tspan><tspan x="119.8" class="d">them </tspan><tspan x="158.9" class="d">from </tspan><tspan x="198.1" class="d">the </tspan><tspan x="229.4" class="d">React </tspan><tspan x="276.4" class="d">Native </tspan><tspan x="331.2" class="d">`StatusBar`: </tspan><tspan x="433.0" class="d">edge-to-edge </tspan><tspan x="534.8" class="d">draws </tspan><tspan x="581.8" class="d">behind </tspan><tspan x="636.6" class="d">the </tspan><tspan x="667.9" class="d">status </tspan><tspan x="722.7" class="d">bar </tspan><tspan x="754.0" class="d">on </tspan></text><text y="382" class="l15"><tspan x="80.6" class="d">Android. </tspan><tspan x="151.1" class="d">expo-status-bar </tspan><tspan x="276.4" class="d">is </tspan><tspan x="299.9" class="d">not </tspan><tspan x="331.2" class="d">affected.</tspan></text><text y="420" class="l17"><tspan x="18.0" class="d">What this cannot confirm:</tspan></text><text y="439" class="l18"><tspan x="33.7" class="d">- </tspan><tspan x="49.3" class="d">Native </tspan><tspan x="104.1" class="d">library </tspan><tspan x="166.8" class="d">code </tspan><tspan x="205.9" class="d">and </tspan><tspan x="237.2" class="d">iOS/Android </tspan><tspan x="331.2" class="d">build </tspan><tspan x="378.2" class="d">settings </tspan><tspan x="448.6" class="d">beyond </tspan><tspan x="503.5" class="d">the </tspan><tspan x="534.8" class="d">checks </tspan><tspan x="589.6" class="d">above </tspan><tspan x="636.6" class="d">are </tspan><tspan x="667.9" class="d">not </tspan><tspan x="699.2" class="d">evaluated </tspan></text><text y="458" class="l19"><tspan x="49.3" class="d">here; </tspan><tspan x="96.3" class="d">build </tspan><tspan x="143.3" class="d">once </tspan><tspan x="182.4" class="d">on </tspan><tspan x="205.9" class="d">the </tspan><tspan x="237.2" class="d">target </tspan><tspan x="292.1" class="d">before </tspan><tspan x="346.9" class="d">shipping.</tspan></text><text y="477" class="l20"><tspan x="33.7" class="d">- </tspan><tspan x="49.3" class="d">Breaking </tspan><tspan x="119.8" class="d">changes </tspan><tspan x="182.4" class="d">are </tspan><tspan x="213.8" class="d">matched </tspan><tspan x="276.4" class="d">from </tspan><tspan x="315.5" class="d">NativeKeel's </tspan><tspan x="417.3" class="d">catalog </tspan><tspan x="480.0" class="d">for </tspan><tspan x="511.3" class="d">the </tspan><tspan x="542.6" class="d">versions </tspan><tspan x="613.1" class="d">ahead </tspan><tspan x="660.1" class="d">of </tspan><tspan x="683.6" class="d">you </tspan><tspan x="714.9" class="d">(up </tspan><tspan x="746.2" class="d">to </tspan></text><text y="496" class="l21"><tspan x="49.3" class="d">React </tspan><tspan x="96.3" class="d">Native </tspan><tspan x="151.1" class="d">0.88); </tspan><tspan x="205.9" class="d">a </tspan><tspan x="221.6" class="d">change </tspan><tspan x="276.4" class="d">not </tspan><tspan x="307.7" class="d">in </tspan><tspan x="331.2" class="d">the </tspan><tspan x="362.5" class="d">catalog </tspan><tspan x="425.2" class="d">is </tspan><tspan x="448.6" class="d">not </tspan><tspan x="480.0" class="d">reported.</tspan></text>
+</svg>

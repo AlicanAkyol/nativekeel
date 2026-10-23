@@ -70,3 +70,10 @@ test('upgrade: no React Native or Expo detected', () => {
   assert.equal(r.status, 'unknown');
   assert.doesNotThrow(() => render(r));
 });
+
+test('upgrade: end of support is shown with the verdict, not as a limit of the scan', () => {
+  const r = upgradeReport(result({ reactNative: `0.${NEXT.rn.minor - 1}.0` }, [{ id: 'rn-unsupported', severity: 'critical', area: 'react-native', title: 'React Native 0.87.0 is no longer supported' }]));
+  assert.deepEqual(r.support, ['React Native 0.87.0 is no longer supported']);
+  assert.ok(!r.cantKnow.some((k) => /no longer supported/.test(k)));
+  assert.match(render(r), /! React Native 0\.87\.0 is no longer supported/);
+});
