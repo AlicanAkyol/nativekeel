@@ -40,6 +40,13 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.125</h2><p class="date">23 October 2026</p>
+<p>A guide for the second most common upgrade blocker we measured.</p>
+<ul>
+<li><span class="tag">Guides</span><b><a href="/fix/statusbar-backgroundcolor-translucent-removed-react-native-0-87">StatusBar backgroundColor and translucent removed in React Native 0.87</a>.</b> The props are silently ignored, but the setter calls (<code>StatusBar.setBackgroundColor</code>) now throw. Why they went (Android 15 edge-to-edge) and how to colour behind the status bar with safe-area insets. 140 of 947 open-source apps below 0.87 use them.</li>
+<li><span class="tag">Upgrade</span><b>Findings link their guides.</b> The <code>StatusBar</code> and <code>InteractionManager</code> items of <code>npx nativekeel upgrade</code> link to the page with the fix. A long explanation is shortened without cutting the link at its end.</li>
+<li><span class="tag">Listed</span><b>awesome-mcp-servers.</b> NativeKeel is now in the largest list of MCP servers.</li>
+</ul></div>
 <div class="rel"><h2>0.1.124</h2><p class="date">23 October 2026</p>
 <p>See it before you run it.</p>
 <ul>

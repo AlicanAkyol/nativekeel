@@ -139,7 +139,13 @@ export function upgradeText(report, { color } = {}) {
     for (const b of report.blockers) {
       const tag = { code: 'code', 'library-ios-build': 'iOS build', 'library-interop': 'native module', known: 'known trap', mismatch: 'version mismatch' }[b.kind] || b.kind;
       out.push(`  ${c.red('✗')} [${tag}${b.version ? ` · ${b.version}` : ''}] ${b.title}${where(b.where)}`);
-      if (b.action) out.push(c.gray(`      ${b.action.length > 240 ? b.action.slice(0, 237) + '…' : b.action}`));
+      if (b.action) {
+        // Shorten long prose, never the guide link at its end: a cut URL is useless.
+        const m = b.action.match(/^(.*?)\s*(https?:\/\/\S+)$/s);
+        const prose = m ? m[1] : b.action;
+        const short = prose.length > 240 ? prose.slice(0, 237) + '…' : prose;
+        out.push(c.gray(`      ${short}${m ? ` ${m[2]}` : ''}`));
+      }
     }
     out.push('');
   }

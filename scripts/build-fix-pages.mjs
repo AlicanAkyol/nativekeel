@@ -769,6 +769,48 @@ Search the project for \`absoluteFillObject\`, including code that libraries you
 `,
     sources: [['React Native 0.85 release notes: breaking changes', 'https://reactnative.dev/blog/2026/04/07/react-native-0.85'], ['React Native 0.85.0 StyleSheetExports.js', 'https://github.com/facebook/react-native/blob/v0.85.0/packages/react-native/Libraries/StyleSheet/StyleSheetExports.js'], ['React Native 0.84.0 StyleSheet.d.ts (deprecated there)', 'https://github.com/facebook/react-native/blob/v0.84.0/packages/react-native/Libraries/StyleSheet/StyleSheet.d.ts']],
   },
+  {
+    slug: 'statusbar-backgroundcolor-translucent-removed-react-native-0-87',
+    updated: '2026-10-23',
+    error: 'StatusBar backgroundColor and translucent removed in React Native 0.87',
+    title: 'StatusBar backgroundColor, translucent removed in RN 0.87',
+    description: 'React Native 0.87 removed StatusBar backgroundColor, translucent and their setters. Props are ignored, setter calls now crash. What to use instead.',
+    body: `
+React Native 0.87 removed three \`StatusBar\` props and their setter methods. The release notes list it under API removals: "Removed deprecated \`StatusBar\` \`backgroundColor\` / \`translucent\` / \`networkActivityIndicatorVisible\` props and their setter methods."
+
+**What happens after the upgrade.** The two ways of using them fail differently:
+
+- **As props** (\`<StatusBar backgroundColor="#0b5d55" translucent />\`): React Native 0.87 no longer reads them, so they are silently ignored. TypeScript fails the build, because the props are gone from the type definitions.
+- **As setters** (\`StatusBar.setBackgroundColor(...)\`, \`StatusBar.setTranslucent(...)\`, \`StatusBar.setNetworkActivityIndicatorVisible(...)\`): the methods no longer exist, so the call throws a \`TypeError\` (it is not a function). In a development build that is a red screen; in a release build the screen or the app crashes where the call runs.
+
+**Why they went.** On Android 15, apps that target API level 35 or higher are drawn edge-to-edge: the status bar is transparent, content draws behind it, and the system ignores the status bar colour (\`setStatusBarColor\` is deprecated and has no effect). Google Play requires a target of API 35 or higher, so these props had already stopped doing anything on current Android.
+
+**Fix.**
+
+- Remove \`backgroundColor\`, \`translucent\` and \`networkActivityIndicatorVisible\` from every \`StatusBar\` imported from \`react-native\`, and delete the setter calls.
+- Keep \`barStyle\` (and \`StatusBar.setBarStyle\`): it still sets light or dark status bar icons.
+- To colour the area behind the status bar, draw it yourself, using the top inset from react-native-safe-area-context:
+
+\`\`\`
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+function Screen({ children }) {
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: '#0b5d55' }}>
+      <StatusBar barStyle="light-content" />
+      {children}
+    </View>
+  );
+}
+\`\`\`
+
+Search the project for \`setBackgroundColor\`, \`setTranslucent\` and \`setNetworkActivityIndicatorVisible\` first: those are the calls that crash.
+
+**Check before you upgrade.** \`npx nativekeel upgrade\` lists the files that use these props or setters when your app is below React Native 0.87, with the other breaking changes between your version and the newest one. In our scan of 947 open-source React Native apps, 140 that are still below 0.87 use them.
+`,
+    sources: [['React Native 0.87 release notes: API removals', 'https://reactnative.dev/blog/2026/08/11/react-native-0.87'], ['React Native 0.87.1 StatusBar.js', 'https://github.com/facebook/react-native/blob/v0.87.1/packages/react-native/Libraries/Components/StatusBar/StatusBar.js'], ['React Native 0.86.0 StatusBar.js (the setters before removal)', 'https://github.com/facebook/react-native/blob/v0.86.0/packages/react-native/Libraries/Components/StatusBar/StatusBar.js'], ['Android 15 behavior changes: edge-to-edge enforcement', 'https://developer.android.com/about/versions/15/behavior-changes-15']],
+  },
 ];
 
 const STYLE = `:root{--bg:#fbfaf7;--text:#15171b;--muted:#5d6470;--accent:#0b5d55;--line:#e3e1db;--card:#ffffff;--code:#f1efea}

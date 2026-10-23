@@ -77,3 +77,13 @@ test('upgrade: end of support is shown with the verdict, not as a limit of the s
   assert.ok(!r.cantKnow.some((k) => /no longer supported/.test(k)));
   assert.match(render(r), /! React Native 0\.87\.0 is no longer supported/);
 });
+
+test('upgrade: a long action is shortened but its guide link stays whole', () => {
+  const url = 'https://nativekeel.com/fix/statusbar-backgroundcolor-translucent-removed-react-native-0-87';
+  const r = upgradeReport(result({ reactNative: `0.${NEXT.rn.minor - 1}.0` }, [
+    { id: 'upcoming-changes', fix: { kind: 'upcoming', changes: [{ id: 'x', version: 'React Native 0.87', kind: 'removed', title: 'Long one', hits: ['a.js:1'], action: `${'word '.repeat(80)}${url}` }] } },
+  ]));
+  const text = render(r);
+  assert.ok(text.includes(url), 'the full link is printed');
+  assert.match(text, /…/);
+});
