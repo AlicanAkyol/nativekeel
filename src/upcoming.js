@@ -1,6 +1,7 @@
 import fs from './read-boundary.js';
 import path from 'node:path';
 import { unprefixedReactImports } from './react-headers.js';
+import { removedApiInLibraries } from './js-libraries.js';
 import { gitIgnored } from './git.js';
 
 // What changes in the React Native and Expo versions ahead of the project, matched against its
@@ -28,12 +29,12 @@ const importsFrom = (pkg) => new RegExp(`from\\s*['"]${pkg.replace(/[/.]/g, '\\$
 // needs a newer toolchain or config.
 export const CHANGES = [
   // React Native 0.85 (crossed by any app upgrading from 0.84 or below)
-  { id: 'rn85-absolute-fill-object', rn: 85, kind: 'removed', title: '`StyleSheet.absoluteFillObject` is removed', action: 'Use `StyleSheet.absoluteFill` (same values, can be spread). In JavaScript nothing fails: overlays silently lose their absolute layout. https://nativekeel.com/fix/stylesheet-absolutefillobject-removed-react-native-0-85', code: [/StyleSheet\.absoluteFillObject\b/], source: RN_085 },
+  { id: 'rn85-absolute-fill-object', jsLibraries: true, rn: 85, kind: 'removed', title: '`StyleSheet.absoluteFillObject` is removed', action: 'Use `StyleSheet.absoluteFill` (same values, can be spread). In JavaScript nothing fails: overlays silently lose their absolute layout. https://nativekeel.com/fix/stylesheet-absolutefillobject-removed-react-native-0-85', code: [/StyleSheet\.absoluteFillObject\b/], source: RN_085 },
   { id: 'rn85-jest-preset', rn: 85, kind: 'tooling', title: "React Native's Jest preset moved to `@react-native/jest-preset`", action: "Install `@react-native/jest-preset` and change `preset: 'react-native'` to `preset: '@react-native/jest-preset'` in your Jest config.", code: [/['"]?preset['"]?\s*:\s*['"]react-native['"]/], config: true, source: RN_085 },
   // React Native 0.87 (also in Expo SDK 58)
-  { id: 'rn87-interaction-manager', rn: 87, kind: 'removed', title: '`InteractionManager` is removed', action: 'Use `requestIdleCallback` (or run the work after the interaction finishes). https://nativekeel.com/fix/interactionmanager-removed-react-native-0-87', code: [fromRn('InteractionManager')], source: RN_087 },
+  { id: 'rn87-interaction-manager', jsLibraries: true, rn: 87, kind: 'removed', title: '`InteractionManager` is removed', action: 'Use `requestIdleCallback` (or run the work after the interaction finishes). https://nativekeel.com/fix/interactionmanager-removed-react-native-0-87', code: [fromRn('InteractionManager')], source: RN_087 },
   { id: 'rn87-modal-animated', rn: 87, kind: 'removed', title: 'The `animated` prop of `Modal` is removed', action: 'Use `animationType="slide"` or `"fade"` instead of `animated`.', code: [/<Modal\b[^>]*\sanimated(?:\s*=\s*\{?\s*(?:true|false)\s*\}?)?[\s/>]/], requireCode: fromRn('Modal'), source: RN_087 },
-  { id: 'rn87-statusbar-props', rn: 87, kind: 'removed', title: '`StatusBar` `backgroundColor`, `translucent` and `networkActivityIndicatorVisible` (props and setters) are removed', action: 'Remove them from the React Native `StatusBar` (props are ignored; setter calls like `StatusBar.setBackgroundColor` now throw). Edge-to-edge draws behind the status bar on Android. expo-status-bar is not affected. https://nativekeel.com/fix/statusbar-backgroundcolor-translucent-removed-react-native-0-87', code: [/<StatusBar\b[^>]*\b(?:backgroundColor|translucent|networkActivityIndicatorVisible)\b/, /\bStatusBar\.(?:setBackgroundColor|setTranslucent|setNetworkActivityIndicatorVisible)\s*\(/], requireCode: fromRn('StatusBar'), source: RN_087 },
+  { id: 'rn87-statusbar-props', jsLibraries: true, rn: 87, kind: 'removed', title: '`StatusBar` `backgroundColor`, `translucent` and `networkActivityIndicatorVisible` (props and setters) are removed', action: 'Remove them from the React Native `StatusBar` (props are ignored; setter calls like `StatusBar.setBackgroundColor` now throw). Edge-to-edge draws behind the status bar on Android. expo-status-bar is not affected. https://nativekeel.com/fix/statusbar-backgroundcolor-translucent-removed-react-native-0-87', code: [/<StatusBar\b[^>]*\b(?:backgroundColor|translucent|networkActivityIndicatorVisible)\b/, /\bStatusBar\.(?:setBackgroundColor|setTranslucent|setNetworkActivityIndicatorVisible)\s*\(/], requireCode: fromRn('StatusBar'), source: RN_087 },
   { id: 'rn87-keyboard-persist-boolean', rn: 87, kind: 'removed', title: '`keyboardShouldPersistTaps` no longer accepts `true`/`false`', action: 'Use `"always"` (was `true`) or `"never"` (was `false`).', code: [/keyboardShouldPersistTaps\s*=\s*\{\s*(?:true|false)\s*\}|keyboardShouldPersistTaps(?=\s*[/>\n]|\s+[a-zA-Z])(?!\s*=)/], source: RN_087 },
   { id: 'rn87-deep-imports', rn: 87, kind: 'removed', title: 'Deep imports from `react-native/Libraries/` are type errors (Strict TypeScript API is the default)', action: 'Import from `react-native` instead. To defer, add `"customConditions": ["react-native", "react-native-legacy-deep-imports"]` to tsconfig.json (works through 0.88 only).', code: [/from\s*['"]react-native\/Libraries\//], ts: true, source: RN_087 },
   { id: 'rn87-src-private', rn: 87, kind: 'removed', title: 'Deep imports from `react-native/src/private/` are removed', action: 'These internal paths (IntersectionObserver, ReactNativeFeatureFlags, Performance, DOMRect…) are no longer importable. Use the public API where one exists, or pin behind the compatibility layer; there is no supported deep-import replacement.', code: [/from\s*['"]react-native\/src\/private\//], source: RN_087 },
@@ -149,6 +150,8 @@ export function upcomingChanges(project) {
   const hasAndroid = isExpo ? true : !!project.android;
 
   const out = [];
+  // Dependencies that still call a removed API: read once, only when an entry asks for it.
+  let libraryUses = null;
   for (const c of candidates) {
     // Changes inside one library apply only to projects that depend on it.
     if (c.requireDep && !deps[c.requireDep]) continue;
@@ -196,7 +199,12 @@ export function upcomingChanges(project) {
       const gradle = read(path.join(root, 'android', 'gradle.properties'));
       if (!c.unlessConfig.test(configText) && !/android\.enableMinifyInReleaseBuilds\s*=\s*true|enableProguardInReleaseBuilds\s*=\s*true/.test(gradle) && !/minifyEnabled\s*(?:=\s*)?true/.test(read(path.join(root, 'android', 'app', 'build.gradle')))) hits.push('Android release build');
     }
-    if (hits.length) out.push({ ...c, hits: [...new Set(hits)].slice(0, 5) });
+    const libraries = [];
+    if (c.jsLibraries) {
+      libraryUses ??= removedApiInLibraries(project);
+      for (const l of libraryUses.get(c.id) || []) libraries.push(`${l.name}${l.version ? ` ${l.version}` : ''} (${l.where})`);
+    }
+    if (hits.length || libraries.length) out.push({ ...c, hits: [...new Set(hits)].slice(0, 5), libraries });
   }
   return out;
 }
@@ -215,8 +223,8 @@ export function upcomingFinding(project) {
       severity: breaking ? 'low' : 'info',
       area: 'react-native',
       title: `${changes.length} change${changes.length === 1 ? '' : 's'} in ${versions.join(' and ')} affect${changes.length === 1 ? 's' : ''} this app${breaking ? ` (${breaking} break${breaking === 1 ? 's' : ''} code)` : ''}`,
-      detail: changes.map((c) => `${c.title} (${c.hits.join(', ')}): ${c.action}`).join(' '),
-      fix: { kind: 'upcoming', changes: changes.map((c) => ({ id: c.id, version: versionLabel(c), kind: c.kind, title: c.title, hits: c.hits, action: c.action, source: c.source })) },
+      detail: changes.map((c) => `${c.title} (${[...c.hits, ...(c.libraries || []).map((l) => `in ${l}`)].join(', ')}): ${c.action}`).join(' '),
+      fix: { kind: 'upcoming', changes: changes.map((c) => ({ id: c.id, version: versionLabel(c), kind: c.kind, title: c.title, hits: c.hits, libraries: c.libraries || [], action: c.action, source: c.source })) },
     },
   ];
 }

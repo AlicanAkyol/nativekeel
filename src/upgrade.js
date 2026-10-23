@@ -4,6 +4,7 @@
 // and lists only what the upgrade touches. Nothing here is a new detector; it reorganizes what
 // analyze() already found so the upgrade story is the headline, not a buried low finding.
 import { NEXT, EXPO_RN, CHANGES } from './upcoming.js';
+import { CONTACT_EMAIL } from './config.js';
 
 const minorOf = (v) => (v ? Number(String(v).split('.')[1]) : null);
 const majorOf = (v) => (v ? Number(String(v).split('.')[0]) : null);
@@ -42,7 +43,9 @@ export function upgradeReport(result) {
   const upcoming = find('upcoming-changes');
   const changes = (upcoming && upcoming.fix && upcoming.fix.changes) || [];
   const libCompile = changes.filter((c) => c.id === 'rn87-bare-includes');
-  const codeBreaks = changes.filter((c) => c.kind === 'removed' && c.id !== 'rn87-bare-includes');
+  // A change can be in the app's own code, in a dependency, or both: each is its own blocker.
+  const codeBreaks = changes.filter((c) => c.kind === 'removed' && c.id !== 'rn87-bare-includes' && c.hits.length);
+  const libraryBreaks = changes.filter((c) => c.kind === 'removed' && (c.libraries || []).length);
   const behavior = changes.filter((c) => c.kind === 'behavior');
   const tooling = changes.filter((c) => c.kind === 'tooling');
 
@@ -55,6 +58,7 @@ export function upgradeReport(result) {
 
   const blockers = [];
   for (const c of codeBreaks) blockers.push({ kind: 'code', title: c.title, where: c.hits, action: c.action, version: c.version, source: c.source });
+  for (const c of libraryBreaks) blockers.push({ kind: 'library-js', title: `${c.title}, and a dependency still uses it`, where: c.libraries, action: 'Update the library if a release fixes it; until then patch it (patch-package). A fix in your own code does not cover it.', version: c.version, source: c.source });
   for (const c of libCompile) blockers.push({ kind: 'library-ios-build', title: c.title, where: c.hits, action: c.action, version: c.version, source: c.source });
   for (const f of interop) blockers.push({ kind: 'library-interop', title: f.title, where: [], action: f.detail, id: f.id });
   for (const f of knownSerious) blockers.push({ kind: 'known', title: f.title, where: [], action: f.detail, id: f.id });
@@ -137,7 +141,7 @@ export function upgradeText(report, { color } = {}) {
   if (report.blockers.length) {
     out.push(c.bold('Blockers (fix before upgrading)'));
     for (const b of report.blockers) {
-      const tag = { code: 'code', 'library-ios-build': 'iOS build', 'library-interop': 'native module', known: 'known trap', mismatch: 'version mismatch' }[b.kind] || b.kind;
+      const tag = { code: 'code', 'library-js': 'library', 'library-ios-build': 'iOS build', 'library-interop': 'native module', known: 'known trap', mismatch: 'version mismatch' }[b.kind] || b.kind;
       out.push(`  ${c.red('✗')} [${tag}${b.version ? ` · ${b.version}` : ''}] ${b.title}${where(b.where)}`);
       if (b.action) {
         // Shorten long prose, never the guide link at its end: a cut URL is useless.
@@ -161,5 +165,9 @@ export function upgradeText(report, { color } = {}) {
   }
   out.push(c.gray('What this cannot confirm:'));
   for (const k of report.cantKnow) out.push(c.gray(`  - ${k}`));
+  if (report.status === 'blocked' || report.status === 'partial') {
+    out.push('');
+    out.push(`Rather hand the upgrade over? We take on a few at a time: send this output to ${c.bold(CONTACT_EMAIL)} for a fixed quote.`);
+  }
   return out.join('\n');
 }

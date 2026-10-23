@@ -944,7 +944,7 @@ for (const p of PAGES) {
 <h1>${esc(p.error)}</h1>
 <p class="meta">Updated ${p.updated || UPDATED}</p>
 ${md(p.body)}
-<div class="cta"><strong>Check your whole app in one command:</strong> <code>npx nativekeel</code><br><span class="meta">Free, runs locally (your code is not uploaded), no account. It reports this along with the other upgrade, store, crash and security problems it checks for.</span></div>
+<div class="cta"><strong>Check your whole app in one command:</strong> <code>npx nativekeel</code><br><span class="meta">Free, runs locally (your code is not uploaded), no account. It reports this along with the other upgrade, store, crash and security problems it checks for.</span><br><span class="meta">Rather hand the upgrade over? The engineer behind NativeKeel takes on a few upgrades at a time: send your report to <a href="mailto:hello@nativekeel.com?subject=React%20Native%20upgrade">hello@nativekeel.com</a> for a fixed quote.</span></div>
 <h2>Sources</h2>
 <ul>${p.sources.map(([t, u]) => `<li><a href="${u}">${esc(t)}</a></li>`).join('')}</ul>
 <script type="application/ld+json">${JSON.stringify(ld).replace(/</g, '\\u003c')}</script>

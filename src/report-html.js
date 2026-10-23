@@ -1,5 +1,6 @@
 import { SEVERITIES, countBySeverity } from './analyze.js';
-import { SITE_URL } from './config.js';
+import { SITE_URL, CONTACT_EMAIL } from './config.js';
+import { DEADLINE_IDS } from './report-text.js';
 import { startHere } from './plan.js';
 import { MASVS_GROUPS } from './security.js';
 
@@ -123,6 +124,7 @@ ${result.focus === "security" && result.securityReview ? `<section><h2>What this
 <h2>Findings</h2>
 ${result.findings.length ? `<ul class="list">${rows}</ul>` : '<p>No issues found.</p>'}
 ${planHtml}
+${!brand && result.findings.some((f) => (f.severity === 'critical' || f.severity === 'high') && DEADLINE_IDS.test(f.id)) ? `<p class="muted">Short on time before a store deadline? The engineer behind NativeKeel takes on a few upgrades at a time: send this report to <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a> for a fixed quote.</p>` : ''}
 <footer>${footer}</footer>
 </main></body></html>
 `;

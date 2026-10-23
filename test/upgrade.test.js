@@ -87,3 +87,12 @@ test('upgrade: a long action is shortened but its guide link stays whole', () =>
   assert.ok(text.includes(url), 'the full link is printed');
   assert.match(text, /…/);
 });
+
+test('upgrade: the hand-over line shows only when there is upgrade work', () => {
+  const blocked = upgradeReport(result({ reactNative: `0.${NEXT.rn.minor - 1}.0` }, [
+    { id: 'upcoming-changes', fix: { kind: 'upcoming', changes: [{ id: 'x', version: 'React Native 0.87', kind: 'removed', title: 'Gone', hits: ['a.js:1'], action: 'Fix it.' }] } },
+  ]));
+  assert.match(render(blocked), /hello@nativekeel\.com/);
+  const ready = upgradeReport(result({ reactNative: `0.${NEXT.rn.minor - 1}.0` }, []));
+  assert.doesNotMatch(render(ready), /hello@nativekeel\.com/);
+});
