@@ -40,6 +40,12 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.128</h2><p class="date">24 October 2026</p>
+<p>31 libraries checked, 30 listed: the dependency check now covers the libraries that matter most.</p>
+<ul>
+<li><span class="tag">Upgrade</span><b>A wider list of libraries that still call removed APIs.</b> 1,442 libraries used in the open-source corpus were scanned, and every hit was confirmed with the tool's own rules on the published code, with the exact release range it applies to: react-native-calendars (from 1.1275.0), react-native-elements, react-native-snap-carousel, react-navigation-stack, react-native-flash-message, react-native-ui-lib, react-native-svg-charts and 20 more. Libraries that carry their own copy of the API (Tamagui, Unistyles) are not reported.</li>
+<li><span class="tag">Accuracy</span><b>Crash or layout.</b> A dependency that calls <code>InteractionManager</code> or a <code>StatusBar</code> setter blocks the upgrade (it crashes when that code runs). One that uses <code>StyleSheet.absoluteFillObject</code> is listed for review with the component affected (for example react-native-calendars' Timeline), because only those components lose their layout. A hook library such as <code>@react-native-community/hooks</code> is reported only where your code calls <code>useInteractionManager()</code>.</li>
+</ul></div>
 <div class="rel"><h2>0.1.127</h2><p class="date">24 October 2026</p>
 <p>Your code can be clean and the upgrade still break, because a library you depend on calls something React Native removed.</p>
 <ul>

@@ -58,3 +58,22 @@ test('js libraries: React Native itself is not reported as a library', () => {
   });
   assert.deepEqual(uses(root), {});
 });
+
+test('js libraries: a layout-only break in a dependency is for review, not a blocker; version ranges hold', () => {
+  const root = app({ 'react-native-calendars': '1.1300.0' });
+  const changes = upcomingChanges(loadProject(root));
+  const af = changes.find((c) => c.id === 'rn85-absolute-fill-object');
+  assert.deepEqual(af.libraries, ['react-native-calendars 1.1300.0 (Timeline)']);
+  const result = { project: { reactNative: '0.84.0' }, findings: [{ id: 'upcoming-changes', fix: { kind: 'upcoming', changes: changes.map((c) => ({ ...c, version: `React Native 0.${c.rn}` })) } }] };
+  const r = upgradeReport(result);
+  assert.notEqual(r.status, 'blocked');
+  assert.ok(r.notes.some((n) => n.kind === 'library-js' && /Timeline/.test(n.where[0])));
+  assert.deepEqual(uses(app({ 'react-native-calendars': '1.1274.0' })), {}, '1.1274.0 is clean');
+});
+
+test('js libraries: a hook library is not flagged; the app calling the hook is', () => {
+  const root = app({ '@react-native-community/hooks': '100.1.0' }, { 'src/Screen.js': "import { useInteractionManager } from '@react-native-community/hooks';\nexport default function S() { const done = useInteractionManager(); return null; }\n" });
+  assert.deepEqual(uses(root), {});
+  const im = upcomingChanges(loadProject(root)).find((c) => c.id === 'rn87-interaction-manager');
+  assert.deepEqual(im.hits, ['src/Screen.js:2']);
+});

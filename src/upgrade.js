@@ -45,7 +45,12 @@ export function upgradeReport(result) {
   const libCompile = changes.filter((c) => c.id === 'rn87-bare-includes');
   // A change can be in the app's own code, in a dependency, or both: each is its own blocker.
   const codeBreaks = changes.filter((c) => c.kind === 'removed' && c.id !== 'rn87-bare-includes' && c.hits.length);
-  const libraryBreaks = changes.filter((c) => c.kind === 'removed' && (c.libraries || []).length);
+  // A library that crashes (InteractionManager, the StatusBar setters) blocks the upgrade. One that
+  // uses absoluteFillObject only breaks the layout of the components named, which the app may not
+  // use: that is for review, not a blocker.
+  const SILENT_IN_LIBRARY = new Set(['rn85-absolute-fill-object']);
+  const libraryBreaks = changes.filter((c) => c.kind === 'removed' && (c.libraries || []).length && !SILENT_IN_LIBRARY.has(c.id));
+  const libraryReviews = changes.filter((c) => c.kind === 'removed' && (c.libraries || []).length && SILENT_IN_LIBRARY.has(c.id));
   const behavior = changes.filter((c) => c.kind === 'behavior');
   const tooling = changes.filter((c) => c.kind === 'tooling');
 
@@ -65,6 +70,7 @@ export function upgradeReport(result) {
   for (const f of mismatch) blockers.push({ kind: 'mismatch', title: f.title, where: [], action: f.detail, id: f.id });
 
   const notes = [];
+  for (const c of libraryReviews) notes.push({ kind: 'library-js', title: `${c.title}: a dependency still uses it, so its components named here lose their layout`, where: c.libraries, action: 'Check whether you use those components; update the library if a release fixes it, or patch it.', version: c.version, source: c.source });
   for (const c of behavior) notes.push({ kind: 'behavior', title: c.title, where: c.hits, action: c.action, version: c.version, source: c.source });
   for (const f of knownMinor) notes.push({ kind: 'known', title: f.title, where: [], action: f.detail, id: f.id });
   if (newArch) notes.push({ kind: 'new-arch', title: newArch.title, where: [], action: newArch.detail, id: newArch.id });
