@@ -224,7 +224,9 @@ export function buildPlan(result) {
       why: 'Below the required level Google Play rejects updates or hides the app from new users.',
       steps: [
         ...byKind('exported-missing').map((e) => `First add \`android:exported\` to ${e.components.map((c) => `\`${c}\``).join(', ')} in \`android/app/src/main/AndroidManifest.xml\` (\`"true"\` for the launcher activity, \`"false"\` unless another app must start it): from target 31 the build fails without it.`),
-        `Set \`targetSdkVersion = ${sdk.to}\` and \`compileSdkVersion = ${sdk.to}\` in \`android/build.gradle\`.`,
+        sdk.source === 'expo-build-properties'
+          ? `Set \`targetSdkVersion\` and \`compileSdkVersion\` to ${sdk.to} in the expo-build-properties plugin options (app.json or app.config), or remove the pin if your Expo SDK already targets ${sdk.to}.`
+          : `Set \`targetSdkVersion = ${sdk.to}\` and \`compileSdkVersion = ${sdk.to}\` in \`android/build.gradle\`.`,
         `Read the Android behavior changes for every API level between ${sdk.from} and ${sdk.to}; edge-to-edge display and foreground service types are the usual surprises.`,
         'Build a release bundle and test on a device running the newest Android version.',
       ],

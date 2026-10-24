@@ -74,6 +74,21 @@ test('targetSdk between the visibility and update minimums blocks updates', asyn
   assert.ok(!ids.includes('play-target-sdk-visibility'));
 });
 
+test('managed Expo app: a target SDK pinned in expo-build-properties is checked', async () => {
+  const app = (plugins) => makeProject({
+    'package.json': { name: 'demo', dependencies: { expo: '~58.0.0', 'react-native': '0.88.0', react: '19.2.0' } },
+    'app.json': JSON.stringify({ expo: { name: 'demo', plugins } }),
+  });
+  const pinned = loadProject(app([['expo-build-properties', { android: { targetSdkVersion: 35, compileSdkVersion: 35 } }]]));
+  assert.deepEqual(pinned.android, { targetSdk: 35, compileSdk: 35, minSdk: null, source: 'expo-build-properties' });
+  const result = await analyze(pinned, { get: registry, now: NOW });
+  const f = result.findings.find((x) => x.id === 'play-target-sdk-updates');
+  assert.match(f.detail, /pinned in the expo-build-properties/);
+  assert.match(buildPlan(result).phases.find((p) => p.title === 'Meet the Google Play target SDK').steps.join(' '), /expo-build-properties plugin options/);
+  assert.equal(loadProject(app([['expo-build-properties', { ios: { deploymentTarget: '15.1' } }]])).android, null, 'no Android pin: the Expo SDK decides');
+  assert.equal(loadProject(app(['expo-router'])).android, null);
+});
+
 test('no Google Play target SDK finding before the policy date', async () => {
   const result = await analyze(loadProject(bareApp()), { get: registry, now: new Date('2026-01-01') });
   assert.ok(!result.findings.some((f) => f.id.startsWith('play-target-sdk')));

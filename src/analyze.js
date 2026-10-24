@@ -235,6 +235,9 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
   const target = !project.isLibrary && project.android && project.android.targetSdk;
   if (target) {
     const today = now.toISOString().slice(0, 10);
+    const pinned = project.android.source === 'expo-build-properties'
+      ? ` The value is pinned in the expo-build-properties plugin options, so upgrading the Expo SDK does not change it.`
+      : '';
     const { updates, visibility } = PLAY_TARGET_SDK;
     if (today >= visibility.since && target < visibility.minimum) {
       add({
@@ -242,8 +245,8 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
         severity: 'critical',
         area: 'store',
         title: `targetSdk ${target} hides the app from users on newer Android versions`,
-        detail: `Since ${visibility.since} Google Play requires API ${visibility.minimum}+ for published apps to stay visible, and API ${updates.minimum}+ to publish any update.`,
-        fix: { kind: 'target-sdk', from: target, to: updates.minimum },
+        detail: `Since ${visibility.since} Google Play requires API ${visibility.minimum}+ for published apps to stay visible, and API ${updates.minimum}+ to publish any update.${pinned}`,
+        fix: { kind: 'target-sdk', from: target, to: updates.minimum, source: project.android.source || 'gradle' },
       });
     } else if (today >= updates.since && target < updates.minimum) {
       add({
@@ -251,8 +254,8 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
         severity: 'critical',
         area: 'store',
         title: `targetSdk ${target}: Google Play will reject your next update`,
-        detail: `Since ${updates.since} new apps and updates must target API ${updates.minimum}+${today <= updates.extensionUntil ? ` (an extension you request in Play Console runs until ${updates.extensionUntil} at the latest)` : '; the extension period has ended'}.`,
-        fix: { kind: 'target-sdk', from: target, to: updates.minimum },
+        detail: `Since ${updates.since} new apps and updates must target API ${updates.minimum}+${today <= updates.extensionUntil ? ` (an extension you request in Play Console runs until ${updates.extensionUntil} at the latest)` : '; the extension period has ended'}.${pinned}`,
+        fix: { kind: 'target-sdk', from: target, to: updates.minimum, source: project.android.source || 'gradle' },
       });
     }
   }

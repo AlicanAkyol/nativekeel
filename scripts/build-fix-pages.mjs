@@ -565,7 +565,7 @@ Enable the Sign in with Apple capability for the app ID, show Apple's button nex
   },
   {
     slug: 'google-play-target-api-level',
-    updated: '2026-10-18',
+    updated: '2026-10-24',
     error: 'Your app currently targets API level 34 and must target at least API level 36',
     title: 'Google Play "must target at least API level": React Native',
     description: 'What Google Play\'s target API level error means for React Native and Expo apps in 2026, the deadlines, and what usually breaks when you raise targetSdk.',
@@ -578,7 +578,7 @@ Your app currently targets API level 34 and must target at least API level 36 to
 
 **The rule in 2026.** Since 31 August 2026, new apps and app updates must target Android 16 (API level 36). Existing apps must target at least Android 15 (API level 35) to stay available to new users on newer Android versions. Apps that requested an extension have until 1 November 2026; after that, updates need API 36.
 
-**How to fix it in React Native.** Set \`targetSdkVersion = 36\` and \`compileSdkVersion = 36\` in \`android/build.gradle\` (Expo: use the SDK that targets it, or \`expo-build-properties\`). Then check what changes with each API level you skip:
+**How to fix it in React Native.** Set \`targetSdkVersion = 36\` and \`compileSdkVersion = 36\` in \`android/build.gradle\` (Expo: use the SDK that targets it, or \`expo-build-properties\`; an old \`targetSdkVersion\` pinned there keeps the app below 36 even after an SDK upgrade, so check its plugin options). Then check what changes with each API level you skip:
 
 - Target 31: components with an intent filter need \`android:exported\`, or the build fails ([details](/fix/android-exported)).
 - Target 34: foreground services must declare their type, or the app crashes when one starts ([details](/fix/missing-foreground-service-type)).

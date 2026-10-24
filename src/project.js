@@ -170,7 +170,9 @@ export function loadProject(root) {
     managed: !!declared('expo') && !hasAndroid && !hasIos,
     hasNodeModules: !!findPackageDir(root, 'react-native'),
     newArch: detectNewArch(root, appConfig),
-    android: hasAndroid ? detectAndroid(root) : null,
+    // Managed Expo apps have no android/ folder: the Expo SDK sets the target, unless
+    // expo-build-properties pins one (a stale pin keeps the app below Google Play's level).
+    android: hasAndroid ? detectAndroid(root) : declared('expo') ? expoBuildPropertiesAndroid(root) : null,
   };
 }
 
@@ -211,6 +213,21 @@ function detectAndroid(root) {
     return m ? Number(m[1]) : null;
   };
   return { targetSdk: num('targetSdk'), compileSdk: num('compileSdk'), minSdk: num('minSdk') };
+}
+
+// targetSdkVersion / compileSdkVersion pinned in the expo-build-properties plugin options of
+// app.json or app.config.(js|ts). Only numbers written in the config count.
+function expoBuildPropertiesAndroid(root) {
+  const config = ['app.json', 'app.config.js', 'app.config.ts'].map((f) => readText(path.join(root, f)) || '').join('\n');
+  const at = config.indexOf('expo-build-properties');
+  if (at < 0) return null;
+  const after = config.slice(at);
+  const num = (key) => {
+    const m = after.match(new RegExp(`["']?${key}Version["']?\\s*:\\s*(\\d{2})\\b`));
+    return m ? Number(m[1]) : null;
+  };
+  const targetSdk = num('targetSdk');
+  return targetSdk ? { targetSdk, compileSdk: num('compileSdk'), minSdk: num('minSdk'), source: 'expo-build-properties' } : null;
 }
 
 // React Native / Expo app folders below `root` (monorepos: apps/mobile, packages/app, …), as
