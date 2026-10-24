@@ -40,6 +40,11 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.129</h2><p class="date">24 October 2026</p>
+<p>Deep links that launch the app, after the move to UIScene.</p>
+<ul>
+<li><span class="tag">Store</span><b>Cold-start deep links lost after the move to UIScene.</b> With the scene life cycle, a link that starts the app arrives only in the scene's connection options; <code>scene(_:openURLContexts:)</code> and <code>scene(_:continue:)</code> see it only while the app is running. A SceneDelegate that forwards those two callbacks but starts React Native without the connection options passes a quick test and still opens on the first screen when a link launches the app. NativeKeel now reports it, and stays quiet when the options are passed (as in the React Native 0.88 template), converted to launch options, or read directly. Suggested by a reader of the Xcode 27 article.</li>
+</ul></div>
 <div class="rel"><h2>0.1.128</h2><p class="date">24 October 2026</p>
 <p>31 libraries checked, 30 listed: the dependency check now covers the libraries that matter most.</p>
 <ul>

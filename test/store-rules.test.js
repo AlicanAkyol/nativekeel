@@ -55,6 +55,13 @@ test('UIScene life cycle: needed to launch when built with the iOS 27 SDK', asyn
     'forwarded from SceneDelegate',
   );
 
+  const scene = (start) => bare(true, 'class AppDelegate: UIResponder, UIApplicationDelegate {}', { 'ios/App/SceneDelegate.swift': `func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {\n  ${start}\n}\nfunc scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) { RCTLinkingManager.scene(scene, openURLContexts: URLContexts) }` });
+  assert.equal(run(scene('reactNativeFactory?.startReactNative(withModuleName: "App", in: window)'), { rnVersion: '0.88.0' })[0].id, 'ios-uiscene-launch-url', 'cold-start link dropped');
+  assert.deepEqual(run(scene('reactNativeFactory?.startReactNative(\n    withModuleName: "App",\n    in: window,\n    connectionOptions: connectionOptions\n  )'), { rnVersion: '0.88.0' }), [], 'the 0.88 template');
+  assert.deepEqual(run(scene('reactNativeFactory?.startReactNative(withModuleName: "App", in: window)\n  if let url = connectionOptions.urlContexts.first?.url { handle(url) }'), { rnVersion: '0.88.0' }), [], 'reads the launch link itself');
+  assert.deepEqual(run(scene('reactNativeFactory?.startReactNative(withModuleName: "App", in: window, launchOptions: SceneDelegate.launchOptions(from: connectionOptions))'), { rnVersion: '0.88.0' }), [], 'converted to launch options (Zingo)');
+  assert.deepEqual(run(bare(true, 'x', { 'ios/App/SceneDelegate.m': '[self.reactNativeFactory startReactNativeWithModuleName:@"App" inWindow:self.window connectionOptions:connectionOptions];\n- (void)scene:(UIScene *)scene openURLContexts:(NSSet *)URLContexts {}' }), { rnVersion: '0.88.0' }), [], 'Objective-C with connection options');
+
   const blob = { deps: { 'react-native-blob-util': '0.25.1' }, rnVersion: '0.88.0' };
   const crash = run(bare(true, 'class AppDelegate: UIResponder, UIApplicationDelegate {}'), blob);
   assert.equal(crash[0].id, 'ios-scene-delegate-window', 'the 0.88 template AppDelegate has no window');

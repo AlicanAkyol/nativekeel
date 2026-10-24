@@ -272,5 +272,32 @@ export function iosSceneLifecycle(project, now = new Date()) {
       },
     );
   }
+  // Adopted with scene URL handlers, but the launch URL is lost: on a cold start UIKit delivers
+  // the link only in the connection options, and RCTReactNativeFactory turns them into the launch
+  // options Linking.getInitialURL() reads (startReactNative...connectionOptions:, RN 0.88). Starting
+  // React Native without them passes a test with the app running and drops links that launch it.
+  // The arguments of each start call, up to its closing bracket (Swift call or Objective-C message).
+  const startCalls = [...sources.matchAll(/startReactNative(?:\s*\(\s*withModuleName|WithModuleName)/g)].map((m) => {
+    let depth = 0;
+    for (let i = m.index; i < sources.length; i++) {
+      if ('([{'.includes(sources[i])) depth++;
+      else if (')]}'.includes(sources[i]) && --depth <= 0) return sources.slice(m.index, i + 1);
+    }
+    return sources.slice(m.index);
+  });
+  const startsReactNative = startCalls.length > 0;
+  // Passed directly, or converted to launch options first (Zingo: launchOptions(from: connectionOptions)).
+  const passesConnectionOptions = startCalls.some((c) => /connectionOptions/.test(c));
+  const readsLaunchLink = /\.\s*(?:urlContexts|URLContexts|userActivities)\b/.test(sources);
+  if (sceneHandlesUrls && startsReactNative && !passesConnectionOptions && !readsLaunchLink) {
+    out.push({
+      id: 'ios-uiscene-launch-url',
+      severity: 'high',
+      area: 'crash',
+      title: 'Deep links that launch the app are lost: React Native starts without the scene\'s connection options',
+      detail: 'With UIScene, a link that starts the app arrives only in scene(_:willConnectTo:options:) connection options; scene(_:openURLContexts:) and scene(_:continue:) handle it only while the app is running or in the background. React Native reads the launch link (Linking.getInitialURL) from the connection options passed to startReactNative, so without them a cold-start deep link, universal link or OAuth redirect opens the app on its first screen.',
+      fix: { kind: 'store-rule', step: 'Pass the connection options when starting React Native, as the React Native 0.88 template does: startReactNative(withModuleName:in:connectionOptions:). Test a link with the app closed, in the background, and open.' },
+    });
+  }
   return out;
 }
