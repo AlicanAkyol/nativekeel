@@ -68,6 +68,7 @@ h2{font-size:clamp(24px,3.4vw,32px);letter-spacing:-.01em;margin:0 0 10px}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:22px}
 .card h3{margin:0 0 6px;font-size:17px}.card p{margin:0;color:var(--muted);font-size:15px}
+.quote{margin:8px 0 0;padding:20px 24px;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:var(--radius);max-width:46em}.quote p{margin:0 0 10px;font-size:17px}.quote footer{color:var(--muted);font-size:14px;border:0;padding:0;margin:0}
 .card .k{font:600 12px ui-monospace,monospace;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;display:block}
 .steps{counter-reset:s;display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
 .steps .card::before{counter-increment:s;content:counter(s);display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-weight:700;margin-bottom:10px}
@@ -165,6 +166,10 @@ New Architecture  android: <span class="r">off</span>  ios: <span class="r">off<
     <h2>Before you upgrade, ask it</h2>
     <p class="section-lead"><code>npx nativekeel upgrade</code> reads your code and dependencies and tells you, with file and line, what breaks on the newest React Native or Expo. This is its real output on a sample app.</p>
     <a href="/demo-upgrade.svg" title="Open full size"><img src="/demo-upgrade.svg" width="788" height="628" loading="lazy" style="max-width:100%;height:auto;display:block;border-radius:10px" alt="npx nativekeel upgrade on a React Native 0.84 app: NOT READY, 3 blockers in its own code (StyleSheet.absoluteFillObject removed in 0.85, InteractionManager removed in 0.87, StatusBar translucent removed in 0.87), each with file, line and the fix."></a>
+    <blockquote class="quote">
+      <p>&ldquo;Instead of waiting for build-time errors to break our pipeline, it immediately flagged upcoming blockers. It didn&rsquo;t just tell me what was broken. It generated an actionable blueprint to prioritize and patch every single issue systematically.&rdquo;</p>
+      <footer>Sahith Chary, Software Developer, preparing a React Native app for Xcode 27</footer>
+    </blockquote>
   </section>
 
   <!-- usage:start -->
