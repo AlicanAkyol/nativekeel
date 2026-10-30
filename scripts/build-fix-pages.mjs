@@ -375,7 +375,7 @@ If the call is inside a library rather than your code, update the library; patch
 
 **Check your project.** \`npx nativekeel\` lists the files that use \`InteractionManager\`: before the upgrade as work for 0.87, and after it as a crash with the file and line.
 `,
-    sources: [['React Native 0.87 release notes: API removals', 'https://reactnative.dev/blog/2026/08/11/react-native-0.87#api-removals'], ['React Native 0.87.1 index.js (the development error)', 'https://github.com/facebook/react-native/blob/v0.87.1/packages/react-native/index.js']],
+    sources: [['React Native 0.87 release notes: API removals', 'https://reactnative.dev/blog/2026/08/11/react-native-0.87#api-removals'], ['React Native 0.87.1 index.js (the development error)', 'https://github.com/facebook/react-native/blob/v0.87.1/packages/react-native/index.js'], ['Which libraries still call it: 29 popular React Native libraries checked (dev.to)', 'https://dev.to/keel_alican_akyol/your-code-is-clean-your-libraries-arent-29-popular-react-native-libraries-still-call-apis-21cf']],
   },
   {
     slug: 'rctcomponent-h-file-not-found-react-native-0-87',
@@ -767,7 +767,7 @@ Search the project for \`absoluteFillObject\`, including code that libraries you
 
 **Check before you upgrade.** \`npx nativekeel upgrade\` lists every file that uses \`absoluteFillObject\` when your app is on React Native 0.84 or earlier, with the other changes between your version and the newest one. In our scan of 1,162 open-source React Native projects, 146 that are still on 0.84 or earlier use it.
 `,
-    sources: [['React Native 0.85 release notes: breaking changes', 'https://reactnative.dev/blog/2026/04/07/react-native-0.85'], ['React Native 0.85.0 StyleSheetExports.js', 'https://github.com/facebook/react-native/blob/v0.85.0/packages/react-native/Libraries/StyleSheet/StyleSheetExports.js'], ['React Native 0.84.0 StyleSheet.d.ts (deprecated there)', 'https://github.com/facebook/react-native/blob/v0.84.0/packages/react-native/Libraries/StyleSheet/StyleSheet.d.ts']],
+    sources: [['React Native 0.85 release notes: breaking changes', 'https://reactnative.dev/blog/2026/04/07/react-native-0.85'], ['React Native 0.85.0 StyleSheetExports.js', 'https://github.com/facebook/react-native/blob/v0.85.0/packages/react-native/Libraries/StyleSheet/StyleSheetExports.js'], ['React Native 0.84.0 StyleSheet.d.ts (deprecated there)', 'https://github.com/facebook/react-native/blob/v0.84.0/packages/react-native/Libraries/StyleSheet/StyleSheet.d.ts'], ['Which libraries still call it: 29 popular React Native libraries checked (dev.to)', 'https://dev.to/keel_alican_akyol/your-code-is-clean-your-libraries-arent-29-popular-react-native-libraries-still-call-apis-21cf']],
   },
   {
     slug: 'statusbar-backgroundcolor-translucent-removed-react-native-0-87',
@@ -809,7 +809,7 @@ Search the project for \`setBackgroundColor\`, \`setTranslucent\` and \`setNetwo
 
 **Check before you upgrade.** \`npx nativekeel upgrade\` lists the files that use these props or setters when your app is below React Native 0.87, with the other breaking changes between your version and the newest one. In our scan of 947 open-source React Native apps, 140 that are still below 0.87 use them.
 `,
-    sources: [['React Native 0.87 release notes: API removals', 'https://reactnative.dev/blog/2026/08/11/react-native-0.87'], ['React Native 0.87.1 StatusBar.js', 'https://github.com/facebook/react-native/blob/v0.87.1/packages/react-native/Libraries/Components/StatusBar/StatusBar.js'], ['React Native 0.86.0 StatusBar.js (the setters before removal)', 'https://github.com/facebook/react-native/blob/v0.86.0/packages/react-native/Libraries/Components/StatusBar/StatusBar.js'], ['Android 15 behavior changes: edge-to-edge enforcement', 'https://developer.android.com/about/versions/15/behavior-changes-15']],
+    sources: [['React Native 0.87 release notes: API removals', 'https://reactnative.dev/blog/2026/08/11/react-native-0.87'], ['React Native 0.87.1 StatusBar.js', 'https://github.com/facebook/react-native/blob/v0.87.1/packages/react-native/Libraries/Components/StatusBar/StatusBar.js'], ['React Native 0.86.0 StatusBar.js (the setters before removal)', 'https://github.com/facebook/react-native/blob/v0.86.0/packages/react-native/Libraries/Components/StatusBar/StatusBar.js'], ['Android 15 behavior changes: edge-to-edge enforcement', 'https://developer.android.com/about/versions/15/behavior-changes-15'], ['Which libraries still call it: 29 popular React Native libraries checked (dev.to)', 'https://dev.to/keel_alican_akyol/your-code-is-clean-your-libraries-arent-29-popular-react-native-libraries-still-call-apis-21cf']],
   },
   {
     slug: 'expo-file-system-file-write-async-sdk-58',
