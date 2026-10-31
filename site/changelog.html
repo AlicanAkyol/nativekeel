@@ -40,6 +40,11 @@ h1{font-size:30px;margin:0 0 4px}a{color:var(--accent)}p,li{color:var(--muted)}
 <h1>What's new</h1>
 <p>Every release, in plain words. Most changes come from two places: real upgrades we do, and scanning 850+ open-source React Native and Expo apps, more every week, to find what the tool gets wrong. Run <code>npx nativekeel</code> to always get the latest. Full notes on <a href="https://github.com/AlicanAkyol/nativekeel/releases">GitHub</a>.</p>
 
+<div class="rel"><h2>0.1.131</h2><p class="date">31 October 2026</p>
+<p>The orientation lock that expo-camera adds to your Android manifest.</p>
+<ul>
+<li><span class="tag">Store</span><b>expo-camera's scanner activity is locked to portrait.</b> Since expo-camera 16.1 (Expo SDK 53), the Android build includes Google's code scanner, and since 58 the document scanner too. Both declare an activity with <code>screenOrientation="portrait"</code>, so the merged manifest has an orientation lock even when your own activities have none and the app never opens the scanner. Android 16 ignores it on tablets and foldables, and Play Console's warning about orientation restrictions can point at it after you have removed your own locks. NativeKeel now lists it in the Android 16 note, with both ways out: <code>expo.camera.barcode-scanner-enabled=false</code> (and <code>document-scanner-enabled</code>) if you do not scan, or <code>tools:remove="android:screenOrientation"</code> on the activity if you do. In the open-source corpus the note now names it for 69 apps; for 11 of them it was the only lock, so there was no note before. Suggested by a reader on r/reactnative.</li>
+</ul></div>
 <div class="rel"><h2>0.1.130</h2><p class="date">24 October 2026</p>
 <p>Managed Expo apps: a stale target SDK pin no longer goes unnoticed.</p>
 <ul>

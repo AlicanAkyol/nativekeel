@@ -217,12 +217,34 @@ export function nativeChecks(project, { rnLatest = null, now = new Date() } = {}
       const o = (config.match(/["']?orientation["']?\s*:\s*["'](portrait|landscape)["']/) || [])[1];
       if (o) locks.push(`app config orientation "${o}"`);
     }
-    const lockMatters = locks.length && !game;
+    // expo-camera 16.1+ depends on Google's code scanner, and 58+ also on the document scanner. Both
+    // AARs declare a delegate activity with screenOrientation="portrait", so the merged manifest has
+    // a lock even when the app's own activities do not. Turned off with
+    // expo.camera.{barcode,document}-scanner-enabled=false, or removed with tools:remove.
+    const cameraLocks = [];
+    const cameraRange = project.deps['expo-camera'] || (project.devDeps && project.devDeps['expo-camera']);
+    const camera = cameraRange && ((installedVersionOf(root, 'expo-camera') || cameraRange).match(/(\d+)\.(\d+)/) || []).slice(1).map(Number);
+    if (camera && camera.length && (camera[0] > 16 || (camera[0] === 16 && camera[1] >= 1))) {
+      const props = hasAndroid ? read(path.join(root, 'android', 'gradle.properties')) || '' : '';
+      const config = ['app.json', 'app.config.js', 'app.config.ts'].map((f) => read(path.join(root, f)) || '').join('\n');
+      const handled = (activity) => new RegExp(`${activity}[^>]*tools:(?:node\\s*=\\s*"remove"|remove\\s*=\\s*"[^"]*screenOrientation)`).test(appManifest) || (!hasAndroid && config.includes(activity));
+      const scanners = [
+        ['barcode', 'GmsBarcodeScanningDelegateActivity', true],
+        ['document', 'GmsDocumentScanningDelegateActivity', camera[0] >= 58],
+      ].filter(([kind, activity, bundled]) => bundled && !handled(activity) &&
+        !new RegExp(`expo\\.camera\\.${kind}-scanner-enabled\\s*=\\s*false`).test(props) &&
+        // expo-build-properties can set the same Gradle property from the app config
+        !new RegExp(`expo\\.camera\\.${kind}-scanner-enabled["']?\\s*:\\s*["']?false`).test(config) &&
+        !(kind === 'barcode' && /barcodeScannerEnabled["']?\s*:\s*false/.test(config)));
+      for (const [kind, activity] of scanners) cameraLocks.push({ kind, activity });
+    }
+    const lockMatters = (locks.length || cameraLocks.length) && !game;
     if (optOut || lockMatters) {
       const now36 = target && target >= 36;
       const parts = [];
       if (optOut) parts.push('`windowOptOutEdgeToEdgeEnforcement` in android/app/src/main/res/values/styles.xml is ignored on Android 16: the app is drawn edge-to-edge, so screens that relied on the opt-out slide under the status and navigation bars. Handle insets (react-native-safe-area-context) and remove the attribute.');
-      if (lockMatters) parts.push(`On screens at least 600dp wide (tablets, foldables) Android 16 ignores ${locks.slice(0, 3).join(', ')}${locks.length > 3 ? ', …' : ''}: the app rotates and resizes, so layouts that assume portrait need checking there.${allowRestricted ? ' PROPERTY_COMPAT_ALLOW_RESTRICTED_RESIZABILITY keeps the old behavior for now, but it stops working when you target API 37.' : ''}`);
+      if (lockMatters && locks.length) parts.push(`On screens at least 600dp wide (tablets, foldables) Android 16 ignores ${locks.slice(0, 3).join(', ')}${locks.length > 3 ? ', …' : ''}: the app rotates and resizes, so layouts that assume portrait need checking there.${allowRestricted ? ' PROPERTY_COMPAT_ALLOW_RESTRICTED_RESIZABILITY keeps the old behavior for now, but it stops working when you target API 37.' : ''}`);
+      if (lockMatters && cameraLocks.length) parts.push(`expo-camera brings Google's scanner ${cameraLocks.length > 1 ? 'activities' : 'activity'} (${cameraLocks.map((l) => l.activity).join(', ')}) into the merged manifest with screenOrientation="portrait", even if the app never opens ${cameraLocks.length > 1 ? 'them' : 'it'}. Android 16 ignores that lock on large screens, and Play Console's warning about orientation restrictions can point at it even after you remove your own locks. If you do not scan with expo-camera, set ${cameraLocks.map((l) => `expo.camera.${l.kind}-scanner-enabled=false`).join(' and ')} in android/gradle.properties (managed Expo: expo-build-properties gradleProperties); otherwise add tools:remove="android:screenOrientation" to the activity in AndroidManifest.xml (managed Expo: a config plugin). Check the merged manifest of a release build to confirm.`);
       add({
         id: 'android-api36-behavior',
         // A portrait lock alone is common (Expo's template sets it): a note, not a finding that moves the rating.
