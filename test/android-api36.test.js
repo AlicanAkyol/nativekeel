@@ -32,7 +32,8 @@ test('API 36: expo-camera brings a portrait-locked scanner activity into the mer
   assert.equal(f.severity, 'info');
   assert.match(f.detail, /\(GmsBarcodeScanningDelegateActivity\) into the merged manifest/);
   assert.doesNotMatch(f.detail, /GmsDocumentScanningDelegateActivity/);
-  assert.match(f.detail, /barcode-scanner-enabled=false/);
+  assert.match(f.detail, /safe either way: add tools:remove/);
+  assert.match(f.detail, /onBarcodeScanned silently never fires/);
   assert.match(cam('58.0.14').detail, /GmsDocumentScanningDelegateActivity/);
   assert.equal(cam('~16.0.18'), undefined);
   assert.equal(cam('~57.0.6', { 'android/gradle.properties': 'expo.camera.barcode-scanner-enabled=false\n' }), undefined);
@@ -56,4 +57,14 @@ test('API 36: expo-camera lock alone names the right property and skips the port
   const f = nativeChecks(loadProject(makeProject({ 'package.json': { name: 'a', dependencies: { 'react-native': '0.81.0', 'expo-camera': '58.0.14' } }, ...gradle(36), ...manifest(''), 'android/gradle.properties': 'expo.camera.barcode-scanner-enabled=false\n' }))).find((x) => x.id === 'android-api36-behavior');
   assert.match(f.detail, /expo\.camera\.document-scanner-enabled=false/);
   assert.doesNotMatch(f.detail, /barcode-scanner-enabled=false|GmsBarcode|layouts that assume portrait/);
+});
+
+test('expo-camera: barcode scanning turned off while the app scans barcodes', () => {
+  const find2 = (files) => nativeChecks(loadProject(makeProject({ 'package.json': { name: 'a', dependencies: { 'react-native': '0.81.0', expo: '~57.0.0', 'expo-camera': '~57.0.6' } }, ...files }))).find((f) => f.id === 'expo-camera-barcode-disabled');
+  const off = { 'app.json': { expo: { plugins: [['expo-camera', { barcodeScannerEnabled: false }]] } } };
+  const f = find2({ ...off, 'src/Scan.tsx': "import { CameraView } from 'expo-camera';\n\nexport const S = () => <CameraView onBarcodeScanned={(r) => go(r.data)} />;\n" });
+  assert.equal(f.severity, 'medium');
+  assert.match(f.detail, /src\/Scan\.tsx:3/);
+  assert.equal(find2({ ...off, 'src/Photo.tsx': "// onBarcodeScanned is not used here\nexport const P = () => <CameraView />;\n" }), undefined);
+  assert.equal(find2({ 'src/Scan.tsx': 'const x = <CameraView onBarcodeScanned={go} />;' }), undefined);
 });

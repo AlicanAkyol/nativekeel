@@ -72,7 +72,7 @@ export const CHANGES = [
 
 const SKIP = new Set(['node_modules', '.git', 'android', 'ios', 'build', 'dist', '.expo', 'coverage', '__tests__', '__mocks__', 'web-build', 'vendor', 'test', 'tests', 'e2e']);
 
-function codeFiles(root) {
+export function codeFiles(root) {
   const out = [];
   const ignored = gitIgnored(root);
   const walk = (dir, depth) => {
@@ -99,7 +99,7 @@ const read = (f) => {
     return '';
   }
 };
-const stripComments = (t) => t.replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' ')).replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+export const stripComments = (t) => t.replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' ')).replace(/(^|[^:])\/\/[^\n]*/g, '$1');
 const lineOf = (text, index) => text.slice(0, index).split('\n').length;
 
 function nodeTooOld(root, pkg) {

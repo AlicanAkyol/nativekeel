@@ -7,6 +7,7 @@ import { PAGE_SIZE_16K, PLATFORM_MINIMUMS } from './rules.js';
 import { installedVersion as installedVersionOf } from './project.js';
 import { SITE_URL } from './config.js';
 import { unprefixedReactImports } from './react-headers.js';
+import { codeFiles, stripComments } from './upcoming.js';
 
 // Checks on native project files: store requirements and security settings that live
 // outside package.json. Every check returns findings in the same shape as analyze.js.
@@ -237,6 +238,27 @@ export function nativeChecks(project, { rnLatest = null, now = new Date() } = {}
         !new RegExp(`expo\\.camera\\.${kind}-scanner-enabled["']?\\s*:\\s*["']?false`).test(config) &&
         !(kind === 'barcode' && /barcodeScannerEnabled["']?\s*:\s*false/.test(config)));
       for (const [kind, activity] of scanners) cameraLocks.push({ kind, activity });
+      // With barcode-scanner-enabled=false the ML Kit barcode classes are compileOnly: on Android the
+      // CameraView never attaches its barcode analyzer (onBarcodeScanned silently never fires) and
+      // launchScanner / scanFromURLAsync reject. Seen in expo-camera 57 and 58 sources.
+      const barcodeOff = /expo\.camera\.barcode-scanner-enabled\s*=\s*false/.test(props) ||
+        /expo\.camera\.barcode-scanner-enabled["']?\s*:\s*["']?false/.test(config) || /barcodeScannerEnabled["']?\s*:\s*false/.test(config);
+      if (barcodeOff) {
+        const uses = /\bonBarcodeScanned\b|\bbarcodeScannerSettings\b|\.launchScanner\s*\(|\bscanFromURLAsync\s*\(/;
+        const hit = codeFiles(root).map((f) => ({ f, text: stripComments(read(f) || '') })).find(({ text }) => uses.test(text));
+        if (hit) {
+          const rel = path.relative(root, hit.f).split(path.sep).join('/');
+          const line = hit.text.slice(0, hit.text.search(uses)).split('\n').length;
+          add({
+            id: 'expo-camera-barcode-disabled',
+            severity: 'medium',
+            area: 'native',
+            title: 'Barcode scanning is turned off for expo-camera on Android, but the app scans barcodes',
+            detail: `expo.camera.barcode-scanner-enabled=false (or the expo-camera plugin option barcodeScannerEnabled: false) leaves ML Kit's barcode classes out of the Android build, so CameraView never attaches its barcode analyzer: onBarcodeScanned never fires and nothing crashes, and launchScanner / scanFromURLAsync reject. Used in ${rel}:${line}. Remove the setting; to clear the orientation lock of Google's scanner activity, add tools:remove="android:screenOrientation" to GmsBarcodeScanningDelegateActivity instead.`,
+            fix: { kind: 'known-issue', severity: 'medium', title: 'expo-camera barcode scanning turned off on Android', detail: `Remove expo.camera.barcode-scanner-enabled=false / barcodeScannerEnabled: false; the app scans barcodes (${rel}:${line}).` },
+          });
+        }
+      }
     }
     const lockMatters = (locks.length || cameraLocks.length) && !game;
     if (optOut || lockMatters) {
@@ -244,7 +266,7 @@ export function nativeChecks(project, { rnLatest = null, now = new Date() } = {}
       const parts = [];
       if (optOut) parts.push('`windowOptOutEdgeToEdgeEnforcement` in android/app/src/main/res/values/styles.xml is ignored on Android 16: the app is drawn edge-to-edge, so screens that relied on the opt-out slide under the status and navigation bars. Handle insets (react-native-safe-area-context) and remove the attribute.');
       if (lockMatters && locks.length) parts.push(`On screens at least 600dp wide (tablets, foldables) Android 16 ignores ${locks.slice(0, 3).join(', ')}${locks.length > 3 ? ', …' : ''}: the app rotates and resizes, so layouts that assume portrait need checking there.${allowRestricted ? ' PROPERTY_COMPAT_ALLOW_RESTRICTED_RESIZABILITY keeps the old behavior for now, but it stops working when you target API 37.' : ''}`);
-      if (lockMatters && cameraLocks.length) parts.push(`expo-camera brings Google's scanner ${cameraLocks.length > 1 ? 'activities' : 'activity'} (${cameraLocks.map((l) => l.activity).join(', ')}) into the merged manifest with screenOrientation="portrait", even if the app never opens ${cameraLocks.length > 1 ? 'them' : 'it'}. Android 16 ignores that lock on large screens, and Play Console's warning about orientation restrictions can point at it even after you remove your own locks. If you do not scan with expo-camera, set ${cameraLocks.map((l) => `expo.camera.${l.kind}-scanner-enabled=false`).join(' and ')} in android/gradle.properties (managed Expo: expo-build-properties gradleProperties); otherwise add tools:remove="android:screenOrientation" to the activity in AndroidManifest.xml (managed Expo: a config plugin). Check the merged manifest of a release build to confirm.`);
+      if (lockMatters && cameraLocks.length) parts.push(`expo-camera brings Google's scanner ${cameraLocks.length > 1 ? 'activities' : 'activity'} (${cameraLocks.map((l) => l.activity).join(', ')}) into the merged manifest with screenOrientation="portrait", even if the app never opens ${cameraLocks.length > 1 ? 'them' : 'it'}. Android 16 ignores that lock on large screens, and Play Console's warning about orientation restrictions can point at it even after you remove your own locks. The fix that is safe either way: add tools:remove="android:screenOrientation" to the activity in AndroidManifest.xml (managed Expo: a config plugin). Only if the app does no scanning with expo-camera at all, set ${cameraLocks.map((l) => `expo.camera.${l.kind}-scanner-enabled=false`).join(' and ')} in android/gradle.properties (managed Expo: expo-build-properties gradleProperties) to drop the library${cameraLocks.some((l) => l.kind === 'barcode') ? ': that also turns off CameraView barcode scanning, so onBarcodeScanned silently never fires' : ''}. Check the merged manifest of a release build to confirm.`);
       add({
         id: 'android-api36-behavior',
         // A portrait lock alone is common (Expo's template sets it): a note, not a finding that moves the rating.
