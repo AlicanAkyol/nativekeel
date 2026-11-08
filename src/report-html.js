@@ -38,7 +38,7 @@ export function htmlReport(result, { brand = null, plan = null } = {}) {
     ['upgrade', 'Upgrade and maintenance', 'Versions, support windows, store deadlines and packages to update or replace.'],
     ['perf', 'Performance signals', 'Static signs, not measurements: measure on a device before changing.'],
     ['cleanup', 'Cleanup', 'Leftovers that do not change what ships.'],
-    ['notes', 'Notes', 'For information; no action required.'],
+    ['notes', 'Notes', 'Context and limits of the scan.'],
   ];
   const groupOf = (f) => (f.severity === 'info' ? 'notes' : f.area === 'cleanup' ? 'cleanup' : f.area === 'performance' ? 'perf' : f.proof === 'config' || f.proof === 'built-app' ? 'config' : f.proof === 'source' || f.proof === 'dead-code' ? 'code' : 'upgrade');
   const rows = GROUPS.map(([key, title, note]) => {
@@ -107,7 +107,7 @@ footer{margin-top:40px;color:var(--muted);font-size:13px}a{color:var(--accent)}
 <div class="stat"><b>${n.medium}</b><span>medium</span></div>
 <div class="stat"><b>${n.low}</b><span>low${bumps.length ? ` · ${bumps.length} outdated package${bumps.length === 1 ? '' : 's'}` : ''}</span></div>
 </div>
-${result.ratings ? `<div class="ratings" aria-label="Ratings by area: A means nothing found, E means a critical finding">${result.ratings.map((r) => `<div class="rating r${r.rating}"><b>${r.rating}</b><span>${esc(r.label)}</span></div>`).join('')}</div>` : ''}
+${result.ratings ? `<div class="ratings" aria-label="Static scan ratings by area">${result.ratings.map((r) => `<div class="rating r${r.rating}"><b>${r.rating}</b><span>${esc(r.label)}</span></div>`).join('')}</div><p class="meta">A means no findings in that area. Production crashes are not measured.</p>` : ''}
 ${result.settings && result.settings.ignored.length ? `<p class="meta">${result.settings.ignored.length} finding${result.settings.ignored.length === 1 ? '' : 's'} ignored by <code>${esc(result.settings.file)}</code>: ${result.settings.ignored.map((i) => `${esc(i.id)} (${esc(i.reason)})`).join('; ')}</p>` : ''}
 <div class="facts">
 ${p.reactNative ? `<span>React Native <b>${esc(p.reactNative)}</b>${result.latest.reactNative ? ` (latest ${esc(result.latest.reactNative)})` : ''}</span>` : ''}

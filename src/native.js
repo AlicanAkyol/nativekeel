@@ -4,7 +4,7 @@ import { validPackageName } from './package-name.js';
 import { gitLsFiles, gitLastCommitTime } from './git.js';
 import { checkArchive, findBuiltArtifact } from './elf-align.js';
 import { PAGE_SIZE_16K, PLATFORM_MINIMUMS } from './rules.js';
-import { installedVersion as installedVersionOf } from './project.js';
+import { findPackageDir, installedVersion as installedVersionOf } from './project.js';
 import { SITE_URL } from './config.js';
 import { unprefixedReactImports } from './react-headers.js';
 import { codeFiles, stripComments } from './upcoming.js';
@@ -39,6 +39,43 @@ function findFiles(dir, test, depth = 0, out = []) {
 
 const minorOf = (v) => (v ? Number(v.split('.')[1]) : null);
 
+function trackPlayerLegacyHost(project, rn) {
+  const name = 'react-native-track-player';
+  if (!(rn >= 82) || !project.deps[name]) return null;
+  const { root } = project;
+  const pkg = findPackageDir(root, name);
+  if (!pkg) return null;
+  const file = path.join(pkg, 'android/src/main/java/com/doublesymmetry/trackplayer/service/MusicService.kt');
+  const source = stripComments(read(file) || '');
+  if (!/\bclass\s+MusicService\s*:\s*HeadlessJsTaskService\s*\(/.test(source) ||
+      /\boverride\s+(?:(?:val|var)\s+reactNativeHost|fun\s+getReactNativeHost)\b/.test(source)) return null;
+
+  // Match the two known unguarded event emitters. A guarded call or a different service
+  // implementation needs more analysis than a reference to the old host alone.
+  const call = /\bprivate\s+fun\s+emit(?:List)?\([^\n]*\)\s*\{\s*(?:val payload = Arguments\.createArray\(\)\s+data\.forEach \{ payload\.pushMap\(Arguments\.fromBundle\(it\)\) \}\s*)?(reactNativeHost\.reactInstanceManager\.currentReactContext)\s*\?\.getJSModule\(/.exec(source);
+  if (!call) return null;
+
+  const apps = findFiles(path.join(root, 'android', 'app', 'src'), (name) => /^MainApplication\.(kt|java)$/.test(name), -1);
+  const main = apps.length === 1 && apps[0].startsWith(path.join(root, 'android', 'app', 'src', 'main') + path.sep) && apps[0];
+  const app = main ? stripComments(read(main) || '') : '';
+  // Require the ReactHost-only Kotlin template, with no custom base application or other
+  // MainApplication variants that could supply the legacy getter.
+  if (!/\bclass\s+MainApplication\s*:\s*Application\s*\(\s*\)\s*,\s*ReactApplication\s*\{/.test(app) ||
+      !/\boverride\s+val\s+reactHost\b/.test(app) ||
+      /\b(?:reactNativeHost|getReactNativeHost)\b/.test(app)) return null;
+
+  const line = source.slice(0, call.index + call[0].indexOf(call[1])).split('\n').length;
+  const at = `${path.relative(root, file)}:${line}`;
+  return {
+    id: 'crash-track-player-legacy-host',
+    severity: 'high',
+    area: 'crash',
+    title: 'Track Player can crash when Android playback emits an event',
+    detail: `\`${at}\` reads the legacy reactNativeHost. \`${path.relative(root, main)}\` provides only reactHost, so React Native's default legacy getter throws when this code runs.`,
+    fix: { kind: 'crash', step: 'Patch the Android MusicService event emitters to use \`reactHost?.currentReactContext\`. Test playback and media controls in an Android release build.' },
+  };
+}
+
 function gitTracked(root) {
   // ls-files paths are relative to the current directory, which is the app root here.
   return gitLsFiles(root);
@@ -53,6 +90,8 @@ export function nativeChecks(project, { rnLatest = null, now = new Date() } = {}
   const add = (f) => findings.push(f);
   const root = project.root;
   const rn = minorOf(project.rnVersion);
+  const playbackCrash = trackPlayerLegacyHost(project, rn);
+  if (playbackCrash) add(playbackCrash);
   const hasIos = fs.existsSync(path.join(root, 'ios'));
   const hasAndroid = fs.existsSync(path.join(root, 'android'));
 

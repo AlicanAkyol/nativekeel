@@ -550,13 +550,15 @@ export function cloudRules(root, deps, now = new Date()) {
     }
   }
 
-  if (!findings.length && usesFirebaseData && !rtdb && !findFile(['firestore.rules', 'storage.rules'])) {
+  const missingRtdbRules = !!deps['@react-native-firebase/database'] && !rtdb;
+  if (missingRtdbRules || (usesFirebaseData && !rtdb && !findFile(['firestore.rules', 'storage.rules']))) {
     findings.push({
       id: 'firebase-rules-not-in-repo',
       severity: 'info',
       area: 'security',
-      title: 'Firebase data is used, but its security rules are not in the repository',
-      detail: 'Open database or storage rules are the most common way mobile app data leaks, and NativeKeel cannot see rules that live only in the Firebase console. Review them there (no "if true", no root-level "auth != null"), or keep them in the repo (firebase init) so they are reviewed and checked.',
+      proof: 'project',
+      title: missingRtdbRules ? 'Firebase Realtime Database access was not checked' : 'Firebase access rules were not checked',
+      detail: 'NativeKeel did not find a local rules file for this check. It did not test deployed rules or unauthenticated access. Review the deployed rules in the Firebase console and verify which paths can be read or written without signing in.',
     });
   }
   return findings;

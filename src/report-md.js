@@ -21,7 +21,9 @@ export function markdownReport(result, { verbose = false } = {}) {
     '',
   ];
   if (result.settings && result.settings.ignored.length) lines.push(`${result.settings.ignored.length} finding${result.settings.ignored.length === 1 ? '' : 's'} ignored by \`${result.settings.file}\` (each with a reason).`, '');
-  if (result.ratings) lines.push(`Ratings: ${result.ratings.map((r) => `${r.label} **${r.rating}**`).join(' · ')}`, '');
+  if (result.ratings) lines.push(`Static scan ratings: ${result.ratings.map((r) => `${r.label} **${r.rating}**`).join(' · ')}. A means no findings in that area. Production crashes are not measured.`, '');
+  const missingFirebaseRules = result.findings.find((f) => f.id === 'firebase-rules-not-in-repo');
+  if (missingFirebaseRules) lines.push(`**${missingFirebaseRules.title}.** ${missingFirebaseRules.detail}`, '');
 
   const main = result.findings.filter((f) => ['critical', 'high', 'medium'].includes(f.severity));
   if (main.length) {

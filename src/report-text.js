@@ -85,7 +85,7 @@ const label = {
   out.push(`${c.bold('Summary')}  ${c.red(`${n.critical} critical`)} · ${c.yellow(`${n.high} high`)} · ${n.medium} medium · ${n.low} low`);
   if (result.ratings) {
     const paintRating = (r) => (r === 'A' || r === 'B' ? c.green(r) : r === 'C' ? c.yellow(r) : c.red(r));
-    out.push(`${c.bold('Ratings')}  ${result.ratings.map((r) => `${r.label} ${paintRating(r.rating)}`).join(' · ')}${c.gray('  ·  A = nothing found, E = a critical finding')}`);
+    out.push(`${c.bold('Static scan ratings')}  ${result.ratings.map((r) => `${r.label} ${paintRating(r.rating)}`).join(' · ')}${c.gray('  ·  A = no findings in that area. Production crashes are not measured.')}`);
   }
   if (result.security) {
     const groups = Object.entries(result.security);

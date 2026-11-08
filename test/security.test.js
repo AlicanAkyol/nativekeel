@@ -166,6 +166,11 @@ test('Firebase rules: open writes, whole-database reads, test mode; public folde
   );
   const used = cloudRules(makeProject({ 'package.json': '{}' }), { '@react-native-firebase/database': '22.0.0' }, now);
   assert.equal(used[0].id, 'firebase-rules-not-in-repo');
+  const storageOnly = makeProject({ 'storage.rules': 'allow write: if true;' });
+  const partial = cloudRules(storageOnly, { '@react-native-firebase/database': '22.0.0' }, now);
+  const missing = partial.find((f) => f.id === 'firebase-rules-not-in-repo');
+  assert.equal(missing.severity, 'info');
+  assert.match(missing.title, /Realtime Database access was not checked/);
 });
 
 test('TLS bypasses: unconditional is critical, behind a setting is high; user CAs only in release', async () => {
