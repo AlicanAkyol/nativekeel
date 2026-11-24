@@ -2,6 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { upgradeReport, upgradeText } from '../src/upgrade.js';
 import { NEXT } from '../src/upcoming.js';
+import { analyze } from '../src/analyze.js';
+import { loadProject } from '../src/project.js';
+import { makeProject, fakeRegistry } from './helpers.js';
+import { spawnSync } from 'node:child_process';
 
 const render = (r) => upgradeText(r); // no color helper → plain strings, must not throw
 
@@ -95,4 +99,111 @@ test('upgrade: the hand-over line shows only when there is upgrade work', () => 
   assert.match(render(blocked), /hello@nativekeel\.com/);
   const ready = upgradeReport(result({ reactNative: `0.${NEXT.rn.minor - 1}.0` }, []));
   assert.doesNotMatch(render(ready), /hello@nativekeel\.com/);
+});
+
+const expoFiles = (extra = {}) => ({
+  'package.json': { name: 'expo-coverage', dependencies: { expo: '~57.0.9', 'react-native': '0.86.3', 'expo-camera': '~18.0.0' } },
+  ...extra,
+});
+const expoPins = { 'react-native': '0.86.3', 'expo-camera': '~18.0.0' };
+const scanExpo = (files, options = {}) => analyze(loadProject(makeProject(files)), { get: async () => null, offline: true, ...options });
+
+test('upgrade: offline Expo without SDK metadata is partial in both CLI text and JSON', async () => {
+  const root = makeProject(expoFiles());
+  const cli = new URL('../bin/nativekeel.js', import.meta.url);
+  for (const json of [false, true]) {
+    const run = spawnSync(process.execPath, [cli.pathname, 'upgrade', root, '--offline', '--no-color', ...(json ? ['--json'] : [])], { encoding: 'utf8' });
+    assert.equal(run.status, 0, run.stderr);
+    if (json) {
+      const report = JSON.parse(run.stdout);
+      assert.equal(report.status, 'partial');
+      assert.equal(report.catalogCoverage, 'full');
+      assert.equal(report.coverage, 'partial');
+      assert.ok(report.checks.every((c) => c.status === 'skipped'));
+    } else {
+      assert.match(run.stdout, /PARTIALLY EVALUATED/);
+      assert.match(run.stdout, /Skipped — Expo \/ React Native compatibility/);
+      assert.doesNotMatch(run.stdout, /READY|MULTI-VERSION JUMP/);
+    }
+  }
+});
+
+test('upgrade: installed Expo pins and resolved packages can be checked offline', async () => {
+  const scan = await scanExpo(expoFiles({
+    'node_modules/expo/package.json': { version: '57.0.9' },
+    'node_modules/expo/bundledNativeModules.json': expoPins,
+    'node_modules/react-native/package.json': { version: '0.86.3' },
+    'node_modules/expo-camera/package.json': { version: '18.0.2' },
+  }));
+  const report = upgradeReport(scan);
+  assert.equal(report.status, 'ready');
+  assert.ok(report.checks.every((c) => c.status === 'checked' && c.source === 'installed'));
+  assert.match(render(report), /Checked — Expo package version compatibility/);
+});
+
+test('upgrade: available pins cannot certify a declared package with no resolved version', async () => {
+  const report = upgradeReport(await scanExpo(expoFiles({
+    'node_modules/expo/package.json': { version: '57.0.9' },
+    'node_modules/expo/bundledNativeModules.json': expoPins,
+  })));
+  assert.equal(report.status, 'partial');
+  assert.equal(report.checks[0].status, 'checked');
+  assert.equal(report.checks[1].status, 'skipped');
+  assert.match(report.checks[1].reason, /expo-camera/);
+});
+
+test('upgrade: lockfile plus fetched metadata supports online checks; network failure stays partial', async () => {
+  const files = expoFiles({ 'package-lock.json': { lockfileVersion: 3, packages: {
+    'node_modules/expo': { version: '57.0.9' },
+    'node_modules/react-native': { version: '0.86.3' },
+    'node_modules/expo-camera': { version: '18.0.2' },
+  } } });
+  const registry = fakeRegistry();
+  const get = (url, ...args) => url === 'https://unpkg.com/expo@57.0.9/bundledNativeModules.json' ? expoPins : registry(url, ...args);
+  const report = upgradeReport(await scanExpo(files, { offline: false, get }));
+  assert.equal(report.status, 'ready');
+  assert.ok(report.checks.every((c) => c.status === 'checked' && c.source === 'registry'));
+  const failed = upgradeReport(await scanExpo(files, { offline: false, get: registry }));
+  assert.equal(failed.status, 'partial');
+  assert.ok(failed.checks.every((c) => c.status === 'skipped'));
+});
+
+test('upgrade: blockers retain priority over incomplete metadata, including the newest SDK', async () => {
+  const project = { reactNative: '0.81.5', expo: `${NEXT.expo.sdk}.0.0` };
+  const missing = upgradeReport(result(project));
+  assert.equal(missing.status, 'partial');
+  assert.doesNotMatch(render(missing), /Up to date/);
+  const blocked = upgradeReport(result(project, [{ id: 'expo-rn-mismatch', title: 'React Native mismatch', detail: 'Use the SDK version.' }]));
+  assert.equal(blocked.status, 'blocked');
+  assert.match(render(blocked), /NOT READY/);
+  assert.equal(blocked.coverage, 'partial');
+});
+
+test('upgrade: malformed pins stay partial and explicit package exclusions remain visible', async () => {
+  const files = expoFiles({
+    'node_modules/expo/package.json': { version: '57.0.9' },
+    'node_modules/expo/bundledNativeModules.json': { 'expo-camera': '~18.0.0' },
+  });
+  const malformed = upgradeReport(await scanExpo(files));
+  assert.equal(malformed.status, 'partial');
+  assert.ok(malformed.checks.every((c) => c.status === 'skipped'));
+  files['node_modules/expo/bundledNativeModules.json'] = expoPins;
+  files['package.json'].expo = { install: { exclude: ['expo-camera'] } };
+  const excluded = upgradeReport(await scanExpo(files));
+  assert.equal(excluded.status, 'ready');
+  assert.match(excluded.checks[1].reason, /expo.install.exclude/);
+});
+
+test('upgrade: resolved incompatible Expo packages remain blockers with checked coverage', async () => {
+  const report = upgradeReport(await scanExpo(expoFiles({
+    'node_modules/expo/package.json': { version: '57.0.9' },
+    'node_modules/expo/bundledNativeModules.json': expoPins,
+    'node_modules/react-native/package.json': { version: '0.81.5' },
+    'node_modules/expo-camera/package.json': { version: '16.0.0' },
+  })));
+  assert.equal(report.status, 'blocked');
+  assert.equal(report.coverage, 'full');
+  assert.ok(report.checks.every((c) => c.status === 'checked'));
+  assert.ok(report.blockers.some((b) => b.id === 'expo-rn-mismatch'));
+  assert.ok(report.blockers.some((b) => b.id === 'expo-sdk-mismatch'));
 });

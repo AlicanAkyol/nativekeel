@@ -9,6 +9,16 @@ import { makeProject } from './helpers.js';
 const call = (ctx, name, args, id = 1) => handle({ jsonrpc: '2.0', id, method: 'tools/call', params: { name, arguments: args } }, ctx);
 const ctxFor = (root, extra = {}) => ({ version: 'test', roots: allowedRoots({}, root), ...extra });
 
+test('MCP: Expo upgrade readiness retains missing compatibility coverage', async () => {
+  const root = makeProject({ 'package.json': { name: 'expo-app', dependencies: { expo: '~57.0.9', 'react-native': '0.86.3' } } });
+  const response = await call(ctxFor(root), 'upgrade_readiness', { path: root, offline: true });
+  assert.ok(!response.result.isError);
+  const report = response.result.structuredContent;
+  assert.equal(report.status, 'partial');
+  assert.equal(report.coverage, 'partial');
+  assert.ok(report.checks.every((check) => check.status === 'skipped'));
+});
+
 test('MCP: initialize, tools/list, unknown method', async () => {
   const ctx = ctxFor(os.tmpdir());
   const init = await handle({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-03-26' } }, ctx);

@@ -443,13 +443,42 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
   const lockedAll = lockedVersions(project.root, project.deps);
   const exactOf = (n) => installedVersion(project.root, n) || (/^\d+\.\d+\.\d+/.test(lockedAll[n] || '') ? lockedAll[n] : null);
   let expoPins = expoDir ? readJsonFile(path.join(expoDir, 'bundledNativeModules.json')) : null;
+  let expoPinSource = expoPins ? 'installed' : null;
   const expoExact = project.expoVersion ? exactOf('expo') : null;
-  if (!expoPins && expoExact && !forcedOffline) expoPins = await registry.expoPins(expoExact);
+  if (!expoPins && expoExact && !forcedOffline) {
+    expoPins = await registry.expoPins(expoExact);
+    if (expoPins) expoPinSource = 'registry';
+  }
   const expoSdk = project.expoVersion ? majorOf(project.expoVersion) : null;
   // The React Native the Expo SDK's native modules are built against. A different minor is a
   // common cause of build failures and launch crashes; the generic pin check below skips
   // react-native, so it is compared here.
   const expoRn = expoPins && expoPins['react-native'] ? String(expoPins['react-native']).replace(/^[~^>=\s]+/, '') : null;
+  const upgradeChecks = [];
+  if (project.expoVersion) {
+    const pinsAvailable = !!expoRn && /^\d+\.\d+\.\d+(?:-[\w.-]+)?$/.test(expoRn);
+    const missingPins = !pinsAvailable
+      ? 'Expo SDK compatibility metadata is unavailable. Install the project dependencies, or provide a lockfile with the exact Expo version and re-run online.'
+      : null;
+    upgradeChecks.push({
+      id: 'expo-react-native',
+      label: 'Expo / React Native compatibility',
+      status: pinsAvailable && current ? 'checked' : 'skipped',
+      source: expoPinSource,
+      reason: missingPins || (current ? `Compared React Native ${current} with Expo\'s ${expoRn} requirement.` : 'The React Native version could not be resolved.'),
+    });
+    const pkgJson = readJsonFile(path.join(project.root, 'package.json')) || {};
+    const excluded = new Set(((pkgJson.expo && pkgJson.expo.install && pkgJson.expo.install.exclude) || []).map(String));
+    const pinned = pinsAvailable ? Object.keys(expoPins).filter((name) => project.deps[name] && !['expo', 'react', 'react-native', 'react-dom', 'react-native-web'].includes(name) && !excluded.has(name)) : [];
+    const unresolved = pinned.filter((name) => !exactOf(name) || !/^[~^]?\s*\d+\.\d+\.\d+(?:-[\w.-]+)?$/.test(String(expoPins[name]).trim()));
+    upgradeChecks.push({
+      id: 'expo-packages',
+      label: 'Expo package version compatibility',
+      status: pinsAvailable && !unresolved.length ? 'checked' : 'skipped',
+      source: expoPinSource,
+      reason: missingPins || (unresolved.length ? `Exact versions or supported SDK ranges are unavailable for ${unresolved.join(', ')}. Install dependencies or provide their resolved versions in the lockfile.` : `Compared ${pinned.length} declared packages with Expo\'s SDK ranges. expo.install.exclude entries are excluded.`),
+    });
+  }
   if (expoRn && current && minorOf(expoRn) !== minorOf(current)) {
     const rc = /-/.test(expoRn);
     add({
@@ -726,6 +755,7 @@ export async function analyze(project, { get, now = new Date(), offline: forcedO
     nativeSecurityCoverage: native.coverage,
     accessibilityCoverage: ui.coverage,
     bundleMeasurement: bundle.measured,
+    upgradeChecks,
     scannedAt: now.toISOString(),
     project: {
       name: project.name,

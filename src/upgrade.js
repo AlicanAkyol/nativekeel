@@ -79,14 +79,25 @@ export function upgradeReport(result) {
 
   // Does the catalog cover the whole jump, or only its last step(s)? A far-behind app crosses
   // versions we do not carry, so a "no blockers" result there is partial, never a clean go.
-  const coverage = isExpo
+  const catalogCoverage = isExpo
     ? (fromExpo !== null && fromExpo >= CATALOG_MIN_EXPO - 1 ? 'full' : 'partial')
     : (curMinor !== null && curMinor >= CATALOG_MIN_RN - 1 ? 'full' : 'partial');
 
+  // A saved scan without coverage records cannot establish that Expo pins were checked.
+  const checks = isExpo ? ['expo-react-native', 'expo-packages'].map((id) =>
+    (result.upgradeChecks || []).find((check) => check.id === id) || {
+      id,
+      label: id === 'expo-react-native' ? 'Expo / React Native compatibility' : 'Expo package version compatibility',
+      status: 'skipped',
+      reason: 'This scan did not record compatibility coverage. Re-run with the current NativeKeel version.',
+    }) : [];
+  const skippedChecks = checks.filter((check) => check.status !== 'checked');
+  const coverage = catalogCoverage === 'partial' || skippedChecks.length ? 'partial' : 'full';
+
   let status;
   if (!fromRn && fromExpo === null) status = 'unknown';
-  else if (current) status = 'current';
   else if (blockers.length) status = 'blocked';
+  else if (current && !skippedChecks.length) status = 'current';
   else if (coverage === 'partial') status = 'partial';
   else status = 'ready';
   const coveredFrom = isExpo ? `Expo SDK ${CATALOG_MIN_EXPO}` : `React Native 0.${CATALOG_MIN_RN}`;
@@ -96,13 +107,16 @@ export function upgradeReport(result) {
     'Native library code and iOS/Android build settings beyond the checks above are not evaluated here; build once on the target before shipping.',
     `Breaking changes are matched from NativeKeel's catalog for the versions ahead of you (up to ${isExpo ? `Expo SDK ${NEXT.expo.sdk}` : `React Native 0.${NEXT.rn.minor}`}); a change not in the catalog is not reported.`,
   ];
-  if (coverage === 'partial') cantKnow.unshift(`This is a multi-version jump. NativeKeel's catalog covers the breaking changes from ${coveredFrom} onward; the earlier steps between your version and there have their own breaking changes that are not evaluated here. Upgrade one version at a time and re-run — see \`nativekeel plan\` for the staged path.`);
+  if (catalogCoverage === 'partial') cantKnow.unshift(`This is a multi-version jump. NativeKeel's catalog covers the breaking changes from ${coveredFrom} onward; the earlier steps between your version and there have their own breaking changes that are not evaluated here. Upgrade one version at a time and re-run — see \`nativekeel plan\` for the staged path.`);
+  for (const check of skippedChecks) cantKnow.push(`${check.label}: ${check.reason}`);
 
   return {
     from: { reactNative: fromRn, expo: result.project.expo || null },
     to: target,
     status,
     coverage,
+    catalogCoverage,
+    checks,
     blockers,
     notes,
     tooling: toolingItems,
@@ -124,6 +138,7 @@ export function upgradeText(report, { color } = {}) {
   const toLabel = report.to.expo
     ? `Expo SDK ${report.to.expo}${report.to.expoStatus !== 'stable' ? ` (${report.to.expoStatus})` : ''} / React Native ${report.to.rn}`
     : `React Native ${report.to.rn}${report.to.rnStatus !== 'stable' ? ` (${report.to.rnStatus})` : ''}`;
+  const checkLines = (report.checks || []).map((check) => `  ${check.status === 'checked' ? 'Checked' : 'Skipped'} — ${check.label}. ${check.reason}`);
 
   if (report.status === 'unknown') {
     out.push(c.bold('Upgrade') + '  Could not detect React Native or Expo in this project.');
@@ -131,17 +146,21 @@ export function upgradeText(report, { color } = {}) {
   }
   if (report.status === 'current') {
     out.push(`${c.bold('Upgrade')}  ${c.green('Up to date')} — ${fromLabel} is the newest line NativeKeel tracks (${toLabel}).`);
+    out.push(...checkLines);
     return out.join('\n');
   }
 
   const verdict = report.status === 'blocked'
     ? c.red(`NOT READY — ${report.counts.blockers} blocker${report.counts.blockers === 1 ? '' : 's'} in your code and dependencies`)
     : report.status === 'partial'
-      ? c.yellow('MULTI-VERSION JUMP — no blockers in the newest step, but earlier steps are not evaluated; upgrade one version at a time')
+      ? c.yellow(report.catalogCoverage === 'partial'
+        ? 'MULTI-VERSION JUMP — no blockers in the newest step, but earlier steps are not evaluated; upgrade one version at a time'
+        : 'PARTIALLY EVALUATED — compatibility checks could not be completed; see skipped checks below')
       : c.green('READY — no blockers found in your code');
   out.push(`${c.bold(`Upgrade  ${fromLabel} → ${toLabel}`)}`);
   out.push(`  ${verdict}${report.counts.notes || report.counts.tooling ? c.gray(`  ·  ${report.counts.notes} behavior change${report.counts.notes === 1 ? '' : 's'}, ${report.counts.tooling} tooling change${report.counts.tooling === 1 ? '' : 's'} to review`) : ''}`);
   for (const t of report.support || []) out.push(`  ${c.yellow('!')} ${t}`);
+  out.push(...checkLines);
   out.push('');
 
   if (report.blockers.length) {
